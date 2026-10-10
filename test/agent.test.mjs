@@ -90,3 +90,45 @@ test('工程：init → outline / inspect / select / similar / score / render；
   await runCommand('reverse', proj, {});
   assert.equal(readFileSync(join(proj, 'base.s3d'), 'utf8'), base0, '确定性：重跑逆向得到同样的 base.s3d');
 });
+
+test('提议：propose → preview → accept 写进修改层；有编译错误的不能接受；reject 的理由进收件箱；MCP 与 CLI 同一张命令表', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 's3d-'));
+  const { doc, io } = sceneToGLB(SCENE, { level: 'L0' });
+  const glb = join(dir, 'world.glb');
+  writeFileSync(glb, await io.writeBinary(doc));
+  const proj = join(dir, 'proj');
+  await runCommand('init', proj, { source: glb });
+  // 删掉屋顶：分数应该变差（源模型里有屋顶）
+  const bad = await runCommand('propose', proj, { text: 'drop roof', why: '试试', title: 'drop' });
+  assert.ok(bad.delta > 0, JSON.stringify(bad));
+  await runCommand('reject', proj, { id: bad.id, why: '分数变差' });
+  const inbox = await runCommand('inbox', proj, {});
+  assert.equal(inbox.at(-1).why, '分数变差');
+  // 引用不存在的物体：不能接受
+  const broken = await runCommand('propose', proj, { text: 'over nothing_here mat=steel\\nbox x size=1,1,1 on=nothing_here' });
+  assert.ok(broken.errors.length > 0);
+  await assert.rejects(() => runCommand('accept', proj, { id: broken.id }), /编译错误/);
+  await runCommand('reject', proj, { id: broken.id, why: '有错误' });
+  // 正常的修改：接受后写进 edits.s3d，提议移到 accepted/
+  const ok = await runCommand('propose', proj, { text: 'over shed color=#aa3333', why: '换个颜色' });
+  assert.deepEqual(ok.errors, []);
+  const acc = await runCommand('accept', proj, { id: ok.id });
+  assert.equal(acc.accepted, ok.id);
+  assert.match(readFileSync(join(proj, 'edits.s3d'), 'utf8'), /over shed color=#aa3333/);
+  assert.deepEqual(await runCommand('proposals', proj, {}), []);
+  assert.ok(readFileSync(join(proj, 'state/log.jsonl'), 'utf8').split('\n').filter(Boolean).length >= 6, '每次调用都有日志');
+  // MCP：tools/list 来自同一张命令表；render 附带图像
+  const { serve } = await import('../tools/mcp.mjs');
+  const { PassThrough } = await import('node:stream');
+  const input = new PassThrough(), output = new PassThrough();
+  let buf = '';
+  output.on('data', (d) => (buf += d));
+  serve({ project: proj, input, output });
+  input.write(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }) + '\n');
+  input.write(JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 's3d_render', arguments: { view: 'top', size: '128' } } }) + '\n');
+  for (let i = 0; i < 100 && buf.split('\n').filter(Boolean).length < 2; i++) await new Promise((r) => setTimeout(r, 50));
+  const msgs = buf.trim().split('\n').map((l) => JSON.parse(l));
+  assert.ok(msgs.find((m) => m.id === 1).result.tools.some((t) => t.name === 's3d_score'));
+  assert.ok(msgs.find((m) => m.id === 2).result.content.some((c) => c.type === 'image'));
+  input.end();
+});

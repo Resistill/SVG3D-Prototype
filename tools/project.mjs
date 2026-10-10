@@ -38,14 +38,14 @@ export function openProject(dir) {
     write: (name, text) => { mkdirSync(dirname(join(dir, name)), { recursive: true }); writeFileSync(join(dir, name), text); },
     exists: (name) => existsSync(join(dir, name)),
     sourcePath: () => resolve(dir, cfg.source),
-    // 编译组合根；extra 是临时追加在末尾的语句（预览提议、临时查询）
-    compile(extra = '') {
+    // 编译组合根；extra 是临时追加在末尾的语句（临时查询），overrides 是虚拟替换的层内容（预览提议，不碰磁盘）
+    compile(extra = '', overrides = {}) {
       const main = 'scene.s3d';
       const text = P.read(main) + (extra ? '\n' + extra : '');
-      return compile(text, { file: main, resolve: (p) => readFileSync(resolve(dir, p), 'utf8') });
+      return compile(text, { file: main, resolve: (p) => overrides[p] ?? readFileSync(resolve(dir, p), 'utf8') });
     },
     // 计入描述长度的文本
-    geometryFiles: () => GEOMETRY_LAYERS.filter((f) => P.exists(f)).map((f) => ({ file: f, text: P.read(f) })),
+    geometryFiles: (overrides = {}) => GEOMETRY_LAYERS.filter((f) => overrides[f] != null || P.exists(f)).map((f) => ({ file: f, text: overrides[f] ?? P.read(f) })),
     _parts: null,
     async sourceParts() { return (P._parts ??= await readParts(P.sourcePath(), { split: cfg.split ?? 'auto' })); },
     selection() { try { return JSON.parse(P.read('state/selection.json')); } catch { return { paths: [] }; } },

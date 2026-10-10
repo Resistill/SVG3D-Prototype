@@ -65,10 +65,34 @@ score [--objects]
 - **短数字**：能写 `6.1` 就不要写 `6.0996`；精度只需达到几何误差的要求。
 - **误差大于约 2 厘米的拟合不如诚实地保留网格**：网格引用的代价相当于平均误差约 2.3 cm 的拟合。
 
+## 做：提议
+
+AI 的修改不直接写进层文件，而是提议，人（或按约定的 agent）预览后接受或否决：
+
+```
+propose --text="over shed color=#aa3333" --why="一句话理由" [--layer=edits|semantics|style|decisions] [--title=…] [--retract=12,13]
+proposals                 列出待处理的提议
+preview <编号>            叠加编译：新出现的编译错误、分数变化 delta、受影响的物体（不改文件）
+accept <编号>             追加进目标层（有编译错误时拒绝，除非 --force）
+reject <编号> --why=…     否决；理由进收件箱
+note --text=…             人给 AI 留言（附当前选中的物体）
+inbox                     读留言与否决理由
+```
+
+提议文件在 `proposals/NNN-标题.s3d`：首行 `// layer=edits why=…`，`// retract <行号>` 撤销目标层的某一行，其余是追加的语句。每次工具调用都记在 `state/log.jsonl`。
+
+## MCP
+
+```
+claude mcp add svg3d -- node --import ./bin/node-hooks.mjs bin/s3d-mcp.mjs --project=<工程目录>
+```
+
+工具名是 `s3d_<命令>`，参数与命令行相同；`s3d_render` 除了 JSON 还直接返回 PNG 图像。
+
 ## 一轮工作的建议顺序
 
 1. `score` → 看 `worst` 与 `worstSources`。
 2. 对最贵的那个：`inspect <路径>`，`render --focus=<路径>` 和 `render --source --focus=<源部件>` 对照着看。
 3. 决定动作：换形状、写成阵列 / 镜像 / 类型、改定位、保留为网格、删掉碎片。
-4. 写进 `edits.s3d`（或按提议流程提交，M0b 实现），再 `score`，分数下降才保留。
+4. `propose` 提交修改，看 `delta`：分数下降、没有新错误才 `accept`，否则 `reject --why=…` 并换个做法。
 5. 人在界面里选中了东西、留了话：`inspect --selection`、`render --focus=selection`。
