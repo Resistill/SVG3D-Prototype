@@ -814,7 +814,10 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     const nameOf = (B) => pathOf(B);
     const plainLine = (o) => {
       setPose(o, o.cols);
-      const c = fallback.has(o.id) || o.absolute ? null : chooseFor(o, o.at, isPlaced, nameOf);
+      let c = fallback.has(o.id) || o.absolute ? null : chooseFor(o, o.at, isPlaced, nameOf);
+      // 锚点（at=B[…]、at=B offset=…）只是就近取的参照，不是支撑关系：世界坐标写得更短就写坐标（on= / against= 照旧保留）
+      //（精细档保留锚点：关系优先，坐标依赖率是它的验收标准；粗档位坐标只有一两位小数，锚点多出的名字是净开销）
+      if (c?.kind === 'at' && FID.name !== 'detail' && lineCost(absLine(o)) <= lineCost(line(o, c.place, orientRel(o, c.ref)))) c = null;
       if (c) stats[c.kind]++; else stats.coord++;
       targets.push({ o, path: o.id, tol: (c && c.kind !== 'at' ? 0.025 : 2e-3) * S, kind: c?.kind ?? 'coord' });
       return c ? line(o, c.place, orientRel(o, c.ref)) : absLine(o);
