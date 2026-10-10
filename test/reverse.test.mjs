@@ -345,3 +345,16 @@ test('台阶：楼梯写成 span … steps=n，级数、截面与原文一致，
   assert.ok((sp.src.match(/^span \S+ from=\S+ to=\S+ steps=/gm) ?? []).length >= 2, '两段楼梯');
   assert.ok(sp.report.mirrors.some((x) => /stair/.test(x.of)), JSON.stringify(sp.report.mirrors));
 });
+
+test('旋转体：整流罩写成 revolve（底部半径、高度、尖顶与原文一致）；螺旋扶手这类只占旋转面一小部分的不算', () => {
+  const sp = reverse(partsOfDocument(sceneToGLB(readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8'), { level: 'L0' }).doc), { srcFile: 'x.glb', level: 'L0', fidelity: 'structure' });
+  const m = /^revolve rocket_nose profile=\[([^\]]+)\]/m.exec(sp.src);
+  assert.ok(m, sp.src.split('\n').filter((l) => /nose/.test(l)).join('\n'));
+  const prof = m[1].split(';').map((p) => p.replace(/[()\s]/g, '').split(',').map(Number));
+  assert.ok(Math.abs(prof[0][0] - 2) < 0.05 && prof[0][1] === 0, `底部 ${prof[0]}`);
+  const top = prof[prof.length - 1];
+  assert.ok(Math.abs(top[1] - 7) < 0.05 && top[0] < 0.3, `尖顶 ${top}`);
+  assert.deepEqual(compile(sp.src).errors, []);
+  const cv = reverse(partsOfDocument(sceneToGLB(readFileSync(new URL('../examples/curves.s3d', import.meta.url), 'utf8'), { level: 'L0' }).doc), { srcFile: 'x.glb', level: 'L0', fidelity: 'structure' });
+  assert.doesNotMatch(cv.src, /^revolve garage_rail /m, '螺旋扶手不是旋转体');
+});

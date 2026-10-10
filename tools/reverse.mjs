@@ -403,6 +403,47 @@ function fitSteps(part, pts, F) {
   return { shape: 'steps', from: A, to: B, n, w: width, th, e };
 }
 
+// 旋转体：横截面接近圆形的坐标系里，沿对称轴分箱取最大半径得到外轮廓，Douglas–Peucker 简化 → revolve profile=[(r,y); …]。
+// 误差：采样点到旋转面的径向距离（端面上的点只计超出的部分），按最薄方向归一化
+// areaMesh：网格的表面积；旋转面的面积比它大很多（例如一圈螺旋扶手被当成整个圆柱面）就不算旋转体
+function fitRevolve(pts, verts, F, areaMesh) {
+  const scale = Math.max(Math.min(...F.h), 0.02 * Math.max(...F.h), 1e-6);
+  let best = null;
+  for (let a = 0; a < 3; a++) {
+    const [b, c] = [0, 1, 2].filter((k) => k !== a);
+    if (Math.abs(F.h[b] - F.h[c]) > 0.1 * Math.max(F.h[b], F.h[c])) continue;
+    const q = [...pts, ...verts].map((p) => mvT(F.cols, sub(p, F.c)));
+    const t0 = Math.min(...q.map((x) => x[a])), H = Math.max(...q.map((x) => x[a])) - t0;
+    if (!(H > 1e-6)) continue;
+    const K = 24, rmax = new Array(K).fill(0);
+    for (const x of q) { const k = Math.min(K - 1, Math.floor(((x[a] - t0) / H) * K)); rmax[k] = Math.max(rmax[k], Math.hypot(x[b], x[c])); }
+    // 轮廓：中间用箱子的中心；两端只看紧贴端面的点（尖顶的半径是 0，不是最后一箱里的最大半径）
+    const endR = (s0) => Math.max(0, ...q.filter((x) => Math.abs(x[a] - t0 - s0) < 0.01 * H).map((x) => Math.hypot(x[b], x[c])));
+    let prof = [[endR(0), 0], ...rmax.map((r, k) => [r, ((k + 0.5) / K) * H]), [endR(H), H]];
+    const tol = 0.01 * Math.max(...rmax) + 1e-9;
+    const dp = (ps) => {
+      if (ps.length < 3) return ps;
+      const [A, B] = [ps[0], ps[ps.length - 1]], d = [B[0] - A[0], B[1] - A[1]], L = Math.hypot(...d) || 1;
+      let iMax = 0, dMax = 0;
+      ps.forEach((p, i) => { const e = Math.abs((p[0] - A[0]) * d[1] - (p[1] - A[1]) * d[0]) / L; if (e > dMax) { dMax = e; iMax = i; } });
+      return dMax <= tol ? [A, B] : [...dp(ps.slice(0, iMax + 1)).slice(0, -1), ...dp(ps.slice(iMax))];
+    };
+    prof = dp(prof);
+    // 旋转面的面积（侧面 + 两个端面）：网格只占其中一小部分时不是旋转体
+    let areaRev = Math.PI * (prof[0][0] ** 2 + prof[prof.length - 1][0] ** 2);
+    for (let k = 1; k < prof.length; k++) areaRev += Math.PI * (prof[k - 1][0] + prof[k][0]) * Math.hypot(prof[k][0] - prof[k - 1][0], prof[k][1] - prof[k - 1][1]);
+    if (areaMesh < 0.6 * areaRev) continue;
+    const R = (t) => { for (let k = 1; k < prof.length; k++) if (t <= prof[k][1]) { const [r0, y0] = prof[k - 1], [r1, y1] = prof[k]; return y1 > y0 ? r0 + ((r1 - r0) * (t - y0)) / (y1 - y0) : Math.max(r0, r1); } return prof[prof.length - 1][0]; };
+    const e = pts.reduce((acc, p) => {
+      const x = mvT(F.cols, sub(p, F.c)), t = x[a] - t0, r = Math.hypot(x[b], x[c]), Rt = R(t);
+      const cap = t < 0.02 * H || t > 0.98 * H;
+      return acc + (cap ? Math.max(0, r - Rt) : Math.abs(r - Rt));
+    }, 0) / pts.length / scale;
+    if (!best || e < best.e) best = { shape: 'revolve', axis: a, t0, prof, e };
+  }
+  return best;
+}
+
 // only：只在这种形状里挑（决定层指定了形状）
 export function fitPart(part, i, only = null) {
   const pts = samplePoints(part.tris, 600, i + 1);
@@ -416,6 +457,8 @@ export function fitPart(part, i, only = null) {
   fits.sort((a, b) => effErr(a) - effErr(b));
   // 基本体拟合得不好时，试试管道（弯管、输料管）
   if (!only && fits[0].e > 0.02) { const t = fitTube(part, i, vol, fits[0].e); if (t && t.e < fits[0].e) fits.unshift({ ...t, frame: fits[0].frame }); }
+  // 拟合得不好时，试试旋转体（整流罩、天线）；语义档一律用基本体当代理（灰盒），不用旋转体
+  if (!only && FID.name !== 'semantic' && fits[0].e > 0.02) { const rv = fitRevolve(pts, verts, fits[0].frame, part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0)); if (rv && rv.e < fits[0].e && rv.prof.length <= 16) fits.unshift({ ...rv, frame: fits[0].frame }); }
   // 拟合得不好时，试试台阶（楼梯）
   if (!only && fits[0].e > 0.05) { const st = fitSteps(part, pts, fits[0].frame); if (st && st.e < fits[0].e) fits.unshift({ ...st, frame: fits[0].frame }); }
   const best = fits[0];
@@ -425,7 +468,7 @@ export function fitPart(part, i, only = null) {
   const h = best.frame.h, R = Math.max(best.r0 ?? 0, best.r1 ?? 0);
   const areaPrim = best.shape === 'sphere' ? 4 * Math.PI * best.r * best.r
     : best.shape === 'cyl' || best.shape === 'cone' ? 2 * Math.PI * R * R + 2 * Math.PI * R * 2 * h[best.axis]
-      : best.shape === 'tube' || best.shape === 'steps' ? areaMesh : 8 * (h[0] * h[1] + h[0] * h[2] + h[1] * h[2]);
+      : best.shape === 'tube' || best.shape === 'steps' || best.shape === 'revolve' ? areaMesh : 8 * (h[0] * h[1] + h[0] * h[2] + h[1] * h[2]);
   const cover = areaPrim > 0 ? areaMesh / areaPrim : 1;
   const lo = [0, 1, 2].map((k) => Math.min(...pts.map((p) => p[k]))), hi = [0, 1, 2].map((k) => Math.max(...pts.map((p) => p[k])));
   const uniq = new Map();
@@ -494,6 +537,21 @@ function primitiveOf(fit, part, srcFile) {
       box: { min: [-size[0] / 2, 0, -size[2] / 2], max: [size[0] / 2, size[1], size[2] / 2] }, fit: fitScore, err: fit.e };
   }
   const base = { fit: fitScore, err: fit.e };
+  if (fit.shape === 'revolve') {
+    // 旋转体：局部 y 是对称轴，原点在轴与轮廓 y=0 的交点；朝向朝上（轴竖直时只是一个 turn，旋转体绕 y 对称，写不写都一样）
+    const a = fit.axis, others = [0, 1, 2].filter((k) => k !== a);
+    let ey = F.cols[a];
+    if (ey[1] < 0) ey = scl(ey, -1);
+    const t0 = ey === F.cols[a] ? fit.t0 : -(fit.t0 + fit.prof[fit.prof.length - 1][1]);
+    const prof = ey === F.cols[a] ? fit.prof : [...fit.prof].reverse().map(([r, y]) => [r, fit.prof[fit.prof.length - 1][1] - y]);
+    let ex = F.cols[others[0]];
+    const ez = cross(ex, ey);
+    if (Math.abs(ey[1] - 1) < 1e-6) ex = [1, 0, 0];
+    const cols = Math.abs(ey[1] - 1) < 1e-6 ? [[1, 0, 0], [0, 1, 0], [0, 0, 1]] : [ex, ey, ez];
+    const at = add(F.c, scl(ey, t0));
+    const Rm = Math.max(...prof.map((p) => p[0])), Hh = prof[prof.length - 1][1];
+    return { ...base, kind: 'revolve', props: { profile: `[${prof.map(([r, y]) => `(${fmt(r)},${fmt(y)})`).join('; ')}]` }, cols, at, box: { min: [-Rm, 0, -Rm], max: [Rm, Hh, Rm] } };
+  }
   if (fit.shape === 'steps') {
     // 台阶：两个端点在父坐标系里（顶层就是世界坐标），不再加定位关系；包围盒取源网格的
     const { min, max } = fit.aabb;
@@ -707,7 +765,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     const nm = p.name && !/^part_\d+$|^merged_/.test(p.name) ? cleanName(p.name) : null;
     const id = p.forceName ? uniqueId(sanitize(p.forceName), true) : uniqueId(nm ? sanitize(nm) : `${prim.kind}${(counters[prim.kind] = (counters[prim.kind] ?? 0) + 1)}`);
     const vol = (prim.box.max[0] - prim.box.min[0]) * (prim.box.max[1] - prim.box.min[1]) * (prim.box.max[2] - prim.box.min[2]);
-    const symY = prim.kind === 'sphere' || (['cyl', 'cone'].includes(prim.kind) && !prim.props.axis);
+    const symY = prim.kind === 'sphere' || prim.kind === 'revolve' || (['cyl', 'cone'].includes(prim.kind) && !prim.props.axis);
     if (symY && Math.abs(prim.cols[1][1] - 1) < 1e-6) prim.cols = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
     return { id, src: p.uid ?? p.name ?? p.from ?? null, meta: p.meta, material: p.material, ...prim, vol, symY };
   });
@@ -1171,7 +1229,7 @@ function detectMirrors(objs, units, unitOf) {
   const reflectDir = (v, n) => sub(v, scl(n, 2 * dot(v, n)));
   // 台阶（span from= to=）的形状是级数、截面、水平长度与高度，不是两个端点的坐标
   const spanShape = (o) => { const A = o.props.from.split(',').map(Number), B = o.props.to.split(',').map(Number); return { steps: o.props.steps, section: o.props.section, run: String(Math.hypot(B[0] - A[0], B[2] - A[2])), rise: String(B[1] - A[1]) }; };
-  const sizeKey = (o) => [o.kind, o.props.axis ?? '', o.mat, ...Object.entries(o.kind === 'span' ? spanShape(o) : o.props).filter(([k]) => !['src', 'pivot', 'axis'].includes(k)).map(([k, v]) => `${k}=${String(v).split(',').map((x) => Math.round(+x / SIZE_Q())).join(',')}`)].join('|');
+  const sizeKey = (o) => [o.kind, o.props.axis ?? '', o.mat, ...Object.entries(o.kind === 'span' ? spanShape(o) : o.props).filter(([k]) => !['src', 'pivot', 'axis'].includes(k)).map(([k, v]) => `${k}=${(String(v).match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/g) ?? []).map((x) => Math.round(+x / SIZE_Q())).join(',')}`)].join('|');
   const ents = [];
   // 参考点用全部成员的质心（网格反射后原点会换到另一个角上，质心不会）
   const centroid = (u) => scl(u.children.flatMap((c) => c.members.map(centerOf)).reduce((s2, p) => add(s2, p), [0, 0, 0]), 1 / u.children.reduce((s2, c) => s2 + c.members.length, 0));
@@ -1279,7 +1337,7 @@ function memberNames(members, unit, child) {
 // 第 k 个成员 = 曲线上等弧长的第 k 个点 + 随切线转动的固定偏移。拟合与校验都通过才算。
 function detectCurveArrays(objs, units, onOf) {
   const inUnit = new Set(units.flatMap((u) => u.children.flatMap((c) => c.members.map((o) => o.id))));
-  const nums = (o) => Object.entries(o.props).filter(([k]) => !['src', 'pivot', 'axis'].includes(k)).flatMap(([, v]) => String(v).split(',').map(Number));
+  const nums = (o) => Object.entries(o.props).filter(([k]) => !['src', 'pivot', 'axis'].includes(k)).flatMap(([, v]) => (String(v).match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/g) ?? []).map(Number));
   const sameSize = (a, b) => { const x = nums(a), y = nums(b); return x.length === y.length && x.every((v, i) => Math.abs(v - y[i]) < 0.01 * S + 0.005 * Math.abs(v)); };
   const groups = [];
   for (const o of objs) {
@@ -1391,7 +1449,7 @@ function detectCurveArrays(objs, units, onOf) {
 function detectArrays(objs, related) {
   // 签名：形状、尺寸（量化到厘米）、材质、相对竖直方向的姿态
   // 签名：形状、材质、相对竖直方向的姿态，加上尺寸数值；尺寸按容差比较（拟合会有毫米级的噪声）
-  const nums = (o) => Object.entries(o.props).filter(([k]) => !['src', 'pivot', 'axis'].includes(k)).flatMap(([, v]) => String(v).split(',').map(Number));
+  const nums = (o) => Object.entries(o.props).filter(([k]) => !['src', 'pivot', 'axis'].includes(k)).flatMap(([, v]) => (String(v).match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/g) ?? []).map(Number));
   // 朝向不进签名：一般轴的旋转会改变物体相对竖直方向的姿态；每一对的运动在下面单独核对
   const head = (o) => [o.kind, o.props.axis ?? '', o.mat].join('|');
   const sameSize = (a, b) => { const x = nums(a), y = nums(b); return x.length === y.length && x.every((v, i) => Math.abs(v - y[i]) < 0.01 * S + 0.005 * Math.abs(v)); };
