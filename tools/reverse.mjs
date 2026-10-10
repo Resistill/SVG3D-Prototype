@@ -875,7 +875,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     const st = stairOf(units[i]);
     if (!st) continue;
     units.splice(i, 1);
-    for (const m of st.members) { objs.splice(objs.indexOf(m), 1); byId.delete(m.id); }
+    // 成员从物体列表里拿掉（它们已经不在场景里，不会被当成参照物）；byId 里留着——更早算好的邻近关系里还有它们的编号
+    for (const m of st.members) objs.splice(objs.indexOf(m), 1);
     // 名字：阵列的自动名（boxs_3）换成 stairs
     let id = 'stairs', k = 1;
     while (byId.has(id)) id = `stairs_${++k}`;
@@ -928,7 +929,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     const name = (B) => name0(B);
     // 世界向量 → 父坐标系（顶层是世界；阵列里是实例的坐标系）
     const toParent = (v) => (frame ? mvT(frame, v) : v);
-    const sup0 = (onOf.get(A.id) ?? []).map((id) => byId.get(id)).filter(cand).sort((x, y) => y.vol - x.vol)[0];
+    const sup0 = (onOf.get(A.id) ?? []).map((id) => byId.get(id)).filter((B) => B && cand(B)).sort((x, y) => y.vol - x.vol)[0];
     const sup = sup0 && poseOf(sup0);
     if (sup) {
       const uvw = norm(sup, toB(sup, p));
@@ -949,7 +950,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       FACE[ag.face].forEach((v, k) => { if (v) uvw[k] = v; });
       return { place: `against=${name(B)}[${anchorTxt(B, uvw, tau)}]`, ref: B, kind: 'against' };
     }
-    const near0 = (nearOf.get(A.id) ?? []).map((id) => byId.get(id)).filter(cand).sort((x, y) => y.vol - x.vol)[0];
+    const near0 = (nearOf.get(A.id) ?? []).map((id) => byId.get(id)).filter((B) => B && cand(B)).sort((x, y) => y.vol - x.vol)[0];
     if (near0) {
       const near = poseOf(near0), t2 = Math.min(tau, 5e-4 * S);
       const ctr = add(near.at, mvC(near.cols, scl(add(near.box.min, near.box.max), 0.5)));

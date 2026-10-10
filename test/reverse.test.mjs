@@ -388,3 +388,16 @@ test('L2 的网格兜底：合并网格拆出来、拟合不了的分量写进�
   const bin = await partsGlb(parts, fb.objs, 'p.parts.glb');
   assert.ok(bin && bin.length > 1000);
 });
+
+test('L2 的楼梯改写之后，旁边的物体照常定位、零错误编译', () => {
+  const src = `material m color=#888888
+material n color=#cc4444
+box ground size=40,1,40 pin=top mat=m
+span stairs from=0,0,0 to=6,3,0 steps=8 section=2,0.2 mat=m
+box crate size=1,1,1 at=3,0,1.6 mat=n
+box crate2 size=1,1,1 at=3.4,1.6,-1.6 mat=n`;
+  const parts = partsOfDocument(sceneToGLB(src, { level: 'L2' }).doc);
+  const out = reverse(parts, { srcFile: 'x.glb', level: 'L2', fidelity: 'structure' });
+  assert.match(out.src, /steps=8/);
+  assert.deepEqual(compile(out.src).errors, []);
+});
