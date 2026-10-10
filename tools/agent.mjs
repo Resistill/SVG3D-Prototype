@@ -53,8 +53,9 @@ async function refineAuto(P, parts, { to, budget, target }) {
   let cur = await scoreWith(P, {}, consts);
   const start = cur.s.S, log = [], tried = new Set(), done = new Set();
   for (let i = 0; i < budget && cur.s.explain < target; i++) {
-    // 已经细化过的物体，它内部新拆出来的部件不再细化（它们没有自己的源部件，局部分数不可靠）
-    const inside = (p) => [...done].some((d) => p.startsWith(d + '.'));
+    // 已经细化过的物体，它内部新拆出来的部件：记着来源（~src="部件#分量"）的可以再细化，没有来源的（整体体素）不再细化
+    const srcOf = new Map(cur.r.nodes.map((n) => [n.path, n.meta?.src]));
+    const inside = (p) => !srcOf.get(p) && [...done].some((d) => p.startsWith(d + '.'));
     const cands = [...cur.s.objects].filter((o) => !o.mesh && !tried.has(o.path) && !inside(o.path)).sort((x, y) => (y.rSrc + y.rRecon) - (x.rSrc + x.rRecon));
     let pr = null;
     // 局部分数（只看这个物体）先筛一遍：最好的候选都不如现在的写法，就不必编译、评分整个场景

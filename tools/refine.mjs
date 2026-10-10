@@ -130,7 +130,7 @@ function voxelLines(tris, { voxel, maxBoxes, digits }) {
 }
 
 // 一组分量 → 在物体自己的坐标系里跑一遍逆向（逐块拟合、找关系、找阵列与镜像）；
-// 面积大、又拟合不好的分量（一整栋楼的外壳）换成同名的一组体素盒子
+// 面积大、又拟合不好的分量（一整栋楼的外壳）换成同名的一组体素盒子。每个子块记下来源 ~src="部件#分量"，以后还能逐层细化
 function nestedLines(comps, { to, unit, digits, voxel, substitute = true }) {
   const out = reverseParts(comps.map((c) => ({ ...c, name: null })), { srcFile: 'refine', fidelity: to, unit, types: false, names: false });
   setFidelity(to, unit);
@@ -146,10 +146,27 @@ function nestedLines(comps, { to, unit, digits, voxel, substitute = true }) {
     const m = /^([\p{L}_][\p{L}\p{N}_]*) ([\p{L}_][\p{L}\p{N}_]*) /u.exec(l);
     const c = m && poor.get(m[2]);
     const v = c && voxelLines(c.tris, { voxel, maxBoxes: 8, digits });
-    if (v) { lines.push(`group ${m[2]} {`, ...v.lines.map((x) => '  ' + x), '}'); voxels += v.boxes; continue; }
-    lines.push(l.replace(/ ~fit=\S+/, '').replace(/ ~src="[^"]*"/, ''));
+    if (v) { lines.push(`group ${m[2]} ~src="${c.from}" {`, ...v.lines.map((x) => '  ' + x), '}'); voxels += v.boxes; continue; }
+    lines.push(l.replace(/ ~fit=\S+/, ''));
   }
   return { lines, materials, boxes: out.objs.length - poor.size + voxels, arrays: out.report.arrays.length, voxelized: voxels ? poor.size : 0 };
+}
+
+// 来源 ~src → 源部件：先按完整名字找（L2 的部件名本身带 #）；找不到就是“部件#分量”——细化出来的子块，分量按世界坐标拆（可以嵌套）。
+// 返回 { part（这个来源的几何，分量也包装成部件）, whole（它所在的源部件，邻域评分用） }
+const SPLITS = new WeakMap();
+function sourceOf(parts, src) {
+  const exact = parts.find((p) => (p.uid ?? p.name ?? p.from) === src);
+  if (exact) return { part: exact, whole: exact };
+  const i = src.lastIndexOf('#'), k = +src.slice(i + 1);
+  if (i < 0 || !Number.isInteger(k)) return null;
+  const up = sourceOf(parts, src.slice(0, i));
+  if (!up) return null;
+  let cache = SPLITS.get(parts);
+  if (!cache) SPLITS.set(parts, (cache = new Map()));
+  if (!cache.has(up.part.uid ?? up.part.name)) cache.set(up.part.uid ?? up.part.name, splitComponents(up.part));
+  const comp = cache.get(up.part.uid ?? up.part.name)[k];
+  return comp ? { part: { ...up.part, uid: src, name: null, from: src, tris: comp.tris }, whole: up.whole } : null;
 }
 
 // 一个物体（编译结果里的节点路径）→ 细化提议 { target, kind: 'type' | 'object', text, boxes, candidates, current, local }；拆不了返回 { error }
@@ -163,7 +180,11 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
   if (!n.meta?.src && path.includes('.')) { const up = byPath.get(path.slice(0, path.lastIndexOf('.'))); if (up?.types) n = up; }
   // 对应的源部件：自己的 ~src；类型的实例可以借同类型的另一个实例；都没有时（阵列成员）按世界包围盒的重叠度找
   if (!n.meta?.src && n.types) { const twin = result.nodes.find((m) => m.types?.[0] === n.types[0] && m.meta?.src); if (twin) n = twin; }
-  let part = n.meta?.src && parts.find((p) => (p.uid ?? p.name ?? p.from) === n.meta.src);
+  // 类型内部的子块（细化过的类型）：~src 指向细化时借用的那个实例的分量，换一个实例几何就对不上——暂不支持再细化
+  const segs = n.path.split('.');
+  if (n.meta?.src && segs.slice(1).some((_, i) => byPath.get(segs.slice(0, i + 1).join('.'))?.types)) return { path, error: '类型内部的子块暂不支持再细化' };
+  const found = n.meta?.src ? sourceOf(parts, n.meta.src) : null;
+  let part = found?.part, whole = found?.whole;
   if (!part && n.box) {
     let best = 0.5;
     for (const p of parts) {
@@ -171,7 +192,7 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
       const ov = [0, 1, 2].map((k) => Math.max(0, Math.min(hi[k], n.box.max[k]) - Math.max(lo[k], n.box.min[k])));
       const vol = (a, b) => [0, 1, 2].reduce((m, k) => m * Math.max(1e-9, b[k] - a[k]), 1);
       const iou = (ov[0] * ov[1] * ov[2]) / (vol(lo, hi) + vol(n.box.min, n.box.max) - ov[0] * ov[1] * ov[2]);
-      if (iou > best) { best = iou; part = p; }
+      if (iou > best) { best = iou; part = whole = p; }
     }
   }
   if (!part) return { path, error: '找不到对应的源部件' };
@@ -185,7 +206,7 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
   const cur = localObjects(result, n, parts);
   const env = boxOf(cur);
   // 邻域评分的基准：现在的几何（世界坐标）；候选在物体坐标系里写成，评分前换回世界坐标，路径按写进场景之后的样子取（采样种子取自路径）
-  const hood = neighborhood(result, parts, n, part, consts);
+  const hood = neighborhood(result, parts, n, whole, consts);
   const { R, t } = n.world;
   // 没写材质的部件在场景里继承原物体的材质（over … : group 保留原来的 mat）：按原物体的颜色计价
   const inherited = hood.cur[0]?.color;
@@ -221,7 +242,8 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
     cands.push({ name, ...w, boxes: c.boxes, parts: c.parts, arrays: c.arrays, voxel: c.voxel, local: ls });
   };
   const digits = digitsFor(to, unit), voxel = Math.max(2 * F.tau, 1e-3) / unit;
-  const comps = splitComponents({ ...part, tris: local }).map((c) => ({ ...c, area: areaOf(c.tris) })).sort((a, b) => b.area - a.area);
+  // 分量在世界坐标里拆（编号与 ~src 的“部件#分量”一致），再换到物体坐标系
+  const comps = splitComponents(part).map((c) => { const tris = toLocal(c.tris, n.world); return { ...c, tris, area: areaOf(tris) }; }).sort((a, b) => b.area - a.area);
   if (comps.length > 1) {
     const total = comps.reduce((s2, c) => s2 + c.area, 0);
     const kept = new Set();
