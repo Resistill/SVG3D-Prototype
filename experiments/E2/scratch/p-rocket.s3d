@@ -1,6 +1,0 @@
-drop column_2
-group rocket on=platform_1 mat=white {
-  cyl stage1 r=2.4 h=28
-  cyl stage2 r=2 h=14 on=stage1
-  revolve nose profile=[(2,0); (1.9,2.5); (1.45,5); (0.7,6.6); (0,7)] smooth=true on=stage2
-}
