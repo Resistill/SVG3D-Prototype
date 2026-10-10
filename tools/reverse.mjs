@@ -771,6 +771,20 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   const units = compress ? detectArrays(objs, related) : [];
   // 沿曲线的阵列：剩下的物体里，等间距排成一串、朝向随切线变化的（过山车枕木）
   if (compress) units.push(...detectCurveArrays(objs, units, onOf));
+  // 台阶：一串直立的薄盒子排成线性阵列，步长有水平和竖直两个分量、盒子沿水平步长方向的深度约等于水平步长
+  // （L2 里楼梯是一串互不相连的踏步）→ 一段 span … steps=n，代替这个阵列和它的成员
+  if (compress) for (let i = units.length - 1; i >= 0; i--) {
+    const st = stairOf(units[i]);
+    if (!st) continue;
+    units.splice(i, 1);
+    for (const m of st.members) { objs.splice(objs.indexOf(m), 1); byId.delete(m.id); }
+    // 名字：阵列的自动名（boxs_3）换成 stairs
+    let id = 'stairs', k = 1;
+    while (byId.has(id)) id = `stairs_${++k}`;
+    st.obj.id = id;
+    objs.push(st.obj);
+    byId.set(st.obj.id, st.obj);
+  }
   const unitOf = new Map(); // 物体 id → { unit, child, k }
   for (const u of units) u.children.forEach((c, ci) => c.members.forEach((o, k) => unitOf.set(o.id, { unit: u, child: c, k: instOf(u, k) })));
   // 镜像：成对的物体或阵列关于同一个竖直平面对称 → 一个写出来，另一个是它的镜像副本
@@ -1099,6 +1113,31 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     ...(decisionReport ? { decisions: decisionReport } : {}),
   };
   return { src: named.text + '\n', absSrc, report, objs };
+}
+
+// 线性阵列 → 台阶（见 reverse 里的调用处）；不是台阶返回 null
+function stairOf(u) {
+  if (u.grid || u.rotate || u.along || u.turn || u.children.length !== 1 || u.holes?.length || !u.step) return null;
+  let ms = u.children[0].members, s = u.step;
+  if (ms.length < 3 || !ms.every((o) => o.kind === 'box' && Math.abs(o.cols[1][1] - 1) < 1e-6)) return null;
+  if (s[1] < 0) { ms = [...ms].reverse(); s = scl(s, -1); }
+  const run = Math.hypot(s[0], s[2]), rise = s[1];
+  if (!(run > 1e-6) || !(rise > 1e-6)) return null;
+  const uh = [s[0] / run, 0, s[2] / run];
+  const size = ms[0].props.size.split(',').map(Number), o = ms[0];
+  const ax = [0, 2].find((k) => Math.abs(Math.abs(dot(o.cols[k], uh)) - 1) < 1e-3);
+  if (ax == null) return null;
+  const depth = size[ax], width = size[2 - ax], th = size[1];
+  if (Math.abs(depth - run) > 0.15 * run || th > 1.5 * rise) return null;
+  const A = [o.at[0] - uh[0] * run / 2, o.at[1] + th - rise, o.at[2] - uh[2] * run / 2], n = ms.length;
+  const B = add(A, [uh[0] * run * n, rise * n, uh[2] * run * n]);
+  // 包围盒按台阶本身的几何算（校验比较的是中心）
+  const wv = [-uh[2], 0, uh[0]], cs = [];
+  for (const [x, y] of [[0, A[1] + rise - th], [run * n, B[1]]]) for (const z of [-width / 2, width / 2]) cs.push([A[0] + uh[0] * x + wv[0] * z, y, A[2] + uh[2] * x + wv[2] * z]);
+  const min = [0, 1, 2].map((k) => Math.min(...cs.map((c) => c[k]))), max = [0, 1, 2].map((k) => Math.max(...cs.map((c) => c[k])));
+  const obj = { id: u.id, kind: 'span', props: { from: vec(A), to: vec(B), steps: String(n), section: `${fmt(width)},${fmt(th)}` }, cols: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], at: [0, 0, 0], box: { min, max }, absolute: true,
+    mat: o.mat, material: o.material, src: o.src, meta: o.meta, fit: Math.min(...ms.map((m) => m.fit ?? 1)), err: Math.max(...ms.map((m) => m.err ?? 0)), vol: (max[0] - min[0]) * (max[1] - min[1]) * (max[2] - min[2]), symY: false };
+  return { obj, members: ms };
 }
 
 // 阵列里第 i 个成员所在的实例编号（有缺位的阵列不是 0, 1, 2…）

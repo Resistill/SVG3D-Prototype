@@ -31,18 +31,20 @@ for (const file of ['spaceport.s3d', 'rotation.s3d']) {
   });
 }
 
-test('L0 / L1 / L2 三档：L0 ≈ L1 < L2，与真值评测的结构指标同序', () => {
+test('L0 / L1 / L2 三档：L0 ≈ L1 < L2，与真值评测同序', () => {
   const src = read('spaceport.s3d');
   const rows = ['L0', 'L1', 'L2'].map((level) => {
     const parts = partsOfDocument(sceneToGLB(src, { level }).doc);
     const out = reverse(parts, { srcFile: 'x.glb', level });
     const ev = evaluate(src, out.src);
-    return { level, S: scored(out.src, parts).S, ev: ev.description.statementRatio * (1 + ev.description.coordinateRatio) };
+    return { level, S: scored(out.src, parts).S, ev: ev.description.statementRatio * (1 + ev.description.coordinateRatio), quality: [ev.kinds.accuracy, ev.compression.array.recall, ev.compression.mirror.recall] };
   });
   const [l0, l1, l2] = rows;
-  // L1 只是抹去了名字：结构指标相同，分数相差不到 1%（名字长短不同）；L2 合并了网格，两种指标都明显更差
+  // L1 只是抹去了名字：结构指标相同，分数相差不到 1%（名字长短不同）。
+  // L2 合并了网格：真值评测的形状正确率、阵列召回、镜像召回至少一项更差，分数更高。
+  // （语句数比不再能给 L2 排序：楼梯压成 span、大块的合并网格写成一个实心盒子之后，L2 的语句比 L0 还少，但几何差得多）
   assert.ok(Math.abs(l0.S - l1.S) < 0.01 * l0.S && Math.abs(l0.ev - l1.ev) < 0.01 * l0.ev, JSON.stringify(rows));
-  assert.ok(l2.S > Math.max(l0.S, l1.S) && l2.ev > Math.max(l0.ev, l1.ev), JSON.stringify(rows));
+  assert.ok(l2.S > Math.max(l0.S, l1.S) && l2.quality.some((q, k) => q < l0.quality[k]), JSON.stringify(rows));
 });
 
 test('邻域评分与全场分数同向：自动细化的每一步，普通物体两者相差不到 1', async () => {
