@@ -11,7 +11,7 @@ if (process.argv.includes('--json')) { console.log(JSON.stringify(r, null, 2)); 
 const pct = (x) => `${(x * 100).toFixed(1)}%`;
 console.log(`编译错误      原始 ${r.errors.orig} · 逆向 ${r.errors.recon}`);
 console.log(`对象          原始 ${r.objects.orig} · 逆向 ${r.objects.recon} · 匹配 ${r.objects.matched} · 平均 IoU ${r.objects.meanIoU}`);
-console.log(`形状种类      ${r.kinds.correct}/${r.kinds.fittable} 正确（${pct(r.kinds.accuracy)}）；复杂形状 ${r.kinds.complex} 个，其中 ${r.kinds.complexAsMesh} 个保留为 mesh`);
+console.log(`形状种类      ${r.kinds.correct}/${r.kinds.fittable} 正确（${pct(r.kinds.accuracy)}）；复杂形状 ${r.kinds.complex} 个，其中 ${r.kinds.complexAsMesh} 个保留为 mesh、${r.kinds.complexDescribed} 个描述为扫掠 / 旋转体`);
 console.log(`              ${Object.entries(r.kinds.confusion).map(([k, v]) => `${k}:${v}`).join('  ')}`);
 for (const [k, v] of Object.entries(r.facts)) console.log(`事实 ${k.padEnd(10)} 真值 ${String(v.truth).padStart(4)} · 找到 ${String(v.found).padStart(4)} · P ${v.precision} · R ${v.recall} · F1 ${v.f1}`);
 console.log(`压缩召回      阵列 ${r.compression.array.recovered}/${r.compression.array.orig}（${pct(r.compression.array.recall)}）· 镜像 ${r.compression.mirror.recovered}/${r.compression.mirror.orig}（${pct(r.compression.mirror.recall)}）`);

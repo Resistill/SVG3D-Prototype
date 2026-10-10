@@ -64,6 +64,8 @@ export function evaluate(origSrc, reconSrc, opts = {}) {
   const kindOk = fittable.filter((a) => mA.get(a.path) && mA.get(a.path).b.cls === a.cls).length;
   const complex = oa.filter((a) => a.cls === 'complex');
   const complexAsMesh = complex.filter((a) => mA.get(a.path)?.b.cls === 'mesh').length;
+  // 复杂形状被描述成扫掠体 / 旋转体（逆向拟合出的管道等）
+  const complexDescribed = complex.filter((a) => mA.get(a.path)?.b.cls === 'complex').length;
   const confusion = {};
   for (const a of fittable) { const k = `${a.cls}→${mA.get(a.path)?.b.cls ?? '无'}`; confusion[k] = (confusion[k] ?? 0) + 1; }
   // 关系
@@ -116,7 +118,7 @@ export function evaluate(origSrc, reconSrc, opts = {}) {
   return {
     errors: { orig: A.errors.length, recon: B.errors.length },
     objects: { orig: oa.length, recon: ob.length, matched: mA.size, meanIoU: +([...mA.values()].reduce((s, x) => s + x.s, 0) / (mA.size || 1)).toFixed(3) },
-    kinds: { fittable: fittable.length, correct: kindOk, accuracy: +(kindOk / (fittable.length || 1)).toFixed(3), complex: complex.length, complexAsMesh, confusion },
+    kinds: { fittable: fittable.length, correct: kindOk, accuracy: +(kindOk / (fittable.length || 1)).toFixed(3), complex: complex.length, complexAsMesh, complexDescribed, confusion },
     facts: { all: prf(() => true), ...Object.fromEntries(rels.map((r) => [r, prf((x) => x.startsWith(r + '|'))])), onAgainst: prf((x) => /^(on|against)\|/.test(x)) },
     compression: { array: recall('array'), mirror: recall('mirror') },
     semantic,

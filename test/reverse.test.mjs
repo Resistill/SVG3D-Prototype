@@ -19,7 +19,8 @@ test('航天基地 L0 往返：形状、关系、坐标依赖率达到第一阶�
   assert.equal(ev.errors.recon, 0, '逆向结果零错误编译');
   assert.equal(ev.objects.matched, ev.objects.orig, '每个对象都找到了对应');
   assert.ok(ev.kinds.accuracy >= 0.95, `形状种类正确率 ${ev.kinds.accuracy}`);
-  assert.equal(ev.kinds.complexAsMesh, ev.kinds.complex, '复杂形状都保留为源网格引用');
+  assert.equal(ev.kinds.complexAsMesh + ev.kinds.complexDescribed, ev.kinds.complex, '复杂形状要么保留为源网格引用，要么描述为扫掠 / 旋转体');
+  assert.ok(ev.kinds.complexDescribed >= 2, '两根弯管拟合成管道');
   assert.ok(ev.facts.onAgainst.f1 >= 0.9, `on/against F1 ${ev.facts.onAgainst.f1}`);
   assert.ok(ev.description.coordinateRatio < 0.1, `坐标依赖率 ${ev.description.coordinateRatio}`);
 });
@@ -213,4 +214,21 @@ test('倾斜的物体保留站立方向：光伏阵列是一个 5×4 网格，�
   assert.equal(ev.facts.on.recall, 1, `on ${JSON.stringify(ev.facts.on)}`);
   // 斜塔的立柱写成倾斜的 y 轴圆柱（不是 axis=x）
   assert.doesNotMatch(out.src, /cyl \S+ r=0\.18 h=5\.1 axis=x/);
+});
+
+test('管道拟合：弯管写成 pipe 并恢复半径；笔直的（储罐、箭体）仍是圆柱', () => {
+  const src = `
+    box ground size=60,1,60 pin=top
+    bezier feedline path=[(-10,0.5,10); (-10,0.5,0); (10,1.5,8); (10,1.5,-6)]
+    sweep feed path=feedline r=0.35
+    group tank on=ground[0.5,1,-0.5] { cyl body r=3 h=8
+      sphere dome r=3 at=body.top pin=center }
+  `;
+  const parts = partsOfDocument(sceneToGLB(src, { level: 'L2' }).doc);
+  const out = reverse(parts, { srcFile: 'x.glb', level: 'L2', fidelity: 'structure' });
+  const pipe = /^pipe \S+ path=\[([^\]]+)\] r=([\d.]+)/m.exec(out.src);
+  assert.ok(pipe, out.src);
+  assert.ok(Math.abs(+pipe[2] - 0.35) < 0.02, `半径 ${pipe[2]}`);
+  assert.doesNotMatch(out.src, /^pipe \S+ path=[^\n]* r=([3-9]|\d\d)/m, '储罐不是管道');
+  assert.equal(evaluate(src, out.src).errors.recon, 0);
 });

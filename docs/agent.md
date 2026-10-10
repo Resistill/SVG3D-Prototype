@@ -36,19 +36,24 @@ reverse [--fidelity=…] [--fresh]                                          重�
 ## 看
 
 ```
-render [--view=iso|iso2|top|front|back|left|right] [--mode=labels|color|id] [--focus=<路径>|selection] [--size=1024] [--source]
+render [--view=iso|iso2|top|front|back|left|right] [--mode=labels|color|id|error] [--focus=<路径>|selection] [--size=1024] [--source] [--box=…] [--ortho]
 ```
 
 - `labels`（默认）：在每个物体的可见部分标编号，返回的 `legend` 给出编号 → 路径。用来把图上的东西和代码对应起来。
 - `--focus`：只标注被聚焦的物体，并且把它画在最上层（不会被挡住），其余物体变淡作为参照。
 - `--source`：渲染**源模型**而不是重建结果。同一视角、同一 `--focus` 各渲一张，对照着看最能发现问题（例如源模型里是弯管，重建成了直梁）。源部件的名字来自 `score` 的 `worstSources`。
+- `--mode=error`：按 `score.json` 的平均误差从绿到红上色（先跑 `score`）；加 `--source` 时给源部件上色。
+- **源与重建逐像素对比**：渲染的返回值里有 `box`（本次取景范围），把它原样传给另一次渲染的 `--box=`，两张图取景完全一致；`--ortho` 用正交相机，尺寸不随深度变化，便于量。
 - 相机预设与界面预览一致：人说“iso 视角左上角那个”，和你看到的是同一张图。
+- labels 会避开重叠：放不下的标签不画，图例里标 `labeled: false`。
 
 ## 查
 
 ```
 outline [--depth=2] [--path=前缀]   分层概要：阵列、副本折叠成一行；类型、尺寸、实体数、主要关系、概念
 inspect <路径…> | --selection         源语句与行号、属性、包围盒、空间事实、所属阵列/镜像/类型与同类数、副本来源、概念、元数据、逐物体分数
+inspect --source <源部件…>           源模型的部件：包络、三角形数、表面积、主轴方向与沿主轴的尺寸、材质、分数，以及把它单独逆向得到的建议语句（量尺寸用这个，不要数像素）
+check [--text=…] [--layer=edits]      空跑：把语句临时叠加编译，报告新错误；语句没有任何效果时警告（不生成提议、不消耗预算）
 select "<集合表达式>"                 例如 "kind(cyl) where h > 5 and top > 30"、"on(ground) - #road"
 similar <路径> [--tol=0.01]           全场景里同形同尺寸同材质的物体及其相对位置——类型（def）与阵列的候选
 ```
@@ -61,10 +66,11 @@ score [--objects]
 
 `S = L_stmt + L_mesh + R_src + R_recon`：
 
-- `L_stmt` 描述长度：名字、关键字、引用各 1；数字 `1 + 0.5 × (小数位 − 1)`（`26`→1、`38.2711`→2.5）；注释与 `~元数据` 不计；语义层、风格层不计。
+- `L_stmt` 描述长度：名字、关键字、引用各 1；数字 `1 + 0.5 × (小数位 − 1)`（`26`→1、`38.2711`→2.5）；注释与 `~元数据` 不计；语义层、风格层不计。**只计有效描述**：基础层里声明的物体被你 drop 了，那一行不计——替换一个物体不会付两份钱。
 - `L_mesh` 网格引用：`10 × log2(1 + 三角形数)`——一个 500 三角形的网格约 90，一个合格的 box 约 8。
-- `R_src` 源模型的每个部件表面采样到重建表面的距离 `d`，代价 `log2(1 + d/5mm)`，按部件复杂度加权：解释错了、漏掉了都很贵。
+- `R_src` 源模型的每个部件表面采样到重建表面的距离 `d`，代价 `log2(1 + max(0, d − δ)/δ)`，按部件复杂度加权：解释错了、漏掉了都很贵。δ 由档位决定（structure 5 cm）；**误差在 δ 以内不计代价**，不用去猜作者的精确数值。距离优先量到**同材质**的重建表面（沥青路面只能由沥青的物体解释，不能拿地面凑数）；没有同材质的表面时多计一个 δ。
 - `R_recon` 重建物体表面到源表面的距离：凭空多出来的东西很贵。
+- 换形状不用改名：`over 物体 : 种类 新参数…`（例如 `over hall : subtract { box outer … ; box door … }`、`over road : pipe path=[…] r=…`），名字与引用都不变。改阵列的模板：`over 阵列 { drop 部件 ; 新语句 }` 作用到每个实例。
 - `explain = 1 − S / S_mesh`：相对“全部写成网格引用”的基线解释了多少，是进度条。
 - `worst`：代价最高的重建物体；`worstSources`：解释得最差的源部件（`explainedBy` 是它被归到的重建物体）。
 
@@ -81,7 +87,7 @@ AI 的修改不直接写进层文件，而是提议，人（或按约定的 agen
 ```
 propose --text="over shed color=#aa3333" --why="一句话理由" [--layer=edits|semantics|style|decisions] [--title=…] [--retract=12,13]
 proposals                 列出待处理的提议
-preview <编号>            叠加编译：新出现的编译错误、分数变化 delta、受影响的物体（不改文件）
+preview <编号> [--render] 叠加编译：新出现的编译错误、分数变化 delta、逐物体的分数变化 changed（只列 ≥ 0.5 的）、新增 / 删除的物体；--render 渲染应用提议之后的场景（不改文件）
 accept <编号>             追加进目标层（有编译错误时拒绝，除非 --force）
 reject <编号> --why=…     否决；理由进收件箱
 note --text=…             人给 AI 留言（附当前选中的物体）

@@ -9,7 +9,7 @@ import { semanticNames } from './naming.mjs';
 import { chainsOf, fitAlong, alongPoses } from './curvefit.mjs';
 import { lineCost } from './score.mjs';
 import { NodeIO } from '@gltf-transform/core';
-import { compile } from '../src/s3d.js';
+import { compile, _curves } from '../src/s3d.js';
 
 // ───────── 小工具 ─────────
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -274,8 +274,78 @@ function fitInFrame(F, pts, vol = null, verts = []) {
     const A = [-hs * sign, -hy], B = [hs * sign, -hy], C = [hs * sign, hy];
     push({ shape: 'wedge', slope: s, sign, e: err((x) => sd2(sdTri2(x[s], x[1], A, B, C), Math.abs(x[o]) - h[o])) }, 4 * hs * hy * h[o]);
   }
-  cands.sort((x, y) => x.e - y.e);
+  cands.sort((x, y) => effErr(x) - effErr(y));
   return { ...cands[0], frame: F };
+}
+
+// 粗档位偏向更简单的形状：楔形、圆锥要比盒子、圆柱明显更好才选（逆向只要求保留语义）
+const SHAPE_BIAS = { wedge: 0.6, cone: 0.3 };
+const effErr = (c) => c.e * (FID.name === 'detail' ? 1 : 1 + (SHAPE_BIAS[c.shape] ?? 0));
+
+// 管道：表面点沿法线往里退一个半径就落在中心线上。半径 = 2·体积 / 表面积（闭合管道），
+// 去掉端盖上的点，中心线点按主轴分段取平均得到折线，再用尽量少的控制点拟合 Catmull-Rom。
+// 拐回头的曲线（螺旋）分段会失败，误差很大，自然不会被选中
+function fitTube(part, i, vol, primE = Infinity) {
+  const tris = part.tris;
+  const area = tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0);
+  if (!(vol > 0) || !(area > 0)) return null;
+  let r = (2 * vol) / area;
+  // 带法线的采样
+  const rnd = rng(7919 * (i + 1));
+  const cum = [];
+  tris.reduce((s2, [a, b, c], k) => (cum[k] = s2 + len(cross(sub(b, a), sub(c, a))) / 2), 0);
+  const S = [];
+  for (let k = 0; k < 800; k++) {
+    const x = rnd() * area;
+    let lo = 0, hi = cum.length - 1;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (cum[m] < x) lo = m + 1; else hi = m; }
+    const [a, b, c] = tris[lo];
+    let u = rnd(), v = rnd();
+    if (u + v > 1) { u = 1 - u; v = 1 - v; }
+    S.push({ p: add(a, add(scl(sub(b, a), u), scl(sub(c, a), v))), n: unit(cross(sub(b, a), sub(c, a))) });
+  }
+  const F = pcaFrame(S.map((x) => x.p)), ax = F.cols.reduce((b2, c2, k) => (F.h[k] > F.h[F.cols.indexOf(b2)] ? c2 : b2), F.cols[0]);
+  const side = S.filter((x) => Math.abs(dot(x.n, ax)) < 0.7);
+  if (side.length < 100) return null;
+  // 法线朝向不确定：两个方向都试，中心线点更“细”的那个是对的
+  const centerline = (sign) => {
+    const cs = side.map((x) => sub(x.p, scl(x.n, sign * r)));
+    const ts = cs.map((c) => dot(c, ax)), t0 = Math.min(...ts), t1 = Math.max(...ts);
+    const K = Math.max(6, Math.min(48, Math.round((t1 - t0) / (2 * r))));
+    const bins = Array.from({ length: K }, () => ({ s: [0, 0, 0], n: 0 }));
+    cs.forEach((c, k) => { const b = Math.min(K - 1, Math.floor(((ts[k] - t0) / (t1 - t0 || 1)) * K)); bins[b].s = add(bins[b].s, c); bins[b].n++; });
+    const poly = bins.filter((b) => b.n).map((b) => scl(b.s, 1 / b.n));
+    const spread = cs.reduce((s2, c, k) => { const b = Math.min(K - 1, Math.floor(((ts[k] - t0) / (t1 - t0 || 1)) * K)); return s2 + (bins[b].n ? len(sub(c, scl(bins[b].s, 1 / bins[b].n))) : 0); }, 0) / cs.length;
+    return { poly, spread, t0, t1 };
+  };
+  const A = centerline(1), B = centerline(-1), C = A.spread <= B.spread ? A : B;
+  if (C.poly.length < 3 || C.spread > 2 * r) return null;
+  // 两端延长到端面（分段平均会把端点往里拉）
+  const ext = (p0, p1, t) => { const d = sub(p0, p1), dt = dot(d, ax); return Math.abs(dt) < 1e-9 ? p0 : add(p0, scl(d, (t - dot(p0, ax)) / dt)); };
+  const poly = [ext(C.poly[0], C.poly[1], C.t0 + 0.5 * r * 0), ...C.poly.slice(1, -1), ext(C.poly.at(-1), C.poly.at(-2), C.t1)];
+  poly[0] = ext(C.poly[0], C.poly[1], C.t0);
+  // 按弧长重采样出 M 个控制点，M 从少到多，取误差最小的（差不多时取少的）
+  const cumL = [0];
+  for (let k = 1; k < poly.length; k++) cumL.push(cumL[k - 1] + len(sub(poly[k], poly[k - 1])));
+  const at = (s2) => { let k = 1; while (k < cumL.length - 1 && cumL[k] < s2) k++; const u = (s2 - cumL[k - 1]) / (cumL[k] - cumL[k - 1] || 1); return add(poly[k - 1], scl(sub(poly[k], poly[k - 1]), u)); };
+  const segDist = (p, a, b) => { const ab = sub(b, a), t = Math.max(0, Math.min(1, dot(sub(p, a), ab) / (dot(ab, ab) || 1))); return len(sub(p, add(a, scl(ab, t)))); };
+  const pts = side.slice(0, 400).map((x) => x.p);
+  let best = null;
+  for (let M = 2; M <= Math.min(12, poly.length); M++) {
+    const ctrl = Array.from({ length: M }, (_, k) => at((cumL.at(-1) * k) / (M - 1)));
+    const line = M < 3 ? ctrl : _curves.catmullRom(ctrl, false, 10);
+    const ds = pts.map((p) => { let m = Infinity; for (let k = 1; k < line.length; k++) m = Math.min(m, segDist(p, line[k - 1], line[k])); return m; });
+    const rr = ds.reduce((s2, d) => s2 + d, 0) / ds.length; // 半径取到中心线距离的平均，比 2V/A 更准
+    const e = ds.reduce((s2, d) => s2 + Math.abs(d - rr), 0) / ds.length / rr;
+    // 每多一个控制点多 3 个数：误差要明显变好（少于原来的 75%）才多加
+    if (!best || e < best.e * 0.75) best = { shape: 'tube', ctrl, r: rr, e };
+  }
+  if (!best || !(best.r > 0)) return null;
+  // 笔直的管道就是圆柱（储罐、箭体），语义上应写成圆柱：中心线明显弯曲（偏离首尾连线超过 1.5 倍半径），
+  // 或者基本体都拟合得很差、中心线又有可察觉的弯曲（缓缓弯下来的输料管），才当管道
+  const a0 = best.ctrl[0], a1 = best.ctrl.at(-1);
+  const bend = Math.max(...best.ctrl.map((p) => segDist(p, a0, a1)));
+  return bend > 1.5 * best.r || (primE > 0.25 && bend > 0.3 * best.r) ? best : null;
 }
 
 export function fitPart(part, i) {
@@ -286,7 +356,9 @@ export function fitPart(part, i) {
   const verts = [...vmap.values()];
   const frames = [uprightFrame(pts), pcaFrame(pts), normalFrame(part.tris, pts)].filter(Boolean);
   const fits = frames.map((F) => fitInFrame(F, pts, vol, verts));
-  fits.sort((a, b) => a.e - b.e);
+  fits.sort((a, b) => effErr(a) - effErr(b));
+  // 基本体拟合得不好时，试试管道（弯管、输料管）
+  if (fits[0].e > 0.02) { const t = fitTube(part, i, vol, fits[0].e); if (t && t.e < fits[0].e) fits.unshift({ ...t, frame: fits[0].frame }); }
   const best = fits[0];
   const lo = [0, 1, 2].map((k) => Math.min(...pts.map((p) => p[k]))), hi = [0, 1, 2].map((k) => Math.max(...pts.map((p) => p[k])));
   const uniq = new Map();
@@ -325,6 +397,11 @@ function primitiveOf(fit, part, srcFile) {
       box: { min: [-size[0] / 2, 0, -size[2] / 2], max: [size[0] / 2, size[1], size[2] / 2] }, fit: fitScore, err: fit.e };
   }
   const base = { fit: fitScore, err: fit.e };
+  if (fit.shape === 'tube') {
+    // 管道：点列在父坐标系里（顶层就是世界坐标），不再加定位关系；包围盒取源网格的
+    const { min, max } = fit.aabb;
+    return { ...base, kind: 'pipe', props: { path: `[${fit.ctrl.map((p) => `(${p.map(fmt).join(',')})`).join('; ')}]`, r: fmt(fit.r), smooth: 'true' }, cols: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], at: [0, 0, 0], box: { min, max }, absolute: true };
+  }
   if (fit.shape === 'box') {
     // 规范表示：水平方向较长的边沿局部 x（盒子转 90° 等于宽深互换，不规范化的话同样的盒子会被当成不同的形状）
     let hh = h, cols = F.cols;
@@ -494,6 +571,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   for (const m of mats.values()) header.push(`material ${m.name} color=${m.color}${m.metal != null ? ` metal=${fmt(m.metal)}` : ''}${m.rough != null ? ` rough=${fmt(m.rough)}` : ''}`);
   header.push('');
   const line = (o, place, orient) => {
+    if (o.absolute) { place = ''; orient = ''; } // 管道的点列本身就是位置
     const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
     return [o.kind, o.id, props, place, orient, `mat=${o.mat}`, `~fit=${fmt(o.fit)}`, o.src ? `~src=${JSON.stringify(o.src)}` : ''].filter(Boolean).join(' ');
   };
@@ -623,7 +701,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     const nameOf = (B) => pathOf(B);
     const plainLine = (o) => {
       setPose(o, o.cols);
-      const c = fallback.has(o.id) ? null : chooseFor(o, o.at, isPlaced, nameOf);
+      const c = fallback.has(o.id) || o.absolute ? null : chooseFor(o, o.at, isPlaced, nameOf);
       if (c) stats[c.kind]++; else stats.coord++;
       targets.push({ o, path: o.id, tol: (c && c.kind !== 'at' ? 0.025 : 2e-3) * S, kind: c?.kind ?? 'coord' });
       return c ? line(o, c.place, orientRel(o, c.ref)) : absLine(o);
@@ -963,7 +1041,7 @@ function detectCurveArrays(objs, units, onOf) {
   const sameSize = (a, b) => { const x = nums(a), y = nums(b); return x.length === y.length && x.every((v, i) => Math.abs(v - y[i]) < 0.01 * S + 0.005 * Math.abs(v)); };
   const groups = [];
   for (const o of objs) {
-    if (o.kind === 'mesh' || inUnit.has(o.id)) continue;
+    if (o.kind === 'mesh' || o.absolute || inUnit.has(o.id)) continue;
     const g = groups.find((gg) => gg[0].kind === o.kind && gg[0].mat === o.mat && (gg[0].props.axis ?? '') === (o.props.axis ?? '') && sameSize(gg[0], o));
     if (g) g.push(o); else groups.push([o]);
   }
@@ -1077,7 +1155,7 @@ function detectArrays(objs, related) {
   const sameSize = (a, b) => { const x = nums(a), y = nums(b); return x.length === y.length && x.every((v, i) => Math.abs(v - y[i]) < 0.01 * S + 0.005 * Math.abs(v)); };
   const groupList = [];
   for (const o of objs) {
-    if (o.kind === 'mesh') continue;
+    if (o.kind === 'mesh' || o.absolute) continue;
     const g = groupList.find((gg) => gg.head === head(o) && sameSize(gg.items[0], o));
     if (g) g.items.push(o); else groupList.push({ head: head(o), items: [o] });
   }
