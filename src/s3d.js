@@ -758,7 +758,7 @@ const MATH = {
   sqrt: Math.sqrt, abs: Math.abs, min: Math.min, max: Math.max, floor: Math.floor, ceil: Math.ceil, round: Math.round, pow: Math.pow,
 };
 // 由求解后的空间事实定义的集合：on(S) = 立在 S 上的；supports(S) = 承托着 S 的；……
-const RELATIONS = ['on', 'supports', 'against', 'inside', 'contains', 'touching'];
+const RELATIONS = ['on', 'supports', 'against', 'inside', 'contains', 'touching', 'intersects'];
 
 function evalCall(ast, ctx) {
   const { name, args } = ast;
@@ -1105,6 +1105,7 @@ class Solver {
         if (f.rel === 'against') { put('against', x, y); put('against', y, x); put('touching', x, y); put('touching', y, x); }
         if (f.rel === 'inside') { put('inside', x, y); put('contains', y, x); }
         if (f.rel === 'touching') { put('touching', x, y); put('touching', y, x); }
+        if (f.rel === 'intersects') { put('intersects', x, y); put('intersects', y, x); put('touching', x, y); put('touching', y, x); }
       }
     }
     this.rel = R;
@@ -1332,7 +1333,6 @@ class Solver {
   // 朝向 = 基准 · turn · tilt · roll · rot
   //   基准：on/under/against/inside 继承参照物的朝向；有 aim 时改为“让自己的某个面指向目标”
   orientation(n) {
-    if (n.kind === 'repeat') return I3; // repeat 的 turn 是每个实例的递增角
     const P = n.parent;
     let base = I3;
     const rk = ['on', 'under', 'against', 'inside'].find((k) => n.props.has(k));
@@ -1340,6 +1340,8 @@ class Solver {
       base = this.relTo(this.ref(n, rk).node, P).R;
       if (det3(base) < 0) base = mm(base, [[-1, 0, 0], [0, 1, 0], [0, 0, 1]]); // 参照物是镜像时，只继承朝向不继承手性
     }
+    // repeat 也继承参照物的朝向，但它的 turn 是每个实例的递增角，不旋转阵列本身
+    if (n.kind === 'repeat') return base;
     let Rm = mm(base, Ry(rad(this.num(n, 'turn', 0))));
     if (n.props.has('aim')) {
       const tgt = this.pointOf(this.eval(n, 'aim'), P, `${n.path} 的 aim`);
@@ -1767,59 +1769,213 @@ function buildItems(root, S, materials) {
 }
 
 // 反向：从求解后的几何中读出客观空间事实，用同一套词汇表达。
-// 判断在参照物 B 自己的坐标系里进行，所以 “A against B.left” 指的是 B 自身的左面，旋转物体同样成立。
+// 每一对物体只输出最强的一条关系：on > against > inside > touching（接触）> intersects（相交）。
+// on / against 在参照物 B 自己的坐标系里判断，所以 “A against B.left” 指的是 B 自身的左面；
+// 接触与相交用有向包围盒的分离轴测试，对任意朝向都精确（不再用世界包围盒近似）。
+export const FACT_EPS = 0.02;
+
+// ── 碰撞代理：每个物体 → 若干凸块（凸多面体或球），用于判断接触、相交、包含 ──
+// 盒子、楔形、梁是精确的多面体；圆柱、圆锥是 12 边棱柱；球是精确的；扫掠沿路径分段；
+// revolve 暂用外接圆柱（标为近似）。
+
+// 由顶点和面（顶点索引环）构造凸多面体：面法线用 Newell 法，对退化（如圆锥顶点重合）稳健
+function polyFrom(verts, faces) {
+  const normals = [], edges = [];
+  const addDir = (list, d) => {
+    const l = len(d);
+    if (l < 1e-9) return;
+    d = scl(d, 1 / l);
+    if (!list.some((e) => Math.abs(Math.abs(dot(e, d)) - 1) < 1e-6)) list.push(d);
+  };
+  for (const f of faces) {
+    let nrm = [0, 0, 0];
+    for (let i = 0; i < f.length; i++) {
+      const a = verts[f[i]], b = verts[f[(i + 1) % f.length]];
+      nrm = add(nrm, [(a[1] - b[1]) * (a[2] + b[2]), (a[2] - b[2]) * (a[0] + b[0]), (a[0] - b[0]) * (a[1] + b[1])]);
+      addDir(edges, sub(b, a));
+    }
+    addDir(normals, nrm);
+  }
+  return { verts, normals, edges };
+}
+const BOX_FACES = [[0, 1, 3, 2], [4, 6, 7, 5], [0, 4, 5, 1], [2, 3, 7, 6], [0, 2, 6, 4], [1, 5, 7, 3]];
+const boxPoly = (b) => polyFrom(boxCorners(b), BOX_FACES);
+// 沿 y 轴的棱台（底半径 r1、顶半径 r2、y 从 y0 到 y1），再由 map 变换到所需方向
+function frustumPoly(r1, r2, y0, y1, map = (p) => p, sides = 12) {
+  const verts = [];
+  for (let i = 0; i < sides; i++) { const a = (i / sides) * 2 * Math.PI; verts.push(map([r1 * Math.cos(a), y0, r1 * Math.sin(a)])); }
+  for (let i = 0; i < sides; i++) { const a = (i / sides) * 2 * Math.PI; verts.push(map([Math.max(r2, 1e-4) * Math.cos(a), y1, Math.max(r2, 1e-4) * Math.sin(a)])); }
+  const faces = [[...Array(sides).keys()].reverse(), [...Array(sides).keys()].map((i) => i + sides)];
+  for (let i = 0; i < sides; i++) faces.push([i, (i + 1) % sides, sides + ((i + 1) % sides), sides + i]);
+  return polyFrom(verts, faces);
+}
+// 局部坐标系里的凸块
+function localParts(n) {
+  const g = n.geom, b = n._box;
+  if (!g) return { parts: [boxPoly(b)], approx: false };
+  switch (g.type) {
+    case 'box': case 'beam': return { parts: [boxPoly(b)], approx: false };
+    case 'wedge': {
+      const { w, h, d } = g;
+      const v = [[-w / 2, 0, -d / 2], [w / 2, 0, -d / 2], [w / 2, h, -d / 2], [-w / 2, 0, d / 2], [w / 2, 0, d / 2], [w / 2, h, d / 2]];
+      return { parts: [polyFrom(v, [[0, 1, 2], [3, 5, 4], [0, 3, 4, 1], [1, 4, 5, 2], [0, 2, 5, 3]])], approx: false };
+    }
+    case 'cyl': {
+      const R = Math.max(g.r1, g.r2);
+      const map = g.axis === 'y' ? (p) => p : g.axis === 'x' ? (p) => [p[1] - g.h / 2, R + p[0], p[2]] : (p) => [p[0], R + p[2], p[1] - g.h / 2];
+      return { parts: [frustumPoly(g.r1, g.r2, 0, g.h, map)], approx: false };
+    }
+    case 'rod': return { parts: [frustumPoly(g.r, g.r, -g.L / 2, g.L / 2, (p) => [p[1], p[0], p[2]])], approx: false };
+    case 'sphere': return { parts: [{ sphere: true, c: [0, g.r, 0], r: g.r }], approx: false };
+    case 'revolve': return { parts: [frustumPoly(b.max[0], b.max[0], b.min[1], b.max[1])], approx: true };
+    case 'steps': return { parts: g.treads.map((t) => boxPoly({ min: sub(t.c, scl(t.s, 0.5)), max: add(t.c, scl(t.s, 0.5)) })), approx: false };
+    case 'sweep': {
+      // 每一段取相邻两个截面环的凸包（截面是凸的时候精确）；圆截面用 8 边形代替
+      const F = g.frames, segs = g.closed ? F.length : F.length - 1;
+      const prof = g.prof.length > 8 ? Array.from({ length: 8 }, (_, i) => g.prof[Math.floor((i * g.prof.length) / 8)]) : g.prof;
+      const m = prof.length, ring = (f) => prof.map(([u, v]) => add(f.p, add(scl(f.side, u), scl(f.up, v))));
+      const faces = [[...Array(m).keys()].reverse(), [...Array(m).keys()].map((i) => i + m)];
+      for (let i = 0; i < m; i++) faces.push([i, (i + 1) % m, m + ((i + 1) % m), m + i]);
+      const parts = [];
+      for (let i = 0; i < segs; i++) parts.push(polyFrom([...ring(F[i]), ...ring(F[(i + 1) % F.length])], faces));
+      return { parts, approx: false };
+    }
+  }
+  return { parts: [boxPoly(b)], approx: true };
+}
+const worldPart = (W, P) => (P.sphere ? { sphere: true, c: apply(W, P.c), r: P.r }
+  : { verts: P.verts.map((v) => apply(W, v)), normals: P.normals.map((d) => applyDir(W, d)), edges: P.edges.map((d) => applyDir(W, d)) });
+const projOf = (P, L) => {
+  if (P.sphere) { const c = dot(P.c, L); return [c - P.r, c + P.r]; }
+  let lo = Infinity, hi = -Infinity;
+  for (const v of P.verts) { const x = dot(v, L); if (x < lo) lo = x; if (x > hi) hi = x; }
+  return [lo, hi];
+};
+const partBox = (P) => (P.sphere ? { min: sub(P.c, [P.r, P.r, P.r]), max: add(P.c, [P.r, P.r, P.r]) } : boundsOf(P.verts));
+// 两个凸块在候选分离轴上的最大间隙：> 0 分离，≈ 0 接触，< 0 相交
+function partGap(A, B) {
+  const axes = [];
+  if (!A.sphere) axes.push(...A.normals);
+  if (!B.sphere) axes.push(...B.normals);
+  if (!A.sphere && !B.sphere) for (const a of A.edges) for (const b of B.edges) axes.push(cross(a, b));
+  if (A.sphere && B.sphere) axes.push(sub(B.c, A.c));
+  else if (A.sphere || B.sphere) { const [S0, P] = A.sphere ? [A, B] : [B, A]; for (const v of P.verts) axes.push(sub(v, S0.c)); }
+  let best = -Infinity;
+  for (let L of axes) {
+    const l = len(L);
+    if (l < 1e-9) continue;
+    L = scl(L, 1 / l);
+    const [a0, a1] = projOf(A, L), [b0, b1] = projOf(B, L);
+    best = Math.max(best, b0 - a1, a0 - b1);
+  }
+  return best;
+}
+
 function deriveFacts(root, S) {
+  const eps = FACT_EPS;
   const objs = [];
   const walk = (n, inCsg) => {
     const k = K(n);
     if (n.skin) return; // 变体只是外观，空间事实按原来的外包络算
-    if (n.kind !== 'root' && !inCsg && (LEAVES.has(k) || CSG.has(k)) && n._box && n._world) objs.push(n);
+    if (n.kind !== 'root' && !inCsg && (LEAVES.has(k) || CSG.has(k)) && n._box && n._world) {
+      const b = n._box;
+      if (b.max[0] - b.min[0] + b.max[1] - b.min[1] + b.max[2] - b.min[2] > 1e-9) objs.push(n);
+    }
     n.children.forEach((c) => walk(c, inCsg || CSG.has(k)));
   };
   walk(root, false);
-  const eps = 0.02;
   const ov = (a, b, k) => Math.min(a.max[k], b.max[k]) - Math.max(a.min[k], b.min[k]);
+  const ovI = (a, b) => Math.min(a[1], b[1]) - Math.max(a[0], b[0]);
   const vol = (x) => (x.max[0] - x.min[0]) * (x.max[1] - x.min[1]) * (x.max[2] - x.min[2]);
-  const facts = [], seen = new Set();
-  for (const A of objs) for (const B of objs) {
-    if (A === B || A.isAncestorOf(B) || B.isAncestorOf(A)) continue;
-    const rel = compose(invT(S.world(B)), S.world(A));
-    // 只有两者的坐标轴互相平行（相差 90° 的整数倍）时，盒子在 B 系中才是精确的
-    const aligned = isAxisAligned(rel.R);
-    const a = transformBox(rel, A._box);
-    const b = B._box;
-    const [ox, oy, oz] = [0, 1, 2].map((k) => ov(a, b, k));
-    if (Math.abs(a.min[1] - b.max[1]) < eps && ox > eps && oz > eps) {
-      facts.push({ rel: 'on', a: A.path, b: B.path, text: `${A.path} on ${B.path}` });
-      continue;
+  const info = objs.map((n) => {
+    const W = S.world(n);
+    const lp = localParts(n);
+    const parts = lp.parts.map((P) => worldPart(W, P));
+    const k = K(n.ghostOf ?? n);
+    return {
+      n, W, box: n._box, parts, pboxes: parts.map(partBox), approx: lp.approx, wb: boundsOf(parts.flatMap((P) => boxCorners(partBox(P)))),
+      // 单块、可以当作“实心盒子”看待的物体，才做贴面判断
+      boxy: lp.parts.length === 1 && !lp.approx && ['box', 'beam', 'wedge'].includes(n.geom?.type ?? 'box') && !CURVES.has(k),
+      convex: lp.parts.length === 1 && !lp.approx,
+    };
+  });
+
+  // 粗筛：按世界包围盒的 x 起点排序扫描，只留下三个方向都靠得足够近的对
+  const order = [...info].sort((p, q) => p.wb.min[0] - q.wb.min[0]);
+  const active = [], cands = [];
+  for (const P of order) {
+    for (let i = active.length - 1; i >= 0; i--) if (active[i].wb.max[0] < P.wb.min[0] - eps) active.splice(i, 1);
+    for (const Q of active) if (ov(P.wb, Q.wb, 1) > -eps && ov(P.wb, Q.wb, 2) > -eps) cands.push([P, Q]);
+    active.push(P);
+  }
+  // 两个物体的最小间隙，以及哪些块彼此接触
+  const gapOf = (P, Q) => {
+    let best = Infinity;
+    const touching = [];
+    for (let i = 0; i < P.parts.length; i++) for (let j = 0; j < Q.parts.length; j++) {
+      const a = P.pboxes[i], b = Q.pboxes[j];
+      if (ov(a, b, 0) < -eps || ov(a, b, 1) < -eps || ov(a, b, 2) < -eps) continue;
+      const g = partGap(P.parts[i], Q.parts[j]);
+      if (g < best) best = g;
+      if (g <= eps) touching.push([i, j]);
     }
-    // on 与朝向无关；贴面与包含只在朝向对齐时判断。
-    // 朝向不对齐（斜梁、转过角度的物体）时，退而用世界包围盒判断“接触”，这是近似的
-    if (!aligned) {
-      const key = [A.path, B.path].sort().join('|');
-      if (seen.has(key)) continue;
-      const wa = S.worldBox(A), wb = S.worldBox(B);
-      if ([0, 1, 2].every((k) => ov(wa, wb, k) > -eps) && [0, 1, 2].filter((k) => ov(wa, wb, k) > eps).length >= 2) {
-        seen.add(key);
-        facts.push({ rel: 'touching', a: A.path, b: B.path, text: `${A.path} touching ${B.path}`, approx: true });
+    return { gap: best, touching };
+  };
+  // A 立在 B 上：A 与 B 的竖直轴平行；A 的最低处贴着与它接触的那块 B 的最高处；两者在水平方向上有重叠
+  const onTest = (A, B, touching, flip) => {
+    const rel = compose(invT(B.W), A.W);
+    if (Math.abs(Math.abs(rel.R[1][1]) - 1) > 1e-6) return null;
+    const up = applyDir(B.W, [0, 1, 0]), bx = applyDir(B.W, [1, 0, 0]), bz = applyDir(B.W, [0, 0, 1]);
+    const span = (O, L) => { const iv = O.parts.map((P) => projOf(P, L)); return [Math.min(...iv.map((x) => x[0])), Math.max(...iv.map((x) => x[1]))]; };
+    const bottom = span(A, up)[0];
+    for (const [i, j] of touching) {
+      const [ia, jb] = flip ? [j, i] : [i, j];
+      const top = projOf(B.parts[jb], up)[1];
+      if (Math.abs(bottom - top) >= eps) continue;
+      if (ovI(projOf(A.parts[ia], bx), projOf(B.parts[jb], bx)) > eps && ovI(projOf(A.parts[ia], bz), projOf(B.parts[jb], bz)) > eps) return bottom - top;
+    }
+    return null;
+  };
+  // A 在 B 里：B 是单个凸块，A 的每一块在 B 的每个面法线方向上都不超出
+  const insideTest = (A, B) => {
+    if (!B.convex || vol(A.box) >= vol(B.box) * 0.9) return false;
+    const PB = B.parts[0];
+    if (PB.sphere) return A.parts.every((P) => (P.sphere ? len(sub(P.c, PB.c)) + P.r : Math.max(...P.verts.map((v) => len(sub(v, PB.c))))) <= PB.r + eps);
+    return PB.normals.every((nrm) => {
+      const hb = projOf(PB, nrm), nb = projOf(PB, scl(nrm, -1));
+      return A.parts.every((P) => projOf(P, nrm)[1] <= hb[1] + eps && projOf(P, scl(nrm, -1))[1] <= nb[1] + eps);
+    });
+  };
+  const facts = [];
+  const push = (rel, A, B, text, gap, approx) => facts.push({ rel, a: A.n.path, b: B.n.path, text, gap: +gap.toFixed(4), eps, ...(approx ? { approx: true } : {}) });
+  for (const [P, Q] of cands) {
+    if (P.n.isAncestorOf(Q.n) || Q.n.isAncestorOf(P.n)) continue;
+    const { gap, touching } = gapOf(P, Q);
+    if (gap > eps) continue;
+    const approx = P.approx || Q.approx;
+    let g;
+    if ((g = onTest(P, Q, touching, false)) !== null) { push('on', P, Q, `${P.n.path} on ${Q.n.path}`, g, approx); continue; }
+    if ((g = onTest(Q, P, touching, true)) !== null) { push('on', Q, P, `${Q.n.path} on ${P.n.path}`, g, approx); continue; }
+    // 贴面：两个都是实心盒子、坐标轴平行；在体积较大的那个的坐标系里判断，报“小的贴着大的”
+    const [A, B] = vol(P.box) <= vol(Q.box) ? [P, Q] : [Q, P];
+    if (A.boxy && B.boxy) {
+      const rel = compose(invT(B.W), A.W);
+      if (isAxisAligned(rel.R)) {
+        const a = transformBox(rel, A.box), b = B.box;
+        const [ox, oy, oz] = [0, 1, 2].map((k) => ov(a, b, k));
+        let face = null;
+        if (oy > eps) {
+          if (Math.abs(a.max[0] - b.min[0]) < eps && oz > eps) face = 'left';
+          else if (Math.abs(a.min[0] - b.max[0]) < eps && oz > eps) face = 'right';
+          else if (Math.abs(a.max[2] - b.min[2]) < eps && ox > eps) face = 'back';
+          else if (Math.abs(a.min[2] - b.max[2]) < eps && ox > eps) face = 'front';
+        }
+        if (face) { push('against', A, B, `${A.n.path} against ${B.n.path}.${face}`, gap, false); continue; }
       }
-      continue;
     }
-    if (oy > eps) {
-      let face = null;
-      if (Math.abs(a.max[0] - b.min[0]) < eps && oz > eps) face = 'left';
-      else if (Math.abs(a.min[0] - b.max[0]) < eps && oz > eps) face = 'right';
-      else if (Math.abs(a.max[2] - b.min[2]) < eps && ox > eps) face = 'back';
-      else if (Math.abs(a.min[2] - b.max[2]) < eps && ox > eps) face = 'front';
-      // 每对只报一次：报“更小的贴着更大的”
-      const key = [A.path, B.path].sort().join('|');
-      if (face && !seen.has(key) && vol(A._box) <= vol(B._box)) {
-        seen.add(key);
-        facts.push({ rel: 'against', a: A.path, b: B.path, text: `${A.path} against ${B.path}.${face}` });
-      }
-    }
-    if ([0, 1, 2].every((k) => a.min[k] >= b.min[k] - eps && a.max[k] <= b.max[k] + eps) && vol(a) < vol(b) * 0.9)
-      facts.push({ rel: 'inside', a: A.path, b: B.path, text: `${A.path} inside ${B.path}` });
+    if (insideTest(A, B)) { push('inside', A, B, `${A.n.path} inside ${B.n.path}`, gap, approx); continue; }
+    if (gap >= -eps) push('touching', A, B, `${A.n.path} touching ${B.n.path}`, gap, approx);
+    else push('intersects', A, B, `${A.n.path} intersects ${B.n.path}`, gap, approx);
   }
   return facts;
 }

@@ -122,7 +122,7 @@ semEl.addEventListener('click', (e) => {
 });
 
 function renderFacts(r) {
-  const groups = { on: '支撑 on', against: '贴面 against', inside: '包含 inside', touching: '接触 touching（朝向不对齐，按包围盒近似）' };
+  const groups = { on: '支撑 on', against: '贴面 against', inside: '包含 inside', touching: '接触 touching', intersects: '相交 intersects' };
   factList.innerHTML = Object.entries(groups).map(([k, title]) => {
     const fs = r.facts.filter((f) => f.rel === k);
     if (!fs.length) return '';

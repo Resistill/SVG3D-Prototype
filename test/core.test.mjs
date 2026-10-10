@@ -613,3 +613,58 @@ test('变体对语义层不可见：集合、检查只看原来的外包络', ()
   assert.ok(r.checks.every((c) => c.ok), JSON.stringify(r.checks));
   assert.ok(r.items.some((i) => i.path === 'a.skin.inner'));
 });
+
+// ───────── 空间事实：每对只一条、形状感知 ─────────
+
+const factOf = (r, a, b) => r.facts.filter((f) => (f.a === a && f.b === b) || (f.a === b && f.b === a));
+
+test('空间事实：每对物体只有一条最强的关系，旋转物体不会再多出近似接触', () => {
+  const r = compile(`
+    box ground size=40,1,40 pin=top
+    box hut size=4,3,4 on=ground turn=30
+    wedge ramp size=3,3,4 against=hut.left align=bottom
+  `);
+  assert.deepEqual(r.errors, []);
+  assert.deepEqual(factOf(r, 'hut', 'ground').map((f) => f.rel), ['on']);
+  assert.deepEqual(factOf(r, 'ramp', 'hut').map((f) => f.text), ['ramp against hut.left']);
+  assert.ok(r.facts.every((f) => !f.approx));
+});
+
+test('空间事实按真实形状：圆柱外侧的柱子不算在圆柱里面，扫掠不会“装下”路径围住的东西', () => {
+  const r = compile(`
+    cyl core r=4 h=10
+    cyl col r=0.2 h=8 at=(4.55*cos(45),0,4.55*sin(45))
+    arc loop r=10
+    sweep rail path=loop profile=rect section=0.4,0.2
+    box crate size=1,1,1 at=0,0,0
+    sphere ball r=1 at=8,0,0
+    box block size=2,2,2 at=9.5,0,0
+  `);
+  assert.deepEqual(r.errors, []);
+  assert.deepEqual(factOf(r, 'col', 'core'), [], '柱子离圆柱面还有 0.35 米');
+  assert.ok(!r.facts.some((f) => f.rel === 'inside' && f.b === 'rail'), '没有东西在细细的轨道“里面”');
+  assert.deepEqual(factOf(r, 'ball', 'block').map((f) => f.rel), ['intersects'], '球与盒子相交');
+});
+
+test('intersects 是一条事实，也能当关系谓词用', () => {
+  const r = compile(`
+    box beam size=10,0.5,0.5 at=0,3,0
+    repeat cols n=3 step=4,0,0 center=true { box c size=0.5,6,0.5 }
+    concept pierced = kind(box) & intersects(beam)
+  `);
+  assert.deepEqual(r.errors, []);
+  assert.deepEqual(members(r, 'pierced'), ['cols.0.c', 'cols.1.c', 'cols.2.c']);
+});
+
+test('repeat 继承参照物的朝向：转过角度的墙面上排窗', () => {
+  const r = compile(`
+    box wall size=10,6,0.4 turn=30
+    repeat win n=(3,2,1) step=2.5,2,0 center=true against=wall.front {
+      box pane size=1,1.2,0.1
+    }
+  `);
+  assert.deepEqual(r.errors, []);
+  const panes = r.facts.filter((f) => f.rel === 'against' && f.b === 'wall');
+  assert.equal(panes.length, 6, '六扇窗都贴在墙的正面');
+  assert.ok(panes.every((f) => f.text.endsWith('wall.front')));
+});
