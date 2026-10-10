@@ -80,32 +80,94 @@ function surfaces(objs) {
   return { byColor, all: bvhOf(objs) };
 }
 
-// 点集到一组表面的距离；返回 { r（平均代价）, mean, max, owners（每个点最近的物体） }
-function residual(points, target, k, color = null) {
+// 到一组表面的最近距离：nearest(target, k)(color) 给出 p → [d, 最近的物体]（没有目标、或 dMax 以内没有表面：[dMax, −1]）。
+// 距离优先量到同材质的表面；没有同材质的表面时量到全部表面，并多计一个 δ
+function nearest(target, k) {
   const v = new THREE.Vector3(), hit = {};
-  let rs = 0, sum = 0, mx = 0;
-  const owners = [];
-  const same = target && color != null ? target.byColor.get(colorKey(color)) : null;
-  const bvh = same ?? target?.all ?? null;
-  const penalty = target && color != null && !same ? k.delta : 0; // 没有同材质的表面：多计一个 δ
-  for (const p of points) {
-    let d = k.dMax, owner = -1;
-    if (bvh) {
+  return (color = null) => {
+    const same = target && color != null ? target.byColor.get(colorKey(color)) : null;
+    const bvh = same ?? target?.all ?? null;
+    const penalty = target && color != null && !same ? k.delta : 0;
+    return (p) => {
+      if (!bvh) return [k.dMax, -1];
       const res = bvh.bvh.closestPointToPoint(v.set(p[0], p[1], p[2]), hit, 0, k.dMax);
-      if (res) { d = Math.min(res.distance + penalty, k.dMax); owner = bvh.owner[bvh.triOf(res.faceIndex)]; }
-    }
-    rs += Math.log2(1 + Math.max(0, d - k.delta) / k.delta); sum += d; mx = Math.max(mx, d);
-    owners.push(owner);
-  }
-  const n = points.length || 1;
-  return { r: rs / n, mean: sum / n, max: mx, owners };
+      return res ? [Math.min(res.distance + penalty, k.dMax), bvh.owner[bvh.triOf(res.faceIndex)]] : [k.dMax, -1];
+    };
+  };
+}
+// 逐点距离 → { r（平均代价）, mean, max }；按点的顺序累加（增量评分与全量评分逐位一致）
+function aggregate(d, k) {
+  let rs = 0, sum = 0, mx = 0;
+  for (let i = 0; i < d.length; i++) { rs += Math.log2(1 + Math.max(0, d[i] - k.delta) / k.delta); sum += d[i]; mx = Math.max(mx, d[i]); }
+  const n = d.length || 1;
+  return { r: rs / n, mean: sum / n, max: mx };
+}
+// 点集到一组表面的距离；返回 { r, mean, max, owners（每个点最近的物体） }
+function residual(points, target, k, color = null) {
+  const f = nearest(target, k)(color);
+  const d = new Float64Array(points.length), owners = new Array(points.length);
+  points.forEach((p, i) => { [d[i], owners[i]] = f(p); });
+  return { ...aggregate(d, k), owners };
+}
+// 一个源部件的逐点结果 → 代价与归属。权重 = 这块表面在当前精度下有多少个 δ 见方的格子（取对数）：
+// 表面越大、精度要求越细，同样的误差越贵；归到最近点最多落在其上的那个重建物体（who、owners 是物体编号）
+function partResult(s, d, own, k) {
+  const res = aggregate(d, k);
+  const votes = new Map();
+  for (const o of own) if (o >= 0) votes.set(o, (votes.get(o) ?? 0) + 1);
+  const top = [...votes].sort((a, b) => b[1] - a[1])[0];
+  return { c: k.cRes * Math.log2(1 + s.area / (k.delta * k.delta)) * res.r, mean: res.mean, max: res.max, who: top ? top[0] : -1, owners: [...votes.keys()], d, own };
+}
+// 点到包围盒的距离
+const boxDist = (p, b) => Math.hypot(...[0, 1, 2].map((j) => Math.max(b.lo[j] - p[j], 0, p[j] - b.hi[j])));
+
+// 增量评分的缓存：同一组源部件上反复评分（细化、预览提议）时，只重算变了的部分，结果与全量评分一致。
+//   源侧固定的东西（三角形数组、BVH、面积、包围盒、基线）只算一次；
+//   R_recon 每个重建物体的残差只取决于它自己的几何（源固定），按“路径 + 颜色 + 几何哈希”缓存；
+//   R_src 每个源部件逐点记下距离与最近的物体。与上一次评分相比：删掉的物体只影响以它为最近表面的点；
+//   新增的物体只会让距离变小，只影响比现在的距离离它更近的点（同材质的目标存在时只看同材质的新增物体）；
+//   某种颜色的重建物体整组出现或消失时，这种颜色的源部件全部重算（同材质优先的目标变了）；改动太多时全部重算。
+// 常数不同（细化时用目标档位的 δ）各自一份状态
+export function scoreCache() { return { parts: null, shared: null, states: new Map() }; }
+
+const hashPos = (pos) => {
+  const u32 = new Uint32Array(pos.buffer, pos.byteOffset, pos.length);
+  let h = 2166136261;
+  for (let i = 0; i < u32.length; i++) h = Math.imul(h ^ u32[i], 16777619);
+  return (h >>> 0).toString(36) + ':' + pos.length;
+};
+const boxOfPos = (pos) => {
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < pos.length; i += 3) for (let j = 0; j < 3; j++) { const x = pos[i + j]; if (x < lo[j]) lo[j] = x; if (x > hi[j]) hi[j] = x; }
+  return { lo, hi };
+};
+const boxesMeet = (a, b, pad) => [0, 1, 2].every((j) => a.lo[j] - pad <= b.hi[j] && b.lo[j] <= a.hi[j] + pad);
+
+// 源侧：只取决于源部件，与常数无关
+function sharedOf(sourceParts, cache) {
+  if (cache?.parts === sourceParts && cache.shared) return cache.shared;
+  const src = sourceParts.map((p, i) => {
+    // 包围盒按原始坐标取（基线里的数字要和全量评分一模一样）
+    const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+    for (const t of p.tris) for (const v of t) for (let j = 0; j < 3; j++) { if (v[j] < lo[j]) lo[j] = v[j]; if (v[j] > hi[j]) hi[j] = v[j]; }
+    return { i, name: p.uid ?? p.name ?? p.from ?? `part_${i}`, tris: p.tris, pos: trisToArray(p.tris), color: p.material?.color, area: areaOf(p.tris), box: { lo, hi } };
+  });
+  const shared = { src, srcBVH: surfaces(src) };
+  if (cache) { cache.parts = sourceParts; cache.shared = shared; cache.states.clear(); }
+  return shared;
 }
 
-// result：compile() 的结果；files：描述文本（[{file, text}]，已包括 import 的文件）；sourceParts：readParts() 的源部件
-export function score({ result, files, sourceParts, consts = {} }) {
+// result：compile() 的结果；files：描述文本（[{file, text}]，已包括 import 的文件）；sourceParts：readParts() 的源部件；
+// cache：scoreCache()，可选（给了就增量评分）
+export function score({ result, files, sourceParts, consts = {}, cache = null }) {
   const k0 = { ...SCORE_DEFAULTS, ...consts }, k = inScene(k0), u = k0.unit;
+  // 计时：S3D_TIMING=1 时把各阶段耗时打到 stderr
+  const T0 = performance.now(), lap = (what) => process.env.S3D_TIMING && console.error(`[score] ${what} ${Math.round(performance.now() - T0)}ms`);
   const recon = sceneObjects(result, { sourceParts }).filter((o) => o.pos.length);
-  const src = sourceParts.map((p, i) => ({ i, name: p.uid ?? p.name ?? p.from ?? `part_${i}`, tris: p.tris, pos: trisToArray(p.tris), color: p.material?.color }));
+  const { src, srcBVH } = sharedOf(sourceParts, cache);
+  const ckey = JSON.stringify([k.delta, k.dMax, k.samples, k.cRes]);
+  const state = cache ? (cache.states.get(ckey) ?? cache.states.set(ckey, { recon: new Map(), prev: null, srcRes: null }).get(ckey)) : null;
+  lap('sceneObjects');
   const D0 = descriptionLength(files);
   // 有效描述：声明物体的行，物体还在才计
   const declared = new Set(result.nodes.map((n) => `${n.file ?? ''}:${n.line}`));
@@ -119,7 +181,9 @@ export function score({ result, files, sourceParts, consts = {} }) {
   const stmtOf = new Map();
   for (const n of result.nodes) { const c = byLine.get(`${n.file ?? ''}:${n.line}`); if (c && !n.ghost && n.kind !== 'instance' && !stmtOf.has(`${n.file ?? ''}:${n.line}`)) stmtOf.set(`${n.file ?? ''}:${n.line}`, { path: n.path, cost: c }); }
 
-  const reconBVH = surfaces(recon), srcBVH = surfaces(src);
+  lap('description');
+  const reconBVH = surfaces(recon);
+  lap('bvh');
   const per = new Map(recon.map((o) => [o.path, { path: o.path, stmt: 0, mesh: 0, rSrc: 0, rRecon: 0, meanErr: 0, maxErr: 0, src: [] }]));
   for (const { path, cost } of stmtOf.values()) { const p = per.get(path) ?? per.get([...per.keys()].find((q) => q.startsWith(path + '.')) ?? ''); if (p) p.stmt += cost; }
 
@@ -127,32 +191,94 @@ export function score({ result, files, sourceParts, consts = {} }) {
   let Lmesh = 0;
   for (const o of recon) if (o.mesh) { const c = k.cMesh * Math.log2(1 + (o.mesh.tris || 1)); Lmesh += c; per.get(o.path).mesh += c; }
 
-  // R_src：源部件 → 重建
-  let Rsrc = 0;
-  const srcOut = [];
-  for (const s of src) {
-    const pts = samplePoints(s.tris, k.samples, s.i + 1);
-    const res = residual(pts, reconBVH, k, s.color);
-    // 权重 = 这块表面在当前精度下有多少个 δ 见方的格子（取对数）：表面越大、精度要求越细，同样的误差越贵
-    const c = k.cRes * Math.log2(1 + areaOf(s.tris) / (k.delta * k.delta)) * res.r;
-    Rsrc += c;
-    // 归到最近点最多落在其上的那个重建物体
-    const votes = new Map();
-    for (const o of res.owners) if (o >= 0) votes.set(o, (votes.get(o) ?? 0) + 1);
-    const top = [...votes].sort((a, b) => b[1] - a[1])[0];
-    const who = top ? recon[top[0]].path : null;
-    if (who) { const p = per.get(who); p.rSrc += c; p.src.push(s.name); p.meanErr = Math.max(p.meanErr, res.mean); p.maxErr = Math.max(p.maxErr, res.max); }
-    srcOut.push({ name: s.name, tris: s.tris.length, cost: +c.toFixed(3), meanErr: +(res.mean * u).toFixed(5), maxErr: +(res.max * u).toFixed(5), explainedBy: who });
+  // 这一次的重建物体：键（路径 + 颜色 + 几何）与包围盒；和上一次比，得到新增的物体与删掉的物体
+  const keys = recon.map((o) => `${o.path}|${colorKey(o.color)}|${hashPos(o.pos)}`);
+  const now = new Map(keys.map((key, j) => [key, { j, path: recon[j].path, box: boxOfPos(recon[j].pos), color: colorKey(recon[j].color) }]));
+  // 物体路径的编号（逐点记最近的物体用；跨多次评分不变）
+  const ids = state?.ids ?? { of: new Map(), path: [] };
+  const idOf = (p) => { let i = ids.of.get(p); if (i == null) { i = ids.path.length; ids.path.push(p); ids.of.set(p, i); } return i; };
+  const reconId = recon.map((o) => idOf(o.path));
+  let delta = null; // null：全部重算
+  if (state?.prev && state.srcRes) {
+    const added = [], removed = new Set(), colorsNow = new Set([...now.values()].map((x) => x.color)), colorsPrev = new Set([...state.prev.values()].map((x) => x.color));
+    for (const [key, x] of now) if (!state.prev.has(key)) added.push(x);
+    for (const [key, x] of state.prev) if (!now.has(key)) removed.add(idOf(x.path));
+    const flipped = new Set([...colorsNow].filter((c) => !colorsPrev.has(c)).concat([...colorsPrev].filter((c) => !colorsNow.has(c))));
+    delta = { added, removed, flipped, colorsNow };
   }
+  // 改动牵连了大半个场景（被挂靠的物体换了形，挂在它上面的都跟着动）：逐点核对不比全部重算省，直接全部重算
+  if (delta && delta.added.length + delta.removed.size > 0.3 * recon.length) delta = null;
+  if (delta) {
+    const { added } = delta;
+    // 新增的物体单独建一组表面：包围盒初筛之后，按真实几何判断新增的东西是不是比现在的距离更近（同材质规则、多计的 δ 与正式查询一样）
+    const addedSurf = added.length ? surfaces(added.map((a) => recon[a.j])) : null;
+    const v = new THREE.Vector3(), hitA = {};
+    const closer = (p, color, same, limit) => {
+      const g = same ? addedSurf.byColor.get(colorKey(color)) : addedSurf.all;
+      const pen = !same && color != null ? k.delta : 0;
+      if (!g || limit - pen <= 0) return false;
+      const res = g.bvh.closestPointToPoint(v.set(p[0], p[1], p[2]), hitA, 0, limit - pen);
+      return !!res && res.distance + pen < limit;
+    };
+    delta.closer = closer;
+  }
+
+  // R_src：源部件 → 重建。逐点记距离与最近的物体；增量时只重算受影响的点：
+  //   最近的物体被删掉了的点；离某个新增物体的包围盒比现在的距离还近的点（同材质的目标存在时只看同材质的新增物体）
+  let Rsrc = 0, touchedParts = 0, touchedPoints = 0, byRemoval = 0;
+  const srcOut = [], srcRes = [];
+  const near = nearest(reconBVH, k);
+  for (const s of src) {
+    const was = delta ? state.srcRes[s.i] : null;
+    let x = was;
+    if (delta) {
+      const c = colorKey(s.color), same = s.color != null && delta.colorsNow.has(c);
+      // 同材质的目标存在时只看同材质的新增物体
+      const adds = delta.added.filter((a) => (!same || a.color === c) && boxesMeet(s.box, a.box, was.max));
+      const hit = delta.flipped.has(c) ? null : (was.owners.some((o) => delta.removed.has(o)) || adds.length ? adds : false);
+      if (hit !== false) {
+        const pts = samplePoints(s.tris, k.samples, s.i + 1), f = near(s.color);
+        const d = hit ? was.d.slice() : new Float64Array(pts.length), own = hit ? was.own.slice() : new Int32Array(pts.length);
+        for (let i = 0; i < pts.length; i++) {
+          if (hit && !delta.removed.has(own[i]) && !(hit.some((a) => boxDist(pts[i], a.box) < d[i]) && delta.closer(pts[i], s.color, same, d[i]))) continue;
+          if (hit && delta.removed.has(own[i])) byRemoval++;
+          const [di, oi] = f(pts[i]);
+          d[i] = di; own[i] = oi >= 0 ? reconId[oi] : -1; touchedPoints++;
+        }
+        x = partResult(s, d, own, k);
+        touchedParts++;
+      }
+    } else {
+      const pts = samplePoints(s.tris, k.samples, s.i + 1), f = near(s.color);
+      const d = new Float64Array(pts.length), own = new Int32Array(pts.length);
+      pts.forEach((p, i) => { const [di, oi] = f(p); d[i] = di; own[i] = oi >= 0 ? reconId[oi] : -1; });
+      x = partResult(s, d, own, k);
+      touchedParts++; touchedPoints += pts.length;
+    }
+    srcRes.push(x);
+    Rsrc += x.c;
+    const who = x.who >= 0 ? ids.path[x.who] : null;
+    if (who) { const p = per.get(who); p.rSrc += x.c; p.src.push(s.name); p.meanErr = Math.max(p.meanErr, x.mean); p.maxErr = Math.max(p.maxErr, x.max); }
+    srcOut.push({ name: s.name, tris: s.tris.length, cost: +x.c.toFixed(3), meanErr: +(x.mean * u).toFixed(5), maxErr: +(x.max * u).toFixed(5), explainedBy: who });
+  }
+  lap(`R_src（检查 ${touchedParts}/${src.length} 个部件，重算 ${touchedPoints} 个点，其中 ${byRemoval} 个因为最近的物体被删）`);
   // R_recon：重建物体 → 源。权重以顶层语句为单位：一个物体被细化成很多块、一个类型实例里的各个部件，
   // 共享一个权重、内部按面积分摊——拆分不会因为“块数多”而受罚；凭空多出来的语句照样各算一份
   const triArea = (t) => len3(cross3(sub3(t[1], t[0]), sub3(t[2], t[0]))) / 2;
   // 采样种子取自路径（不取序号）：语句挪了位置、换了文件，分数不变
   const seedOf = (s) => { let h = 2166136261; for (let j = 0; j < s.length; j++) h = Math.imul(h ^ s.charCodeAt(j), 16777619); return 1000 + ((h >>> 0) % 1000003); };
-  const rec = recon.map((o) => {
-    const tris = triList(o.pos);
-    const res = residual(samplePoints(tris, k.samples, seedOf(o.path)), srcBVH, k, o.color);
-    return { o, res, tris: tris.length, area: tris.reduce((s2, t) => s2 + triArea(t), 0), top: o.path.split('.')[0] };
+  let fresh = 0;
+  const reconRes = new Map();
+  const rec = recon.map((o, j) => {
+    let x = state?.recon.get(keys[j]);
+    if (!x) {
+      const tris = triList(o.pos);
+      const res = residual(samplePoints(tris, k.samples, seedOf(o.path)), srcBVH, k, o.color);
+      x = { r: res.r, mean: res.mean, max: res.max, tris: tris.length, area: tris.reduce((s2, t) => s2 + triArea(t), 0) };
+      fresh++;
+    }
+    reconRes.set(keys[j], x);
+    return { o, res: x, tris: x.tris, area: x.area, top: o.path.split('.')[0] };
   });
   const groups = new Map();
   for (const x of rec) { const g = groups.get(x.top) ?? { tris: 0, area: 0 }; g.tris += x.tris; g.area += x.area; groups.set(x.top, g); }
@@ -165,15 +291,19 @@ export function score({ result, files, sourceParts, consts = {} }) {
     const p = per.get(o.path);
     p.rRecon += c; p.meanErr = Math.max(p.meanErr, res.mean); p.maxErr = Math.max(p.maxErr, res.max);
   }
+  // 记住这一次的状态（只留这一次的物体，缓存不会越积越多）
+  if (state) { state.prev = now; state.srcRes = srcRes; state.recon = reconRes; state.ids = ids; }
 
-  // 基线：每个源部件写成一句世界坐标的 mesh 引用，误差为零
+  lap(`R_recon（重算 ${fresh}/${recon.length}）`);
+  // 基线：每个源部件写成一句世界坐标的 mesh 引用，误差为零（只取决于源部件与 cMesh）
   const fmt = (x) => String(Math.round(x * 1e4) / 1e4);
   let Smesh = 0;
   for (const s of src) {
-    const lo = [0, 1, 2].map((j) => Math.min(...s.tris.flat().map((v) => v[j]))), hi = [0, 1, 2].map((j) => Math.max(...s.tris.flat().map((v) => v[j])));
+    const { lo, hi } = s.box;
     const pv = [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2];
     Smesh += lineCost(`mesh p src="x#${s.name}" size=${[0, 1, 2].map((j) => fmt(hi[j] - lo[j])).join(',')} pivot=${pv.map(fmt).join(',')} at=${pv.map(fmt).join(',')} mat=m`) + k.cMesh * Math.log2(1 + s.tris.length);
   }
+  lap('S_mesh');
   const S = D.total + Lmesh + Rsrc + Rrecon;
   const objects = [...per.values()].map((p) => ({ ...p, total: +(p.stmt + p.mesh + p.rSrc + p.rRecon).toFixed(3), stmt: +p.stmt.toFixed(2), mesh: +p.mesh.toFixed(2), rSrc: +p.rSrc.toFixed(3), rRecon: +p.rRecon.toFixed(3), meanErr: +(p.meanErr * u).toFixed(5), maxErr: +(p.maxErr * u).toFixed(5) }));
   const r3 = (x) => +x.toFixed(2);

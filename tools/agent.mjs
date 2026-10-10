@@ -44,7 +44,7 @@ function applyProposal(P, id, prop) {
 // consts 可以覆盖分数常数：细化到某个档位时，用那个档位的 δ 衡量（细化到结构档就用结构档的尺子）
 async function scoreWith(P, overrides = {}, consts = {}) {
   const r = P.compile('', overrides);
-  const s = score({ result: r, files: P.geometryFiles(overrides), sourceParts: await P.sourceParts(), consts: P.consts(consts) });
+  const s = score({ result: r, files: P.geometryFiles(overrides), sourceParts: await P.sourceParts(), consts: P.consts(consts), cache: P.scoreCache() });
   return { r, s };
 }
 // 自动细化：从最差的物体开始，逐个按更细的档位拆分；分数下降就写进修改层，直到解释率达标或预算用完
@@ -377,7 +377,7 @@ export const COMMANDS = {
     desc: '自评分数：S = 描述长度 + 网格引用 + 双向几何残差（越低越好）；explain 是解释率；worst 是下一步最值得修的物体',
     args: { objects: '可选：输出每个物体的分数' },
     async run(P, a) {
-      const s = score({ result: P.compile(), files: P.geometryFiles(), sourceParts: await P.sourceParts(), consts: P.consts() });
+      const s = score({ result: P.compile(), files: P.geometryFiles(), sourceParts: await P.sourceParts(), consts: P.consts(), cache: P.scoreCache() });
       P.write('score.json', JSON.stringify(s, null, 2) + '\n');
       const { objects, sources, ...summary } = s;
       // 解释得最差的源部件（L2 里是合并网格的分量）：render --source --focus=名字 可以看它是什么

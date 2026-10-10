@@ -4,13 +4,13 @@
 //   base.s3d       逆向基础层（机器生成，重跑逆向会重写；人和 AI 不直接改）；大的时候是索引，内容拆在 base/ 下
 //   edits.s3d      修改层；semantics.s3d 语义层；style.s3d 风格层；decisions.s3d 决定层（逆向的约束，不进 scene）
 //   state/         选中状态等；renders/ 渲染图；score.json 最近一次评分
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, relative, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compile, FACT_EPS } from '../src/s3d.js';
 import { readParts, reverse, FIDELITY } from './reverse.mjs';
-import { SCORE_DEFAULTS } from './score.mjs';
+import { SCORE_DEFAULTS, scoreCache } from './score.mjs';
 import { splitSource, joinSource, importedFiles } from './split.mjs';
 
 const LIB = resolve(dirname(fileURLToPath(import.meta.url)), '../lib/semantics.s3d');
@@ -24,6 +24,10 @@ const HEADERS = {
   'style.s3d': '// 风格层：只改外观（mat / color / use=）\n',
   'decisions.s3d': '// 决定层：对逆向的约束（哪些部件是一个物体、是一个阵列、是同一个类型、保留为网格……），重跑逆向时遵守。不进 scene\n',
 };
+
+// 同一个进程里（MCP 服务、自动细化、连续预览提议）多次打开同一个工程：源部件与评分缓存留在内存里；
+// 源模型文件变了（大小、修改时间）或换了拆分方式就重读
+const SESSIONS = new Map();
 
 const sha1 = (path) => createHash('sha1').update(readFileSync(path)).digest('hex');
 
@@ -53,7 +57,15 @@ export function openProject(dir) {
     geometryFiles: (overrides = {}) => GEOMETRY_LAYERS.flatMap((f) => (f === 'base.s3d' ? importedFiles((x) => overrides[x] ?? P.read(x), f) : [f]))
       .filter((f) => overrides[f] != null || P.exists(f)).map((f) => ({ file: f, text: overrides[f] ?? P.read(f) })),
     _parts: null,
-    async sourceParts() { return (P._parts ??= await readParts(P.sourcePath(), { split: cfg.split ?? 'auto' })); },
+    async sourceParts() {
+      if (P._parts) return P._parts;
+      const path = P.sourcePath(), st = statSync(path), key = `${path}|${st.size}|${st.mtimeMs}|${cfg.split ?? 'auto'}`;
+      let ses = SESSIONS.get(dir);
+      if (!ses || ses.key !== key) SESSIONS.set(dir, (ses = { key, parts: await readParts(path, { split: cfg.split ?? 'auto' }), cache: scoreCache() }));
+      return (P._parts = ses.parts);
+    },
+    // 增量评分的缓存（与 sourceParts() 读到的源部件配套；缓存自己会核对源部件是不是同一组）
+    scoreCache: () => SESSIONS.get(dir)?.cache ?? null,
     selection() { try { return JSON.parse(P.read('state/selection.json')); } catch { return { paths: [] }; } },
   };
   return P;

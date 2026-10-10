@@ -75,6 +75,7 @@ score [--objects]
 - 换形状不用改名：`over 物体 : 种类 新参数…`（例如 `over hall : subtract { box outer … ; box door … }`、`over road : pipe path=[…] r=…`），名字与引用都不变。改阵列的模板：`over 阵列 { drop 部件 ; 新语句 }` 作用到每个实例。
 - `explain = 1 − S / S_mesh`：相对“全部写成网格引用”的基线解释了多少，是进度条。
 - `worst`：代价最高的重建物体；`worstSources`：解释得最差的源部件（`explainedBy` 是它被归到的重建物体）。
+- 同一个进程里（MCP 服务、`refine --auto`、`preview` / `accept`）的评分是增量的：第一次全量，之后只重算改动影响到的部分，分数与全量一致。命令行每次是新进程，每次都是全量。`S3D_TIMING=1` 把各阶段耗时和重算了多少打到 stderr。
 
 几条从分数本身推出来的经验：
 

@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { compile } from '../src/s3d.js';
 import { sceneToGLB } from '../tools/export.mjs';
 import { partsOfDocument, reverse } from '../tools/reverse.mjs';
-import { score, lineCost, numberCost } from '../tools/score.mjs';
+import { score, scoreCache, lineCost, numberCost } from '../tools/score.mjs';
 import { sceneObjects } from '../tools/worldtris.mjs';
 import { rasterize } from '../tools/raster.mjs';
 import { runCommand } from '../tools/agent.mjs';
@@ -257,4 +257,33 @@ test('场景单位：init 按部件尺寸猜单位（厘米场景猜成 0.01）�
   const wrong = await runCommand('score', join(dir, 'cm'), {});
   assert.equal(wrong.consts.unit, 1);
   assert.equal(wrong.consts.delta, scm.consts.delta, 'δ 仍按米');
+});
+
+test('增量评分：连续改动（删除、换形、新材质、移动、恢复）时与全量评分逐位一致，只重算受影响的部分', () => {
+  const src = readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8');
+  const parts = partsOfDocument(sceneToGLB(src, { level: 'L0' }).doc);
+  const base = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure' }).src;
+  const cache = scoreCache();
+  const steps = [
+    base,
+    base + '\ndrop spare\n',
+    base + '\nover pad : box size=30,1,30\n',
+    base + '\nmaterial ruby color=#cc2244\nover hangar_body mat=ruby\n',
+    base + '\nmaterial ruby color=#cc2244\nover hangar_body mat=ruby\nover bunker at=0,0,0\n',
+    base,
+  ];
+  // 并列（到两个物体的距离相同）时的归属取决于 BVH 的结构，不要求一致；代价、误差逐位一致
+  const strip = (x) => JSON.stringify({ ...x, objects: x.objects.map(({ src: _s, rSrc: _r, total: _t, meanErr: _m, maxErr: _x, ...o }) => o), worst: null, sources: x.sources.map(({ explainedBy: _e, ...y }) => y) });
+  for (const [i, text] of steps.entries()) {
+    const r = compile(text);
+    assert.deepEqual(r.errors, [], `第 ${i} 步`);
+    const full = score({ result: r, files: [{ file: null, text }], sourceParts: parts, consts: { delta: 0.05 } });
+    const inc = score({ result: r, files: [{ file: null, text }], sourceParts: parts, consts: { delta: 0.05 }, cache });
+    assert.equal(inc.S, full.S, `第 ${i} 步`);
+    assert.equal(strip(inc), strip(full), `第 ${i} 步`);
+  }
+  // 常数不同各自一份状态，互不干扰
+  const r = compile(base);
+  assert.equal(score({ result: r, files: [{ file: null, text: base }], sourceParts: parts, consts: { delta: 0.25 }, cache }).S,
+    score({ result: r, files: [{ file: null, text: base }], sourceParts: parts, consts: { delta: 0.25 } }).S);
 });
