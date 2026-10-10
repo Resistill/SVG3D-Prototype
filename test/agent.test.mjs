@@ -7,11 +7,12 @@ import { join } from 'node:path';
 import { compile } from '../src/s3d.js';
 import { sceneToGLB } from '../tools/export.mjs';
 import { partsOfDocument, reverse } from '../tools/reverse.mjs';
-import { score, scoreCache, lineCost, numberCost } from '../tools/score.mjs';
+import { score, scoreCache, lineCost, numberCost, neighborhoodScorer } from '../tools/score.mjs';
 import { sceneObjects } from '../tools/worldtris.mjs';
 import { rasterize } from '../tools/raster.mjs';
 import { runCommand } from '../tools/agent.mjs';
 import { splitSource } from '../tools/split.mjs';
+import { panelLines } from '../tools/panels.mjs';
 
 test('描述长度的计价：名字与关键字各 1，数字按小数位，注释与元数据不计', () => {
   assert.equal(numberCost('26'), 1);
@@ -328,4 +329,30 @@ test('文件拆分按楼栋聚组：立在楼上、在楼里的物体与楼进�
   const r = compile(sp.index, { file: 'base.s3d', resolve: (p) => files[p] });
   assert.deepEqual(r.errors, []);
   assert.equal(r.nodes.length, compile(text).nodes.length);
+});
+
+test('板件分解：有内部空间的楼（外墙、楼板、门洞连成一个网格）拆成墙板与楼板，比实心盒子好', () => {
+  const r = compile(`
+subtract shell {
+  box outer size=20,8,12
+  box inner size=19.4,7.4,11.4 at=0,0.3,0
+  box door size=3,4,1 at=outer.front pin=center align=bottom
+}
+box slab size=19.4,0.3,11.4 at=0,4,0
+`);
+  const tris = [];
+  for (const o of sceneObjects(r)) for (let i = 0; i < o.pos.length; i += 9) tris.push([0, 3, 6].map((k) => [o.pos[i + k], o.pos[i + k + 1], o.pos[i + k + 2]]));
+  const p = panelLines(tris, { cell: 0.25, thick: 0.1, maxThick: 1, maxBoxes: 60, digits: 2 });
+  assert.ok(p && p.boxes >= 6, JSON.stringify(p));
+  const text = p.lines.join('\n');
+  assert.match(text, /^box wall /m);
+  assert.match(text, /^box (floor|ceiling)\S* size=[\d.]+,0\.3,/m, '楼板的厚度来自配对的上下两个面');
+  const rc = compile(text);
+  assert.deepEqual(rc.errors, []);
+  const scorer = neighborhoodScorer({ parts: [{ tris, material: null }], near: [0], others: [], reconColors: new Set(), consts: { delta: 0.05 } });
+  const plain = (objs) => objs.map((o) => ({ ...o, color: null }));
+  const solid = scorer(plain(sceneObjects(compile('box solid size=20,8,12'))), ['box solid size=20,8,12']);
+  const panels = scorer(plain(sceneObjects(rc)), p.lines);
+  assert.ok(panels.R_src < 0.1 * solid.R_src, `板件解释了内部：${JSON.stringify(panels)} 对 ${JSON.stringify(solid)}`);
+  assert.ok(panels.S < solid.S, `总分更低：${panels.S} < ${solid.S}`);
 });

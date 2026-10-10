@@ -105,6 +105,7 @@ export function toLocal(tris, world) {
 import { fitPart, orientText, setFidelity, FIDELITY, digitsFor, splitComponents, reverse as reverseParts } from './reverse.mjs';
 import { sceneObjects } from './worldtris.mjs';
 import { neighborhoodScorer, SCORE_DEFAULTS } from './score.mjs';
+import { panelLines } from './panels.mjs';
 import { compile, FACT_EPS } from '../src/s3d.js';
 
 const mvT = (cols, v) => [dot(cols[0], v), dot(cols[1], v), dot(cols[2], v)];
@@ -130,8 +131,9 @@ function voxelLines(tris, { voxel, maxBoxes, digits }) {
 }
 
 // 一组分量 → 在物体自己的坐标系里跑一遍逆向（逐块拟合、找关系、找阵列与镜像）；
-// 面积大、又拟合不好的分量（一整栋楼的外壳）换成同名的一组体素盒子。每个子块记下来源 ~src="部件#分量"，以后还能逐层细化
-function nestedLines(comps, { to, unit, digits, voxel, substitute = true }) {
+// 面积大、又拟合不好的分量（一整栋楼的外壳）换成同名的一组体素盒子（substitute='voxel'）或板件（'panel'：墙板、楼板、开洞）。
+// 每个子块记下来源 ~src="部件#分量"，以后还能逐层细化
+function nestedLines(comps, { to, unit, digits, voxel, panel, substitute = 'voxel' }) {
   const out = reverseParts(comps.map((c) => ({ ...c, name: null })), { srcFile: 'refine', fidelity: to, unit, types: false, names: false });
   setFidelity(to, unit);
   const total = comps.reduce((s2, c) => s2 + c.area, 0);
@@ -145,7 +147,7 @@ function nestedLines(comps, { to, unit, digits, voxel, substitute = true }) {
     if (!l.trim() || /^(\/\/|material )/.test(l)) continue;
     const m = /^([\p{L}_][\p{L}\p{N}_]*) ([\p{L}_][\p{L}\p{N}_]*) /u.exec(l);
     const c = m && poor.get(m[2]);
-    const v = c && voxelLines(c.tris, { voxel, maxBoxes: 8, digits });
+    const v = c && (substitute === 'panel' ? panelLines(c.tris, { ...panel, cell: voxel, maxBoxes: 16, digits }) : voxelLines(c.tris, { voxel, maxBoxes: 8, digits }));
     if (v) { lines.push(`group ${m[2]} ~src="${c.from}" {`, ...v.lines.map((x) => '  ' + x), '}'); voxels += v.boxes; continue; }
     lines.push(l.replace(/ ~fit=\S+/, ''));
   }
@@ -242,6 +244,8 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
     cands.push({ name, ...w, boxes: c.boxes, parts: c.parts, arrays: c.arrays, voxel: c.voxel, local: ls });
   };
   const digits = digitsFor(to, unit), voxel = Math.max(2 * F.tau, 1e-3) / unit;
+  // 板件：单面薄板的厚度、配对成一块板的最大厚度（墙、楼板一般不超过 1 m）
+  const panel = { thick: Math.max(2 * F.tau, 0.1) / unit, maxThick: 1 / unit };
   // 分量在世界坐标里拆（编号与 ~src 的“部件#分量”一致），再换到物体坐标系
   const comps = splitComponents(part).map((c) => { const tris = toLocal(c.tris, n.world); return { ...c, tris, area: areaOf(tris) }; }).sort((a, b) => b.area - a.area);
   if (comps.length > 1) {
@@ -254,15 +258,22 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
       if (kept.has(k)) continue;
       kept.add(k);
       const label = frac === 1 ? `全部 ${comps.length} 块` : `面积前 ${Math.round(frac * 100)}%（${k}/${comps.length} 块）`;
-      add(label, { ...nestedLines(comps.slice(0, k), { to, unit, digits, voxel, substitute: false }), parts: k });
+      add(label, { ...nestedLines(comps.slice(0, k), { to, unit, digits, voxel, substitute: null }), parts: k });
       const v = nestedLines(comps.slice(0, k), { to, unit, digits, voxel });
       if (v.voxelized) add(`${label}，拟合差的 ${v.voxelized} 块换成体素`, { ...v, parts: k });
+      const w = nestedLines(comps.slice(0, k), { to, unit, digits, voxel, panel, substitute: 'panel' });
+      if (w.voxelized) add(`${label}，拟合差的 ${w.voxelized} 块换成板件`, { ...w, parts: k });
     }
   }
   setFidelity(to, unit);
   for (const [v, mb] of [[voxel, to === 'detail' ? 120 : 40], [voxel * 4, 16], [voxel * 16, 6]]) {
     const c = voxelLines(local, { voxel: v, maxBoxes: mb, digits });
     if (c) add(`体素 ${fmt(c.voxel, 3)}（${c.boxes} 块）`, { ...c, parts: comps.length });
+  }
+  // 板件：有内部空间的大分量（外墙、楼板、内墙连成一个网格）按平面拆成墙板、楼板，门窗洞空出来
+  for (const [cell, mb] of [[voxel, to === 'detail' ? 240 : 120], [voxel * 2, 60], [voxel * 4, 30]]) {
+    const p = panelLines(local, { ...panel, cell, maxBoxes: mb, digits });
+    if (p) add(`板件 ${fmt(p.cell, 3)}（${p.boxes} 块）`, { lines: p.lines, boxes: p.boxes, parts: comps.length });
   }
   const ok = cands.filter((c) => !c.error).sort((a, b) => a.local.S - b.local.S);
   if (!ok.length) return { path, error: '没有可用的候选', candidates: cands.map((c) => ({ name: c.name, error: c.error })) };
