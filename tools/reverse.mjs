@@ -841,7 +841,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
     // 旁路信息（sidecar 表里对上的列）也写成 ~元数据：不计描述长度，可以在 where 里读
     const meta = Object.entries(o.meta ?? {}).filter(([, v]) => v !== '').map(([k, v]) => `~${k}=${/^-?\d+(\.\d+)?$/.test(v) ? v : JSON.stringify(String(v))}`);
-    return [o.kind, o.id, props, place, orient, o.mat === defaultMat ? '' : `mat=${o.mat}`, `~fit=${fmt(o.fit)}`, o.src ? `~src=${JSON.stringify(o.src)}` : '', ...meta].filter(Boolean).join(' ');
+    return [o.kind, o.id, props, place, orient, o.mat === defaultMat ? '' : (o.mat === defaultMat ? '' : `mat=${o.mat}`), `~fit=${fmt(o.fit)}`, o.src ? `~src=${JSON.stringify(o.src)}` : '', ...meta].filter(Boolean).join(' ');
   };
   const absLine = (o) => line(o, `at=${vec(o.at)}`, orientText(o.cols));
   const absSrc = header.concat(objs.map(absLine)).join('\n');
@@ -1030,7 +1030,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
           // 长度由关系决定的杆：从顶点垂到支撑物
           const ch = u.children[0], o = ch.members[0];
           const lp = mvT(poses[0].M, sub(u.top(o), poses[0].q));
-          lines.push(`  span ${ch.id} from=(${vecS(lp)}) drop=${nameOf(byId.get(u.drop.support))} r=${u.drop.r} mat=${o.mat} ~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`);
+          lines.push(`  span ${ch.id} from=(${vecS(lp)}) drop=${nameOf(byId.get(u.drop.support))} r=${u.drop.r}${o.mat === defaultMat ? '' : ` mat=${o.mat}`} ~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`);
           for (const [k, m] of ch.members.entries()) {
             targets.push({ o: m, path: `${u.id}.${k}.${ch.id}`, tol: 2e-3 * S, unit: u.id, kind: 'along', rod: true });
             setPose(m, m.cols, m.box);
@@ -1045,7 +1045,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
           const colsL = o.cols.map((c) => mvT(poses[0].M, c));
           const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
           const orient = o.symY && Math.abs(colsL[1][1] - 1) < 1e-6 ? '' : orientText(colsL);
-          lines.push('  ' + [o.kind, ch.id, props, `at=${vecS(lp)}`, orient, `mat=${o.mat}`, `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' '));
+          lines.push('  ' + [o.kind, ch.id, props, `at=${vecS(lp)}`, orient, (o.mat === defaultMat ? '' : `mat=${o.mat}`), `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' '));
           for (const [k, m] of ch.members.entries()) {
             targets.push({ o: m, path: `${u.id}.${k}.${ch.id}`, tol: 2e-3 * S, unit: u.id, kind: 'along' });
             setPose(m, colsL.map((c) => mvC(poses[k].M, c)), o.box);
@@ -1071,7 +1071,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
           // 阵列成员的校验更严（2 mm），数字精度也要跟上
           const cc = chooseFor(o, o.at, cand, (B) => (sib.has(B.id) ? unitOf.get(B.id).child.id : nameOf(B)), 5e-4 * S);
           const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
-          lines.push('  ' + [o.kind, ch.id, props, cc ? cc.place : `at=${vec(o.at)}`, cc ? orientRel(o, cc.ref) : orientText(o.cols), `mat=${o.mat}`, `~fit=${fmt(Math.min(...ch.members.map((mm) => mm.fit)))}`].filter(Boolean).join(' '));
+          lines.push('  ' + [o.kind, ch.id, props, cc ? cc.place : `at=${vec(o.at)}`, cc ? orientRel(o, cc.ref) : orientText(o.cols), (o.mat === defaultMat ? '' : `mat=${o.mat}`), `~fit=${fmt(Math.min(...ch.members.map((mm) => mm.fit)))}`].filter(Boolean).join(' '));
           if (cc) stats[cc.kind]++; else stats.coord++;
           sib.add(o.id);
           for (const [k, mm] of ch.members.entries()) {
@@ -1126,7 +1126,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
         const placeTxt = cc ? cc.place : lp.every((v) => Math.abs(v) < 1e-6) ? '' : `at=${vec(lp)}`;
         const colsL = o.cols.map((col) => mvT(RF, col));
         const orient = cc ? orientRel(o, cc.ref) : o.symY && Math.abs(colsL[1][1] - 1) < 1e-6 ? '' : orientText(colsL);
-        lines.push('  ' + [o.kind, ch.id, props, placeTxt, orient, `mat=${o.mat}`, `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' '));
+        lines.push('  ' + [o.kind, ch.id, props, placeTxt, orient, (o.mat === defaultMat ? '' : `mat=${o.mat}`), `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' '));
         sib.add(o.id);
         for (const [i, m] of ch.members.entries()) {
           const k = instOf(u, i);

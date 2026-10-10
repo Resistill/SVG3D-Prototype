@@ -424,3 +424,20 @@ test('计价规则：同一个网格只付一次；换了形的基础层语句�
   const s3 = score({ result: compile(t3), files: [{ file: null, text: t3 }], sourceParts: parts.slice(0, 1), objects: true });
   assert.equal(s3.sources[0].explainedBy, 'a');
 });
+
+test('默认材质：没写 mat= 的物体用 default=true 的材质；逆向在多数物体同一种材质时用它省掉每行的 mat=', () => {
+  const r = compile('material a color=#ff0000\nmaterial b color=#00ff00 default=true\nbox x size=1,1,1\nbox y size=1,1,1 at=3,0,0 mat=a\ngroup g mat=a {\n  box z size=1,1,1 at=6,0,0\n}');
+  assert.deepEqual(r.errors, []);
+  const mat = (p) => r.items.find((i) => i.path === p).material.name;
+  assert.equal(mat('x'), 'b');
+  assert.equal(mat('y'), 'a');
+  assert.equal(mat('g.z'), 'a', '上级写了材质就继承上级，不用默认');
+  const parts = partsOfDocument(sceneToGLB(SCENE, { level: 'L0' }).doc);
+  const out = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure' });
+  const def = /^material (\S+) .*default=true/m.exec(out.src);
+  assert.ok(def, out.src.split('\n').filter((l) => /^material/.test(l)).join('\n'));
+  assert.doesNotMatch(out.src, new RegExp(`mat=${def[1]}\\b`), '默认材质不再逐行写');
+  const r2 = compile(out.src);
+  assert.deepEqual(r2.errors, []);
+  assert.ok(r2.items.filter((i) => i.material.name === def[1]).length >= parts.length / 2);
+});
