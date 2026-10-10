@@ -32,7 +32,12 @@ export class Viewer {
 
     this.content = new THREE.Group();
     this.curveLayer = new THREE.Group();
-    this.scene.add(this.content, this.curveLayer);
+    // 源模型叠加层：半透明，不参与拾取与取景
+    this.overlay = new THREE.Group();
+    this.scene.add(this.content, this.curveLayer, this.overlay);
+    // 误差热力：路径 → 0..1（满刻度由调用方定），null 时按材质显示
+    this.heat = null;
+    this.heatMats = new Map();
     this.curveMat = new THREE.LineDashedMaterial({ color: '#1f5fd6', dashSize: 0.8, gapSize: 0.5, depthTest: false, transparent: true, opacity: 0.85 });
     this.helper = null;
     this.mats = new Map();
@@ -163,8 +168,9 @@ export class Viewer {
         const geom = itemGeometry(item, this.evaluator);
         const mesh = new THREE.Mesh(geom, this.material(item.material));
         mesh.castShadow = mesh.receiveShadow = true;
-        mesh.userData = { path: item.path, tags: item.tags, baseMat: mesh.material };
+        mesh.userData = { path: item.path, tags: item.tags, origMat: mesh.material };
         mesh.name = item.path;
+        this.paint(mesh);
         this.content.add(mesh);
       } catch (e) {
         warnings.push(`${item.path}：几何生成失败（${e.message}）`);
@@ -181,8 +187,10 @@ export class Viewer {
       this.curveLayer.add(line);
     }
     this.nodes = result.nodes;
+    this.nodeMap = new Map(result.nodes.map((n) => [n.path, n]));
     this.fitShadow();
     if (this.firstFrame && this.content.children.length) { this.frame(); this.firstFrame = false; }
+    if (this.isolated) this.applyIsolation();
     if (this.selected) this.highlight(this.selected);
     return warnings;
   }
@@ -192,29 +200,60 @@ export class Viewer {
     const holder = new THREE.Group();
     holder.name = item.path;
     const ph = new THREE.Mesh(worldGeom(item), new THREE.MeshStandardMaterial({ color: '#8899aa', transparent: true, opacity: 0.35 }));
-    ph.userData = { path: item.path, tags: item.tags, baseMat: ph.material };
+    ph.userData = { path: item.path, tags: item.tags, origMat: ph.material };
+    this.paint(ph);
     holder.add(ph);
     this.content.add(holder);
     const [rel, node] = item.geom.src.split('#');
     const url = new URL(rel, this.srcBase ?? location.href).href;
     if (!this.gltfCache.has(url)) this.gltfCache.set(url, this.loader.loadAsync(url));
     this.gltfCache.get(url).then((gltf) => {
-      // 节点可以写成 名字@k（重名节点里的第 k 个）
-      const m = node && /^(.*)@(\d+)$/.exec(node);
-      let srcObj = gltf.scene;
-      if (m) { const hits = []; gltf.scene.traverse((o) => { if (o.name === m[1]) hits.push(o); }); srcObj = hits[+m[2] - 1] ?? hits[0]; }
-      else if (node) srcObj = gltf.scene.getObjectByName(node);
-      if (!srcObj) throw new Error(`找不到节点 ${node}`);
+      const srcObj = node ? this.findSourceNode(gltf, node) : gltf.scene;
+      if (!srcObj) {
+        // 找不到：占位盒改成红色线框，一眼能看出是“没加载上”，而不是一个半透明的盒子静默留着
+        console.warn(`mesh ${item.path}：源模型 ${rel} 里找不到节点「${node}」，显示为红色线框占位`);
+        ph.userData.origMat = this.missingMat ??= new THREE.MeshBasicMaterial({ color: '#ff3b3b', wireframe: true });
+        ph.userData.missing = true;
+        this.paint(ph);
+        return;
+      }
       gltf.scene.updateMatrixWorld(true);
-      const obj = srcObj.clone(true);
+      // 只取这个部件本身：节点是单个 Mesh 时不带它的子节点（子节点是别的部件）
+      const obj = srcObj.isMesh ? srcObj.clone(false) : srcObj.clone(true);
       obj.matrixAutoUpdate = false;
       const { R, t } = item.world, p = item.geom.pivot;
       const W = new THREE.Matrix4().set(R[0][0], R[0][1], R[0][2], t[0], R[1][0], R[1][1], R[1][2], t[1], R[2][0], R[2][1], R[2][2], t[2], 0, 0, 0, 1);
       obj.matrix.copy(W.multiply(new THREE.Matrix4().makeTranslation(-p[0], -p[1], -p[2])).multiply(srcObj.matrixWorld));
-      obj.traverse((o) => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; o.userData = { path: item.path, tags: item.tags, baseMat: o.material }; } });
+      obj.traverse((o) => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; o.userData = { path: item.path, tags: item.tags, origMat: o.material }; this.paint(o); } });
       holder.remove(ph);
       holder.add(obj);
+      // 异步加载完成时可能已经选中了它：补上高亮
+      if (this.selected?.some((s) => item.path === s || item.path.startsWith(s + '.'))) obj.traverse((o) => { if (o.isMesh) o.material = this.hiMat(o.userData.baseMat); });
     }).catch((e) => console.warn(`mesh ${item.path} 加载失败：${e.message}`));
+  }
+
+  // 按 .s3d 里写的原始节点名找源文件里的部件。GLTFLoader 会清洗名字（去掉 / . : 等、重名追加 _1），
+  // 所以用 parser.associations 拿到节点下标，再取 glTF JSON 里的原名。名字@k 是同名部件里的第 k 个：
+  // 与 tools/reverse.mjs 的 partsOfDocument 一致——深度优先遍历场景，带网格的节点每个图元算一个部件
+  findSourceNode(gltf, node) {
+    if (!gltf.userData.s3dParts) {
+      const json = gltf.parser.json, byName = new Map();
+      gltf.scene.traverse((o) => {
+        const i = gltf.parser.associations.get(o)?.nodes;
+        if (i == null) return;
+        const nd = json.nodes[i];
+        if (nd.mesh == null || !nd.name) return;
+        const n = json.meshes[nd.mesh].primitives.length;
+        // 多个图元时 three.js 的节点是 Group，每个图元是一个子 Mesh
+        const prims = n === 1 ? [o] : Array.from({ length: n }, (_, j) => o.children.find((c) => c.isMesh && gltf.parser.associations.get(c)?.primitives === j) ?? o);
+        if (!byName.has(nd.name)) byName.set(nd.name, []);
+        byName.get(nd.name).push(...prims);
+      });
+      gltf.userData.s3dParts = byName;
+    }
+    const m = /^(.*)@(\d+)$/.exec(node), parts = gltf.userData.s3dParts;
+    if (m && parts.has(m[1])) return parts.get(m[1])[+m[2] - 1] ?? null;
+    return parts.get(node)?.[0] ?? null;
   }
 
   bounds() { return new THREE.Box3().setFromObject(this.content); }
@@ -246,7 +285,9 @@ export class Viewer {
 
   pick(v) {
     this.raycaster.setFromCamera(v, this.camera);
-    const hit = this.raycaster.intersectObjects(this.content.children, true)[0];
+    // 隔离视图里隐藏的物体不参与拾取
+    const shown = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
+    const hit = this.raycaster.intersectObjects(this.content.children, true).find((h) => shown(h.object));
     return hit ? hit.object.userData : null;
   }
 
@@ -255,26 +296,96 @@ export class Viewer {
     paths = paths ? [].concat(paths) : [];
     this.selected = paths.length ? paths : null;
     if (this.helper) { this.scene.remove(this.helper); this.helper = null; }
-    const under = (p) => paths.some((s) => p === s || p.startsWith(s + '.'));
+    // 路径本身或它的某个祖先被选中（按前缀逐级查集合：选中几百个物体时也不必两两比较）
+    const set = new Set(paths);
+    const under = (p) => { for (let i = p.length; i > 0; i = p.lastIndexOf('.', i - 1)) if (set.has(p.slice(0, i))) return true; return false; };
     const meshes = [];
     this.content.traverse((o) => { if (o.isMesh && o.userData.baseMat) meshes.push(o); });
-    for (const m of meshes) {
-      const base = m.userData.baseMat;
-      if (paths.length && under(m.userData.path)) {
-        if (!base.userData.hi) { base.userData.hi = base.clone(); base.userData.hi.emissive = new THREE.Color('#ff7a1a'); base.userData.hi.emissiveIntensity = 0.55; }
-        m.material = base.userData.hi;
-      } else m.material = base;
-    }
+    for (const m of meshes) m.material = paths.length && under(m.userData.path) ? this.hiMat(m.userData.baseMat) : m.userData.baseMat;
     if (!paths.length || !this.nodes) return null;
     const box = new THREE.Box3();
     for (const p of paths) {
-      const n = this.nodes.find((x) => x.path === p);
+      const n = this.nodeMap?.get(p);
       if (n && n.box) box.union(new THREE.Box3(new THREE.Vector3(...n.box.min), new THREE.Vector3(...n.box.max)));
     }
     if (box.isEmpty()) return null;
     this.helper = new THREE.Box3Helper(box.expandByScalar(0.05), '#ff7a1a');
     this.scene.add(this.helper);
     return box;
+  }
+  hiMat(base) {
+    if (!base.userData.hi) { base.userData.hi = base.clone(); base.userData.hi.emissive = new THREE.Color('#ff7a1a'); base.userData.hi.emissiveIntensity = 0.55; }
+    return base.userData.hi;
+  }
+
+  // ── 视图模式 ──
+  // 按当前模式给物体上底色：实体用自己的材质，误差热力用热度色（没有分数的物体浅灰）；高亮叠在底色之上
+  paint(m) {
+    const u = m.userData;
+    u.baseMat = this.heat ? this.heatMat(this.heat.get(u.path)) : u.origMat;
+    m.material = u.baseMat;
+  }
+  heatMat(t) {
+    const k = t == null ? -1 : Math.round(Math.max(0, Math.min(1, t)) * 20);
+    if (!this.heatMats.has(k)) {
+      // 与离屏渲染（tools/raster.mjs 的 heatColor）同一条色带：0 绿 → 0.5 黄 → 1 红
+      const x = k / 20, rgb = k < 0 ? [205, 205, 205] : x < 0.5 ? [60 + 390 * x, 190, 70] : [235, 190 - 300 * (x - 0.5), 60];
+      this.heatMats.set(k, new THREE.MeshStandardMaterial({ color: new THREE.Color().setRGB(...rgb.map((v) => Math.round(v) / 255), THREE.SRGBColorSpace), roughness: 0.85, metalness: 0, side: THREE.DoubleSide }));
+    }
+    return this.heatMats.get(k);
+  }
+  // heat：Map 路径 → 0..1；null 回到实体
+  setHeat(heat) {
+    this.heat = heat;
+    this.content.traverse((o) => { if (o.isMesh && o.userData.origMat) this.paint(o); });
+    this.highlight(this.selected);
+  }
+  // 源模型半透明叠加（与 mesh 引用共用加载器与缓存）；url 为 null 时移除。源模型本身就在场景坐标里，不用变换。
+  // only：只叠加这些源部件（名字同 ~src / score.json 的 src，即 名字@k），隔离视图里看一个物体对应的源网格时用
+  async setOverlay(url, only = null) {
+    const token = (this.overlayToken = (this.overlayToken ?? 0) + 1);
+    this.overlay.clear();
+    if (!url) return 0;
+    if (!this.gltfCache.has(url)) this.gltfCache.set(url, this.loader.loadAsync(url));
+    const gltf = await this.gltfCache.get(url);
+    if (token !== this.overlayToken) return 0;
+    this.ghostMat ??= new THREE.MeshBasicMaterial({ color: '#2f7dff', transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
+    const ghost = (obj) => { obj.traverse((o) => { if (o.isMesh) { o.material = this.ghostMat; o.castShadow = o.receiveShadow = false; o.renderOrder = 5; } }); this.overlay.add(obj); };
+    if (!only) { ghost(gltf.scene.clone(true)); return 1; }
+    gltf.scene.updateMatrixWorld(true);
+    let n = 0;
+    for (const name of only) {
+      const s = this.findSourceNode(gltf, name);
+      if (!s) continue;
+      const obj = s.isMesh ? s.clone(false) : s.clone(true);
+      obj.matrixAutoUpdate = false;
+      obj.matrix.copy(s.matrixWorld);
+      ghost(obj);
+      n++;
+    }
+    return n;
+  }
+  // 隔离视图：只显示这些路径（及其后代），其余隐藏；null 退出
+  isolate(paths) {
+    this.isolated = paths?.length ? [...paths] : null;
+    this.applyIsolation();
+  }
+  applyIsolation() {
+    const set = this.isolated && new Set(this.isolated);
+    const under = (p) => { for (let i = p.length; i > 0; i = p.lastIndexOf('.', i - 1)) if (set.has(p.slice(0, i))) return true; return false; };
+    for (const c of this.content.children) c.visible = !set || under(c.name);
+    for (const l of this.curveLayer.children) l.visible = !set || under(l.userData.path ?? '');
+  }
+  // 一组路径的世界包围盒（隔离时对准用）
+  boxOf(paths) {
+    const box = new THREE.Box3();
+    for (const p of paths) { const n = this.nodeMap?.get(p); if (n?.box) box.union(new THREE.Box3(new THREE.Vector3(...n.box.min), new THREE.Vector3(...n.box.max))); }
+    return box.isEmpty() ? null : box;
+  }
+  // 写进 state/selection.json 的相机（AI 想从同一个角度看时用）
+  cameraState() {
+    const r = (v) => v.toArray().map((x) => +x.toFixed(3));
+    return { position: r(this.camera.position), target: r(this.controls.target) };
   }
 
   exportGLB(name = 'scene') {

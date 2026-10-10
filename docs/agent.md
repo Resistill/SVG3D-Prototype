@@ -121,6 +121,16 @@ claude mcp add svg3d -- node --import ./bin/node-hooks.mjs bin/s3d-mcp.mjs --pro
 
 工具名是 `s3d_<命令>`，参数与命令行相同；`s3d_render` 除了 JSON 还直接返回 PNG 图像。
 
+## 界面（人这一侧）
+
+`node bin/serve.mjs` 后打开 `http://localhost:5178/index.html?file=<工程>/scene.s3d`。人在界面里做的事都落到工程目录里，你用同一批命令读到：
+
+- 点物体（Shift 多选）→ `state/selection.json`（`inspect --selection`、`render --focus=selection`）；
+- 「交给 AI」→ `note`（`inbox.jsonl`，附选中的物体）；否决提议的理由也在 `inbox` 里；
+- 「提议」面板的预览 / 接受 / 否决就是 `preview` / `accept` / `reject`；工程栏的「评分」就是 `score`。
+
+界面经 HTTP 调用同一张命令表：`POST /api/run {dir, cmd, args}`（结果与命令行的 JSON 相同，文件路径另附 `url`），`GET /api/project?dir=`，`GET/PUT /api/selection?dir=`。层文件被你改过之后，界面切回前台时会重新读取；人有没保存的修改时，保存会提示冲突。
+
 ## 一轮工作的建议顺序
 
 1. `score` → 看 `worst` 与 `worstSources`。
