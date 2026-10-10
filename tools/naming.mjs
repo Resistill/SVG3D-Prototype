@@ -20,7 +20,7 @@ function parseDecls(lines) {
   lines.forEach((line, i) => {
     const m = /^(\s*)([\p{L}_][\p{L}\p{N}_]*)\s+([\p{L}_][\p{L}\p{N}_]*)/u.exec(line);
     if (/^\s*\}/.test(line)) { stack.pop(); return; }
-    if (!m || ['material', 'def', 'let', 'concept', 'import'].includes(m[2])) return;
+    if (!m || ['material', 'def', 'let', 'concept', 'import', 'drop', 'over'].includes(m[2])) return;
     const d = { i, kind: m[2], name: m[3], parent: stack.at(-1) ?? null, of: (/\sof=([\p{L}_][\p{L}\p{N}_]*)/u.exec(line) ?? [])[1] ?? null, children: [] };
     decls.push(d);
     if (d.parent) d.parent.children.push(d);
@@ -143,6 +143,9 @@ export function semanticNames(text, { library = SEMANTICS, previous = null } = {
   const byLine = new Map(decls.map((d) => [d.i, d]));
   const out = lines.map((line, i) => {
     const d = byLine.get(i);
+    // drop / over 后面的路径（例如有缺位的阵列：drop columns.3）
+    const dm = /^(\s*(?:drop|over)\s+)([\p{L}_][\p{L}\p{N}_.]*)(.*)$/u.exec(line);
+    if (!d && dm) return dm[1] + ref(dm[2], null) + dm[3];
     if (!d) return line;
     const scope = d.parent;
     let s = line;

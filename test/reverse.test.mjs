@@ -107,5 +107,35 @@ test('稳定命名：源模型改动后重跑逆向（带上一次的结果）�
     if (R1.nodes.some((x) => x.path === n.path) && srcOf(R1, n.path, B) === s0) ok++;
   }
   assert.ok(total >= 20);
-  assert.ok(ok / total >= 0.9, `路径命中 ${ok}/${total}`);
+  assert.equal(ok, total, `路径命中 ${ok}/${total}`);
+});
+
+test('阵列的例外：缺成员的阵列写成 repeat + drop；只有更短时才算规律', () => {
+  const back = (src) => {
+    const { doc } = sceneToGLB(src, { level: 'L1' });
+    const out = reverse(partsOfDocument(doc), { level: 'L1' });
+    return { out, ev: evaluate(src, out.src) };
+  };
+  // 一排 6 根带灯的柱子拆掉第 3 根
+  const { out, ev } = back(`
+    box ground size=60,1,30 pin=top
+    repeat posts n=6 step=4,0,0 on=ground {
+      cyl post r=0.2 h=3
+      sphere lamp r=0.4 on=post
+    }
+    drop posts.2
+  `);
+  assert.match(out.src, /^repeat \S+ n=6 /m);
+  assert.match(out.src, /^drop \S+\.2$/m);
+  assert.equal(ev.errors.recon, 0);
+  assert.equal(ev.objects.matched, ev.objects.orig);
+  assert.equal(ev.compression.array.recall, 1);
+  // 三个一样的盒子摆成 L 形：凑得成“2×2 缺一角”，但写成阵列并不更短
+  const L = back(`
+    box ground size=60,1,30 pin=top
+    box a size=1,1,1 on=ground
+    box b size=1,1,1 on=ground[0.2,1,0]
+    box c size=1,1,1 on=ground[0,1,0.3]
+  `);
+  assert.doesNotMatch(L.out.src, /^(repeat|drop) /m);
 });

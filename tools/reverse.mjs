@@ -426,7 +426,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   // ── 压缩：阵列（平移 / 绕竖直轴旋转 / 螺旋）──
   const units = compress ? detectArrays(objs, related) : [];
   const unitOf = new Map(); // 物体 id → { unit, child, k }
-  for (const u of units) u.children.forEach((c, ci) => c.members.forEach((o, k) => unitOf.set(o.id, { unit: u, child: c, k })));
+  for (const u of units) u.children.forEach((c, ci) => c.members.forEach((o, k) => unitOf.set(o.id, { unit: u, child: c, k: instOf(u, k) })));
   // 镜像：成对的物体或阵列关于同一个竖直平面对称 → 一个写出来，另一个是它的镜像副本
   const mirrors = compress ? detectMirrors(objs, units, unitOf) : [];
   const ghostPath = new Map(); // 被镜像出来的物体 id → 它在副本里的路径
@@ -573,12 +573,14 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
         const orient = cc ? orientRel(o, cc.ref) : o.symY && Math.abs(colsL[1][1] - 1) < 1e-6 ? '' : orientText(colsL);
         lines.push('  ' + [o.kind, ch.id, props, placeTxt, orient, `mat=${o.mat}`, `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' '));
         sib.add(o.id);
-        for (const [k, m] of ch.members.entries()) {
+        for (const [i, m] of ch.members.entries()) {
+          const k = instOf(u, i);
           targets.push({ o: m, path: `${u.id}.${k}.${ch.id}`, tol: 2e-3, unit: u.id, kind: 'repeat' });
           setPose(m, u.turn ? o.cols.map((c) => mvC(Ry(u.turn * k), c)) : o.cols, o.box);
         }
       }
       lines.push('}');
+      for (const h of u.holes ?? []) lines.push(`drop ${u.id}.${h}`);
       for (const ch of u.children) for (const o of ch.members) placed.add(o.id);
       emitMirror(u);
     }
@@ -626,7 +628,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   const report = {
     source: srcFile, level, parts: parts.length,
     kinds: Object.fromEntries(Object.entries(objs.reduce((m, o) => ((m[o.kind] = (m[o.kind] ?? 0) + 1), m), {})).sort()),
-    arrays: kept.map((u) => ({ id: nm(u.id), n: u.n, kind: u.rotate ? 'rotate' : u.turn ? 'screw' : u.grid ? 'grid' : 'linear', children: u.children.map((c) => c.id) })),
+    arrays: kept.map((u) => ({ id: nm(u.id), n: u.n, ...(u.holes?.length ? { holes: u.holes } : {}), kind: u.rotate ? 'rotate' : u.turn ? 'screw' : u.grid ? 'grid' : 'linear', children: u.children.map((c) => c.id) })),
     mirrors: mirrors.filter((mi) => !droppedMirrors.has(mi.B.id)).map((mi) => ({ id: nm(mi.B.id), of: nm(mi.A.id), across: mi.across, objects: mi.paths.size })),
     covered: kept.reduce((s, u) => s + u.children.reduce((t, c) => t + c.members.length, 0), 0),
     placement: out.stats,
@@ -636,6 +638,9 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   };
   return { src: named.text + '\n', absSrc, report, objs };
 }
+
+// 阵列里第 i 个成员所在的实例编号（有缺位的阵列不是 0, 1, 2…）
+const instOf = (u, i) => (u.ks ? u.ks[i] : i);
 
 // 几何中心：与表示方式无关的物理点（“原点”是包围盒底面中心，取决于局部 y 轴选了哪一头）
 const centerOf = (o) => add(o.at, mvC(o.cols, scl(add(o.box.min, o.box.max), 0.5)));
@@ -664,7 +669,7 @@ function detectMirrors(objs, units, unitOf) {
   const ents = [];
   // 参考点用全部成员的质心（网格反射后原点会换到另一个角上，质心不会）
   const centroid = (u) => scl(u.children.flatMap((c) => c.members.map(centerOf)).reduce((s2, p) => add(s2, p), [0, 0, 0]), 1 / u.children.reduce((s2, c) => s2 + c.members.length, 0));
-  for (const u of units) ents.push({ id: u.id, unit: u, ref: centroid(u), members: u.children.flatMap((c) => c.members.map((o, k) => ({ o, child: c.id, k }))), key: 'U' + u.children.map((c) => sizeKey(c.members[0])).join('/') + '|' + c_n(u) });
+  for (const u of units) ents.push({ id: u.id, unit: u, ref: centroid(u), members: u.children.flatMap((c) => c.members.map((o, k) => ({ o, child: c.id, k: instOf(u, k) }))), key: 'U' + u.children.map((c) => sizeKey(c.members[0])).join('/') + '|' + c_n(u) + '|' + (u.holes ?? []).join(',') });
   for (const o of objs) if (!unitOf.has(o.id)) ents.push({ id: o.id, obj: o, ref: centerOf(o), members: [{ o, child: null, k: null }], key: 'O' + sizeKey(o) });
   function c_n(u) { return JSON.stringify(u.n); }
   // 一个成员反射后是否与另一个物体重合（位置；朝向考虑形状自身的对称）
@@ -772,6 +777,7 @@ function detectArrays(objs, related) {
   for (const g of groups.values()) {
     if (g.length < 2) continue;
     const used = new Set();
+    const rawStart = raw.length;
     const scale = Math.max(...g.map((o) => len(sub(o.box.max, o.box.min)))) || 1;
     const tol = 0.004 + 1e-4 * scale;
     const close = (a, b) => len(sub(a, b)) < tol;
@@ -924,6 +930,56 @@ function detectArrays(objs, related) {
       }
     }
     findRings(() => true);
+    // 有缺口的阵列：常规检测剩下的物体按格点拟合，允许少数缺位（写成 repeat 加 drop 阵列.k）。
+    // 至少 3 个成员、缺位不超过五分之一（至少允许 1 个）、第 0 个实例必须在——它决定阵列原点与部件的写法
+    const holesOk = (n, present) => present >= 3 && present < n && n - present <= Math.max(1, Math.floor(n / 5));
+    const trans = clusters.filter((c) => !c.motion.delta && !c.motion.rot).map((c) => c.motion.step);
+    const isXv = (v) => Math.abs(v[1]) < 1e-6 && Math.abs(v[2]) < 1e-6, isZv = (v) => Math.abs(v[0]) < 1e-6 && Math.abs(v[1]) < 1e-6;
+    // 已经认出的完整平移阵列可以被吸收：例如一排 6 根拆掉第 3 根，常规检测只认得出后 3 根
+    for (;;) {
+      const owned = new Map();
+      for (const e of raw.slice(rawStart)) if (!e.motion.rot && !e.motion.delta) for (const o of e.members) owned.set(o.id, e);
+      const free = g.filter((o) => !used.has(o.id) || owned.has(o.id));
+      if (free.length < 3) break;
+      let best = null;
+      // 以 a 为第 0 个实例、沿 s1（与 s2）的格点上有哪些成员
+      const lattice = (a, s1, s2) => {
+        const at = new Map();
+        for (const b of free) {
+          const d = sub(centerOf(b), centerOf(a));
+          const i = Math.round(dot(d, s1) / dot(s1, s1)), j = s2 ? Math.round(dot(d, s2) / dot(s2, s2)) : 0;
+          if (i < 0 || j < 0 || i > 63 || j > 63) continue;
+          if (!close(add(centerOf(a), add(scl(s1, i), s2 ? scl(s2, j) : [0, 0, 0])), centerOf(b)) || !sameOrientation(b, toRows(a.cols))) continue;
+          at.set(`${i},${j}`, { b, i, j });
+        }
+        return [...at.values()];
+      };
+      // 吸收的阵列必须整个包含进来，并且至少带进一个散落的物体
+      const absorbs = (c) => {
+        const ids = new Set(c.members.map((o) => o.id));
+        const es = new Set(c.members.map((o) => owned.get(o.id)).filter(Boolean));
+        return c.members.some((o) => !used.has(o.id)) && [...es].every((e) => e.members.every((o) => ids.has(o.id))) ? [...es] : null;
+      };
+      const consider = (c) => { if (holesOk(c.N, c.members.length) && (c.replaced = absorbs(c)) && (!best || c.members.length > best.members.length || (c.members.length === best.members.length && c.N < best.N))) best = c; };
+      for (const a of free) {
+        for (const sx of trans.filter(isXv)) for (const sz of trans.filter(isZv)) {
+          const es = lattice(a, sx, sz);
+          const nx = Math.max(...es.map((e) => e.i)) + 1, nz = Math.max(...es.map((e) => e.j)) + 1;
+          if (nx < 2 || nz < 2) continue;
+          es.sort((e, f) => e.j - f.j || e.i - f.i);
+          consider({ N: nx * nz, members: es.map((e) => e.b), ks: es.map((e) => e.j * nx + e.i), raw: { motion: { delta: 0, step: sx }, grid: [nx, nz], step2: sz } });
+        }
+        for (const s1 of trans) {
+          const es = lattice(a, s1, null).sort((e, f) => e.i - f.i);
+          const n = Math.max(...es.map((e) => e.i)) + 1;
+          consider({ N: n, members: es.map((e) => e.b), ks: es.map((e) => e.i), raw: { motion: { delta: 0, step: s1 }, n } });
+        }
+      }
+      if (!best) break;
+      for (const e of best.replaced) raw.splice(raw.indexOf(e), 1);
+      raw.push({ ...best.raw, members: best.members, ks: best.ks, replaced: best.replaced });
+      best.members.forEach((o) => used.add(o.id));
+    }
   }
   // 合并：同一运动、同样形状的阵列，第 k 个成员之间相对位姿固定，且第 0 个实例里彼此有空间关系
   const relPose = (a, b) => ({ a, b, t: mvT(a.cols, sub(centerOf(b), centerOf(a))) });
@@ -931,13 +987,34 @@ function detectArrays(objs, related) {
   const samePose = (p, q) => len(sub(p.t, q.t)) < 2e-3 && sameOrientation(p.b, toRows(q.b.cols.map((c) => mvC(p.a.cols, mvT(q.a.cols, c)))));
   const keyOf = (x) => JSON.stringify(x.motion.rot
     ? ['R', fx(x.motion.deg, 2), x.motion.u.map((v) => fx(v, 3)), x.motion.c.map((v) => fx(v, 1)), x.members.length]
-    : [fx(x.motion.delta, 2), (x.motion.step ?? [x.motion.center[0], x.motion.dy, x.motion.center[2]]).map((v) => fx(v, 2)), x.members.length, x.grid ?? null]);
-  raw.sort((x, y) => y.members.reduce((s, o) => s + o.vol, 0) - x.members.reduce((s, o) => s + o.vol, 0));
-  const unitsList = [];
-  for (const arr of raw) {
-    const u = unitsList.find((uu) => keyOf(uu.arrays[0]) === keyOf(arr) && uu.arrays.some((b) => (related.get(b.members[0].id) ?? []).includes(arr.members[0].id))
-      && arr.members.every((o, k) => samePose(relPose(uu.arrays[0].members[k], o), relPose(uu.arrays[0].members[0], arr.members[0]))));
-    if (u) u.arrays.push(arr); else unitsList.push({ arrays: [arr] });
+    : [fx(x.motion.delta, 2), (x.motion.step ?? [x.motion.center[0], x.motion.dy, x.motion.center[2]]).map((v) => fx(v, 2)), x.members.length, x.grid ?? null, x.ks ?? null]);
+  const merge = (list) => {
+    list.sort((x, y) => y.members.reduce((s, o) => s + o.vol, 0) - x.members.reduce((s, o) => s + o.vol, 0));
+    const out = [];
+    for (const arr of list) {
+      const u = out.find((uu) => keyOf(uu.arrays[0]) === keyOf(arr) && uu.arrays.some((b) => (related.get(b.members[0].id) ?? []).includes(arr.members[0].id))
+        && arr.members.every((o, k) => samePose(relPose(uu.arrays[0].members[k], o), relPose(uu.arrays[0].members[0], arr.members[0]))));
+      if (u) u.arrays.push(arr); else out.push({ arrays: [arr] });
+    }
+    return out;
+  };
+  // 有缺位的阵列要比逐个写出来更短才算规律（压缩即理解）：1 句 repeat + 每个部件 1 句 + 每个缺位 1 句 drop，
+  // 对比原来的写法（被吸收的完整阵列每个 1 + 部件数 句，散落的物体每个 1 句）。
+  // 任意三个同样的物体都能凑成“2×2 缺一角”，只有一个部件时并不更短；不划算就恢复被吸收的阵列
+  const sizeOf = (a) => (a.grid ? a.grid[0] * a.grid[1] : a.n ?? a.members.length);
+  const worth = (uu) => {
+    const a = uu.arrays[0];
+    if (!a.ks) return true;
+    const kids = uu.arrays.length;
+    const before = uu.arrays.reduce((s, x) => s + (x.replaced ?? []).length * 2 + x.members.length - (x.replaced ?? []).reduce((t, e) => t + e.members.length, 0), 0);
+    return 1 + kids + (sizeOf(a) - a.members.length) < Math.min(before, a.members.length * kids);
+  };
+  let list = raw, unitsList = merge([...list]);
+  for (let round = 0; round < 3; round++) {
+    const bad = new Set(unitsList.filter((uu) => !worth(uu)).flatMap((uu) => uu.arrays));
+    if (!bad.size) break;
+    list = list.filter((a) => !bad.has(a)).concat([...bad].flatMap((a) => a.replaced ?? []));
+    unitsList = merge([...list]);
   }
   // 命名：从成员名里去掉变化的序号；没有名字时按形状
   const usedNames = new Set(objs.map((o) => o.id));
@@ -961,10 +1038,13 @@ function detectArrays(objs, related) {
     if (m.delta) {
       return { id, children, n: first.members.length, turn: m.delta, step: [0, m.dy, 0], origin: [m.center[0], a0.at[1], m.center[2]] };
     }
+    // 缺位：ks 是每个成员所在的实例编号，holes 是缺的编号
+    const N = first.grid ? first.grid[0] * first.grid[1] : first.n ?? first.members.length;
+    const gaps = first.ks ? { ks: first.ks, holes: [...Array(N).keys()].filter((k) => !first.ks.includes(k)) } : {};
     if (first.grid) {
-      return { id, children, n: first.grid, grid: true, step: m.step, step2Local: first.step2[2], origin: a0.at };
+      return { id, children, n: first.grid, grid: true, step: m.step, step2Local: first.step2[2], origin: a0.at, ...gaps };
     }
-    return { id, children, n: first.members.length, turn: 0, step: m.step, origin: a0.at };
+    return { id, children, n: N, turn: 0, step: m.step, origin: a0.at, ...gaps };
   }).filter(Boolean);
 }
 
