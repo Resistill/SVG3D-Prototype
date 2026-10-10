@@ -1,6 +1,8 @@
 // 语义命名：源模型没有名字时（L1 / L2），逆向结果里的名字只是形状编号（box46、cyls_2、cyl_）。
 // 这里把描述连同通用语义库一起编译，按每个物体识别出的概念改名：box46 → terrain，cyls_2 → columns，……
 // 只改自动生成的名字；源模型自带的名字保持不变。改名是纯文本的：声明处的名字与所有引用（on= at= of= across= about=）一起改。
+// 稳定命名：传入上一次的逆向结果（previous），几何上对得上的物体沿用上一次的名字，
+// 这样源模型改动后重跑逆向，写在编辑层里的 over / drop 路径仍然命中。
 import { compile } from '../src/s3d.js';
 import { SEMANTICS } from './eval.mjs';
 
@@ -11,16 +13,8 @@ const AUTO_TOP = new RegExp(`^(${SHAPES})\\d+(_\\d+)?$`);
 const AUTO_UNIT = new RegExp(`^(${SHAPES})s(_\\d+)?$`);
 const AUTO_CHILD = new RegExp(`^(${SHAPES})_*$`);
 
-export function semanticNames(text, { library = SEMANTICS } = {}) {
-  const r = compile(`${text}\n${library}`);
-  if (r.errors.length) return { text, map: {}, renamed: 0 };
-  const byPath = new Map(r.nodes.map((n) => [n.path, n]));
-  const conceptOf = (n) => {
-    const cs = new Set(n?.concepts ?? []);
-    return PRIORITY.find((c) => cs.has(c)) ?? null;
-  };
-  // 第一遍：读出声明结构（顶层声明、容器的子物体、副本来源）
-  const lines = text.split('\n');
+// 读出声明结构：顶层声明、容器的子物体、副本来源
+function parseDecls(lines) {
   const decls = [];
   const stack = [];
   lines.forEach((line, i) => {
@@ -32,6 +26,27 @@ export function semanticNames(text, { library = SEMANTICS } = {}) {
     if (d.parent) d.parent.children.push(d);
     if (/\{\s*$/.test(line)) stack.push(d);
   });
+  return decls;
+}
+
+const iou = (a, b) => {
+  if (!a || !b) return 0;
+  const ov = [0, 1, 2].map((k) => Math.max(0, Math.min(a.max[k], b.max[k]) - Math.max(a.min[k], b.min[k])));
+  const v = (x) => [0, 1, 2].reduce((s, k) => s * Math.max(1e-9, x.max[k] - x.min[k]), 1);
+  const inter = ov[0] * ov[1] * ov[2];
+  return inter / (v(a) + v(b) - inter);
+};
+
+export function semanticNames(text, { library = SEMANTICS, previous = null } = {}) {
+  const r = compile(`${text}\n${library}`);
+  if (r.errors.length) return { text, map: {}, renamed: 0 };
+  const byPath = new Map(r.nodes.map((n) => [n.path, n]));
+  const conceptOf = (n) => {
+    const cs = new Set(n?.concepts ?? []);
+    return PRIORITY.find((c) => cs.has(c)) ?? null;
+  };
+  const lines = text.split('\n');
+  const decls = parseDecls(lines);
   const top = new Map(decls.filter((d) => !d.parent).map((d) => [d.name, d]));
   const unitOf = (d, seen = new Set()) => {
     if (!d || seen.has(d)) return null;
@@ -68,13 +83,39 @@ export function semanticNames(text, { library = SEMANTICS } = {}) {
     const src = top.get(d.of);
     baseOf.set(d, baseOf.get(src) ?? (src ? src.name : d.name));
   }
-  // 编号：同名的按出现顺序加 _1 _2 …；不与保留下来的名字冲突
+  // 沿用上一次的名字：同种声明、包围盒 IoU 最高的一对先配（贪心），容器的子物体按顺序对应
+  const fixed = new Map();
+  if (previous) {
+    const P = compile(previous);
+    const pLines = previous.split('\n');
+    const pTop = parseDecls(pLines).filter((d) => !d.parent);
+    const pBy = new Map(P.nodes.map((n) => [n.path, n]));
+    const sig = (m, name) => { const n = m.get(name); return n?.tight ?? n?.box; };
+    const pairs = [];
+    for (const d of baseOf.keys()) for (const q of pTop) {
+      if (q.kind !== d.kind) continue;
+      const s = iou(sig(byPath, d.name), sig(pBy, q.name));
+      if (s > 0.5) pairs.push([s, d, q]);
+    }
+    pairs.sort((a, b) => b[0] - a[0]);
+    const taken = new Set();
+    for (const [, d, q] of pairs) {
+      if (fixed.has(d) || taken.has(q)) continue;
+      fixed.set(d, q.name);
+      taken.add(q);
+      const cm = childMaps.get(d);
+      if (cm && q.children.length === d.children.length && q.children.every((c, k) => c.kind === d.children[k].kind)) d.children.forEach((c, k) => cm.set(c.name, q.children[k].name));
+    }
+  }
+  // 编号：同名的按出现顺序加 _1 _2 …；不与保留下来的、沿用的名字冲突
   const keep = new Set([...top.keys()].filter((n) => ![...baseOf.keys()].some((d) => d.name === n)));
+  for (const n of fixed.values()) keep.add(n);
   const count = new Map();
-  for (const b of baseOf.values()) count.set(b, (count.get(b) ?? 0) + 1);
+  for (const [d, b] of baseOf) if (!fixed.has(d)) count.set(b, (count.get(b) ?? 0) + 1);
   const seen = new Map();
   const rename = new Map();
   for (const [d, b] of baseOf) {
+    if (fixed.has(d)) { rename.set(d.name, fixed.get(d)); continue; }
     let name = b;
     if (count.get(b) > 1 || keep.has(b)) {
       let k = seen.get(b) ?? 0;

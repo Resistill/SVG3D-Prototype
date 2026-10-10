@@ -376,7 +376,7 @@ function rotAbout(u, deg, c, p) {
 }
 
 // ───────── 3 & 4. 关系与校验 ─────────
-export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true } = {}) {
+export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null } = {}) {
   const fits = parts.map((p, i) => fitPart(p, i));
   // 名字：L0 用源节点名；没有名字时按形状编号
   const used = new Map(), counters = {};
@@ -619,8 +619,9 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     if (!changed) break;
   }
   const kept = units.filter((u) => !dissolved.has(u.id));
-  // 语义命名：没有源名字的部件按识别出的概念改名（box46 → terrain，cyls_2 → columns）
-  const named = names ? semanticNames(out.text) : { text: out.text, map: {}, renamed: 0 };
+  // 语义命名：没有源名字的部件按识别出的概念改名（box46 → terrain，cyls_2 → columns）；
+  // 给了上一次的结果（previous）时，对得上的物体沿用上一次的名字
+  const named = names ? semanticNames(out.text, { previous }) : { text: out.text, map: {}, renamed: 0 };
   const nm = (id) => named.map[id] ?? id;
   const report = {
     source: srcFile, level, parts: parts.length,

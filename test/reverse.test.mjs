@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { sceneToGLB } from '../tools/export.mjs';
 import { partsOfDocument, reverse } from '../tools/reverse.mjs';
 import { evaluate } from '../tools/eval.mjs';
+import { compile } from '../src/s3d.js';
 
 const roundTrip = (file, level) => {
   const src = readFileSync(new URL(`../examples/${file}`, import.meta.url), 'utf8');
@@ -79,4 +80,32 @@ test('语义命名：源模型没有名字（L1）时按识别出的概念起名
   const raw = reverse(partsOfDocument(sceneToGLB(readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8'), { level: 'L1' }).doc), { level: 'L1', names: false });
   const ev2 = evaluate(readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8'), raw.src);
   assert.deepEqual(ev2.facts, ev.facts, '改名前后空间事实完全相同');
+});
+
+test('稳定命名：源模型改动后重跑逆向（带上一次的结果），未改动的物体沿用原来的名字', () => {
+  const rd = (p) => readFileSync(new URL(`../examples/${p}`, import.meta.url), 'utf8');
+  const C = (f) => compile(rd(f), { file: f, resolve: rd });
+  const rev = (f, previous) => reverse(partsOfDocument(sceneToGLB(rd(f), { file: f, resolve: rd, level: 'L1' }).doc), { level: 'L1', previous }).src;
+  const iou = (a, b) => {
+    if (!a || !b) return 0;
+    const ov = [0, 1, 2].map((k) => Math.max(0, Math.min(a.max[k], b.max[k]) - Math.max(a.min[k], b.min[k])));
+    const v = (x) => [0, 1, 2].reduce((s, k) => s * Math.max(1e-9, x.max[k] - x.min[k]), 1);
+    return (ov[0] * ov[1] * ov[2]) / (v(a) + v(b) - ov[0] * ov[1] * ov[2]);
+  };
+  const tb = (R, p) => { const n = R.nodes.find((x) => x.path === p); return n?.tight ?? n?.box; };
+  const srcOf = (R, p, S) => { let best = null, bs = 0.5; for (const it of S.items) { const s = iou(tb(R, p), tb(S, it.path)); if (s > bs) { bs = s; best = it.path; } } return best; };
+  // spaceport_edit 是 spaceport 的修改层：火箭加长、塔改 10 层、厂房加宽、罐 3 → 5、拆灯、加厂房
+  const A = C('spaceport.s3d'), B = C('spaceport_edit.s3d');
+  const out0 = rev('spaceport.s3d');
+  const R0 = compile(out0);
+  const R1 = compile(rev('spaceport_edit.s3d', out0));
+  let ok = 0, total = 0;
+  for (const n of R0.nodes.filter((x) => x.tight && (!x.path.includes('.') || /^[^.]+\.0\.[^.]+$/.test(x.path)))) {
+    const s0 = srcOf(R0, n.path, A);
+    if (!s0 || iou(tb(A, s0), tb(B, s0)) < 0.95) continue; // 源里删掉或改了形状的不算
+    total++;
+    if (R1.nodes.some((x) => x.path === n.path) && srcOf(R1, n.path, B) === s0) ok++;
+  }
+  assert.ok(total >= 20);
+  assert.ok(ok / total >= 0.9, `路径命中 ${ok}/${total}`);
 });
