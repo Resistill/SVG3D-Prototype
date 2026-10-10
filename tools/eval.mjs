@@ -25,9 +25,19 @@ function classOf(item) {
   }
 }
 
+// 对象是否被压缩构造覆盖：在阵列实例里（路径中有数字段）或是镜像/旋转生成的副本
 function objectsOf(r) {
-  const boxes = new Map(r.nodes.map((n) => [n.path, n.box]));
-  return r.items.map((it) => ({ path: it.path, cls: classOf(it), box: boxes.get(it.path) })).filter((o) => o.box);
+  const byPath = new Map(r.nodes.map((n) => [n.path, n]));
+  // 镜像：在 mirror 生成的副本里（mirror X of=… 的 X 之下，或 mirror 容器的 .mirrored 之下）；
+  // rotate 生成的副本算作阵列（旋转对称）
+  const mirrorRoots = r.nodes.filter((n) => /^mirror/.test(n.kind)).map((n) => n.path);
+  return r.items.map((it) => {
+    const n = byPath.get(it.path);
+    const rotRoots = r.nodes.filter((x) => x.kind === 'rotate').map((x) => x.path);
+    const array = /(^|\.)\d+(\.|$)|\.r\d+(\.|$)/.test(it.path) || rotRoots.some((g) => it.path.startsWith(g + '.'));
+    const mirror = mirrorRoots.some((g) => (it.path === g || it.path.startsWith(g + '.')) && !/^mirror$/.test(byPath.get(g).kind)) || /\.mirrored(\.|$)/.test(it.path);
+    return { path: it.path, cls: classOf(it), box: n?.tight ?? n?.box, array, mirror };
+  }).filter((o) => o.box);
 }
 
 export function evaluate(origSrc, reconSrc, opts = {}) {
@@ -56,18 +66,35 @@ export function evaluate(origSrc, reconSrc, opts = {}) {
     const p = m.length ? tp / m.length : 1, r = t.length ? tp / t.length : 1;
     return { truth: t.length, found: m.length, precision: +p.toFixed(3), recall: +r.toFixed(3), f1: +(p + r ? (2 * p * r) / (p + r) : 0).toFixed(3) };
   };
-  const leafLines = reconSrc.split('\n').filter((l) => /^\s*(box|cyl|cone|sphere|wedge|mesh|revolve|span|sweep|pipe)\s/.test(l));
-  const lines = (s) => s.split('\n').filter((l) => l.trim() && !l.trim().startsWith('//')).length;
+  // 压缩召回：原始里被阵列 / 镜像覆盖的对象，在逆向结果里是否也被同类构造覆盖
+  const recall = (flag) => {
+    const t = oa.filter((a) => a[flag]);
+    const hit = t.filter((a) => mA.get(a.path)?.b[flag]).length;
+    return { orig: t.length, recovered: hit, recall: +(hit / (t.length || 1)).toFixed(3) };
+  };
+  const topLines = reconSrc.split('\n').filter((l) => /^(box|cyl|cone|sphere|wedge|mesh|revolve|span|sweep|pipe|repeat|mirror|rotate|copy|group)\s/.test(l));
+  // 语句数：把 import 的文件也算进去（修改层本身很短，但它描述的是整个场景）
+  const expand = (src, o, seen = new Set()) => src.replace(/^\s*import\s+"([^"]+)".*$/gm, (m, rel) => {
+    if (!o?.resolve) return '';
+    const base = o.file && o.file.includes('/') ? o.file.slice(0, o.file.lastIndexOf('/') + 1) : '';
+    const path = (base + rel).split('/').reduce((acc, x) => (x === '..' ? acc.slice(0, -1) : x === '.' || !x ? acc : [...acc, x]), []).join('/');
+    if (seen.has(path)) return '';
+    seen.add(path);
+    try { return expand(o.resolve(path), { ...o, file: path }, seen); } catch { return ''; }
+  });
+  const lines = (s, o) => expand(s, o).split('\n').filter((l) => l.trim() && !l.trim().startsWith('//')).length;
   return {
     errors: { orig: A.errors.length, recon: B.errors.length },
     objects: { orig: oa.length, recon: ob.length, matched: mA.size, meanIoU: +([...mA.values()].reduce((s, x) => s + x.s, 0) / (mA.size || 1)).toFixed(3) },
     kinds: { fittable: fittable.length, correct: kindOk, accuracy: +(kindOk / (fittable.length || 1)).toFixed(3), complex: complex.length, complexAsMesh, confusion },
     facts: { all: prf(() => true), ...Object.fromEntries(rels.map((r) => [r, prf((x) => x.startsWith(r + '|'))])), onAgainst: prf((x) => /^(on|against)\|/.test(x)) },
+    compression: { array: recall('array'), mirror: recall('mirror') },
     description: {
       // 只算用世界坐标定位的（at=数字）；at=某物[u,v,w] 是相对锚点，算关系
-      coordinateRatio: +(leafLines.filter((l) => /\sat=[-\d(.]/.test(l)).length / (leafLines.length || 1)).toFixed(3),
-      anchorRatio: +(leafLines.filter((l) => /\sat=[\p{L}_]/u.test(l)).length / (leafLines.length || 1)).toFixed(3),
-      statementRatio: +(lines(reconSrc) / lines(origSrc)).toFixed(3),
+      // 只算最外层用世界坐标定位的语句；repeat 内缩进的 at= 是相对实例原点的偏移（例如螺旋楼梯的半径）
+      coordinateRatio: +(topLines.filter((l) => /\sat=[-\d(.]/.test(l)).length / (topLines.length || 1)).toFixed(3),
+      anchorRatio: +(topLines.filter((l) => /\sat=[\p{L}_]/u.test(l)).length / (topLines.length || 1)).toFixed(3),
+      statementRatio: +(lines(reconSrc, opts.recon) / lines(origSrc, opts.orig)).toFixed(3),
     },
   };
 }

@@ -2044,6 +2044,13 @@ function partGap(A, B) {
   return best;
 }
 
+function tightBox(n) {
+  try {
+    const parts = localParts(n).parts.map((P) => worldPart(n._world, P));
+    return boundsOf(parts.flatMap((P) => boxCorners(partBox(P))));
+  } catch { return null; }
+}
+
 function deriveFacts(root, S) {
   const eps = FACT_EPS;
   const objs = [];
@@ -2300,6 +2307,8 @@ function compileOnce(src, plan, opts) {
     id: n.id, tags: n.tags, concepts: n.concepts ?? [], line: n.line, file: n.file ?? null, types: n.types ?? null, meta: (n.ghostOf ?? n).meta ?? {},
     depth: n.path.split('.').length - 1, late: !!n.late, ghost: !!n.ghostOf, curve: CURVES.has(K(n)), hidden: !!n.hidden, skin: !!n.skin,
     world: n._world ?? null, box: n._world && n._box ? transformBox(n._world, n._box) : null,
+    // 紧包围盒：按真实形状（与空间事实同一套凸块）求，旋转后的圆柱、球不会被放大
+    tight: n._world && n._box && n.geom && LEAVES.has(K(n)) ? tightBox(n) : null,
   }));
   errors.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
   if (!plan && !nextPlan) for (const st of elab.variants) variantSummary.push({ line: st.line, use: st.use, src: st.src, members: [] });

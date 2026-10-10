@@ -14,5 +14,6 @@ console.log(`对象          原始 ${r.objects.orig} · 逆向 ${r.objects.reco
 console.log(`形状种类      ${r.kinds.correct}/${r.kinds.fittable} 正确（${pct(r.kinds.accuracy)}）；复杂形状 ${r.kinds.complex} 个，其中 ${r.kinds.complexAsMesh} 个保留为 mesh`);
 console.log(`              ${Object.entries(r.kinds.confusion).map(([k, v]) => `${k}:${v}`).join('  ')}`);
 for (const [k, v] of Object.entries(r.facts)) console.log(`事实 ${k.padEnd(10)} 真值 ${String(v.truth).padStart(4)} · 找到 ${String(v.found).padStart(4)} · P ${v.precision} · R ${v.recall} · F1 ${v.f1}`);
+console.log(`压缩召回      阵列 ${r.compression.array.recovered}/${r.compression.array.orig}（${pct(r.compression.array.recall)}）· 镜像 ${r.compression.mirror.recovered}/${r.compression.mirror.orig}（${pct(r.compression.mirror.recall)}）`);
 console.log(`坐标依赖率    ${pct(r.description.coordinateRatio)}（世界坐标定位，越低越好）；相对锚点 ${pct(r.description.anchorRatio)}`);
 console.log(`语句数比      ${r.description.statementRatio}（逆向 / 原始）`);

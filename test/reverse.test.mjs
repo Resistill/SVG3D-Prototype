@@ -23,6 +23,34 @@ test('航天基地 L0 往返：形状、关系、坐标依赖率达到第一阶�
   assert.ok(ev.description.coordinateRatio < 0.1, `坐标依赖率 ${ev.description.coordinateRatio}`);
 });
 
+test('压缩即理解：航天基地的阵列、旋转对称、螺旋与镜像都被识别出来，描述比原文还短', () => {
+  const { out, ev } = roundTrip('spaceport.s3d', 'L0');
+  assert.equal(ev.compression.array.recall, 1, `阵列召回 ${JSON.stringify(ev.compression.array)}`);
+  assert.equal(ev.compression.mirror.recall, 1, `镜像召回 ${JSON.stringify(ev.compression.mirror)}`);
+  assert.ok(ev.description.statementRatio < 1, `语句数比 ${ev.description.statementRatio}`);
+  const kinds = Object.fromEntries(out.report.arrays.map((a) => [a.id, a.kind]));
+  assert.equal(kinds.tower_legs, 'grid');
+  assert.equal(kinds.rocket_fins, 'rotate');
+  assert.equal(kinds.spiral_treads, 'screw');
+  assert.deepEqual(out.report.arrays.find((a) => a.id === 'tanks').children, ['tank', 'cap', 'ring'], '同一实例里的多个部件合并成一个 repeat');
+  assert.ok(out.report.mirrors.some((m) => m.id === 'tower2_decks' && m.of === 'tower_decks' && /axis=x/.test(m.across)), '镜像面写成关系');
+});
+
+test('一般轴的旋转：风车叶片绕水平轴、斜塔的立柱环', () => {
+  const src = `
+    box hub size=1,1,1 at=0,10,0 pin=center
+    rotate blades n=2 about=hub axis=z { box blade size=0.6,5,0.2 at=hub.top }
+    cyl core r=2 h=6 at=20,0,0
+    rotate cols n=7 about=core { cyl col r=0.15 h=4 at=22.6,0,0 }`;
+  const { doc } = sceneToGLB(src, { level: 'L0' });
+  const out = reverse(partsOfDocument(doc), { srcFile: 'x.glb' });
+  const ev = evaluate(src, out.src);
+  assert.equal(ev.errors.recon, 0);
+  const rot = out.report.arrays.filter((a) => a.kind === 'rotate').map((a) => a.n);
+  assert.deepEqual(rot.sort(), [3, 8], `识别出的旋转：${JSON.stringify(out.report.arrays)}`);
+  assert.ok(ev.objects.meanIoU > 0.95, `平均 IoU ${ev.objects.meanIoU}`);
+});
+
 test('L1（抹去名字）与 L0 同样好；L2（合并网格）仍可用', () => {
   const l1 = roundTrip('spaceport.s3d', 'L1').ev;
   assert.ok(l1.kinds.accuracy >= 0.95 && l1.facts.onAgainst.f1 >= 0.9);
