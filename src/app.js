@@ -1,5 +1,5 @@
 // 预览器界面：编辑器 ⇄ 编译 ⇄ 3D 视图 ⇄ 对象树 / 空间事实；工程模式下还有选中面板、工程栏、提议（src/collab.js）
-import { compile, FACT_EPS } from './s3d.js';
+import { compile, FACT_EPS, factProviderList } from './s3d.js';
 import { Viewer } from './render.js';
 import { createCollab, detectApi, esc } from './collab.js';
 
@@ -229,7 +229,7 @@ async function run() {
   renderFileList();
   const t0 = performance.now();
   // 工程的场景单位不是米时，空间事实的容差（FACT_EPS，按米）换算成场景单位——与工具（tools/project.mjs）一致
-  const r = compile(files.get(rootFile()), { file: rootFile(), resolve: (p) => files.get(p), ...(project ? { factEps: FACT_EPS / project.unit } : {}) });
+  const r = compile(files.get(rootFile()), { file: rootFile(), resolve: (p) => files.get(p), factProviders, ...(project ? { factEps: FACT_EPS / project.unit } : {}) });
   const t1 = performance.now();
   // 网格引用的 src 相对组合根所在的目录（工程目录；与工具的约定一致）
   viewer.srcBase = new URL(rootFile(), location.href).href;
@@ -347,15 +347,44 @@ semEl.addEventListener('click', (e) => {
   if (head) { const ps = JSON.parse(head.dataset.paths), at = head.closest('[data-line]'); if (ps.length) select(ps, { line: head.classList.contains('match') ? 0 : +at.dataset.line, file: at.dataset.file }); }
 });
 
+// ── 空间事实：按提供者分组（docs/PLAN2.md 4.10），组内按关系 ──
+// contact 总是打开；别的提供者（walkable 等）在面板上方勾选，记在浏览器里，重新编译时传给 compile 的 factProviders
+const PROVIDERS = factProviderList();
+const PROVIDER_TITLE = { contact: '接触 contact', walkable: '可行走 walkable' };
+const REL_TITLE = { on: '支撑 on', against: '贴面 against', inside: '包含 inside', touching: '接触 touching', intersects: '相交 intersects', walkable: '可行走 walkable' };
+let factProviders = (() => {
+  const on = new Set((store.get('s3d:factProviders') ?? '').split(',').filter(Boolean));
+  return PROVIDERS.filter((p) => p.default || on.has(p.name)).map((p) => p.name);
+})();
+const provEl = $('#fact-providers');
+function renderProviderToggles() {
+  provEl.hidden = !PROVIDERS.some((p) => !p.default);
+  provEl.innerHTML = '<span>提供者</span>' + PROVIDERS.map((p) => `<label><input type="checkbox" data-p="${esc(p.name)}" ${factProviders.includes(p.name) ? 'checked' : ''} ${p.default ? 'disabled' : ''}>${esc(p.name)}</label>`).join('');
+}
+provEl.addEventListener('change', () => {
+  const on = new Set([...provEl.querySelectorAll('input:checked')].map((x) => x.dataset.p));
+  factProviders = PROVIDERS.filter((p) => p.default || on.has(p.name)).map((p) => p.name);
+  store.set('s3d:factProviders', PROVIDERS.filter((p) => !p.default && on.has(p.name)).map((p) => p.name).join(','));
+  run();
+});
+renderProviderToggles();
 function renderFacts(r) {
-  const groups = { on: '支撑 on', against: '贴面 against', inside: '包含 inside', touching: '接触 touching', intersects: '相交 intersects' };
-  factList.innerHTML = Object.entries(groups).map(([k, title]) => {
-    const fs = r.facts.filter((f) => f.rel === k);
-    if (!fs.length) return '';
-    return `<h4>${title} <small>${fs.length}</small></h4>` + fs.map((f) => {
-      const parts = f.text.split(' ');
-      return `<li data-a="${esc(f.a)}" data-b="${esc(f.b)}"><code><span class="ref">${esc(parts[0])}</span> <span class="kw">${esc(parts[1])}</span> <span class="ref">${esc(parts.slice(2).join(' '))}</span></code></li>`;
+  const provs = r.factProviders ?? [...new Set(r.facts.map((f) => f.provider ?? 'contact'))];
+  const li = (f) => {
+    // 一元事实（X walkable）只有 a；二元事实按“A 关系 B”着色
+    const [a, kw, ...rest] = f.text.split(' ');
+    const title = f.area != null ? ` title="空着的顶面 ${f.area}（占 ${Math.round(f.share * 100)}%）"` : '';
+    return `<li data-a="${esc(f.a)}"${f.b != null ? ` data-b="${esc(f.b)}"` : ''}${title}><code><span class="ref">${esc(a)}</span> <span class="kw">${esc(kw ?? '')}</span> <span class="ref">${esc(rest.join(' '))}</span></code></li>`;
+  };
+  factList.innerHTML = provs.map((name) => {
+    const fs = r.facts.filter((f) => (f.provider ?? 'contact') === name);
+    const rels = [...new Set([...(PROVIDERS.find((p) => p.name === name)?.rels ?? []), ...fs.map((f) => f.rel)])];
+    const body = rels.map((k) => {
+      const xs = fs.filter((f) => f.rel === k);
+      return xs.length ? `<h4>${esc(REL_TITLE[k] ?? k)} <small>${xs.length}</small></h4>` + xs.map(li).join('') : '';
     }).join('');
+    // 只有一个提供者时不加组标题（与以前的样子相同）
+    return provs.length > 1 ? `<h3>${esc(PROVIDER_TITLE[name] ?? name)}<small>${fs.length} 条</small></h3>` + (body || '<p class="empty">没有</p>') : body;
   }).join('') || '<p class="empty">没有推导出空间事实</p>';
 }
 
@@ -422,7 +451,7 @@ document.addEventListener('keydown', (e) => {
 });
 factList.addEventListener('click', (e) => {
   const li = e.target.closest('li');
-  if (li) select([li.dataset.a, li.dataset.b]);
+  if (li) select(li.dataset.b != null ? [li.dataset.a, li.dataset.b] : [li.dataset.a]);
 });
 // 类型实例里的部件：定位到放置这个实例的语句（def 是共享的，改它会改所有实例）；按住 Alt 点击才跳到 def
 function locate(path, toDef) {

@@ -2160,7 +2160,22 @@ function tightBox(n) {
   } catch { return null; }
 }
 
-function deriveFacts(root, S, eps = FACT_EPS) {
+// ── 空间事实的提供者（docs/PLAN2.md 4.10）──
+// 事实由一组提供者推导：provider = { name, derive(objs, ctx) → facts }。默认只有 contact（on / against / inside / touching / intersects）；
+// 别的提供者按名字注册（registerFactProvider），用 compile(src, { factProviders: ['contact', 'walkable'] }) 打开，也可以直接传提供者对象。
+//   objs：参与推导的物体（叶子与布尔组，变体除外），每个带 path、kind、世界变换 W、局部包围盒 box、世界凸块 parts 与各块的包围盒 pboxes、
+//         世界包围盒 wb，以及 approx（凸块是近似的）、boxy（单块的实心盒子类）、convex（单个精确凸块）
+//   ctx：eps（容差，场景单位）、metre（每米多少场景单位，由 factEps 与默认值之比推出）、options（compile 的 factOptions[name]）、
+//        pairs(margin)（三个方向都靠得足够近的物体对，粗筛）、gapOf(P, Q)（最小间隙与接触的块）、geo（凸块的几何工具）
+//   每条事实至少有 rel、a、text；二元事实有 b，一元事实（X walkable）的 b 是 null。compile 给每条补上 provider 字段
+// 机制本身不认任何具体场景：提供者只读几何（凸块、变换、包围盒），语义仍由 concept / pattern 定义。
+
+const ovAxis = (a, b, k) => Math.min(a.max[k], b.max[k]) - Math.max(a.min[k], b.min[k]);
+const ovI = (a, b) => Math.min(a[1], b[1]) - Math.max(a[0], b[0]);
+const boxVol = (x) => (x.max[0] - x.min[0]) * (x.max[1] - x.min[1]) * (x.max[2] - x.min[2]);
+
+// 参与推导的物体：叶子与布尔组（布尔组内部的块不单独算），尺寸不为零
+function factObjects(root, S) {
   const objs = [];
   const walk = (n, inCsg) => {
     const k = K(n);
@@ -2172,98 +2187,220 @@ function deriveFacts(root, S, eps = FACT_EPS) {
     n.children.forEach((c) => walk(c, inCsg || CSG.has(k)));
   };
   walk(root, false);
-  const ov = (a, b, k) => Math.min(a.max[k], b.max[k]) - Math.max(a.min[k], b.min[k]);
-  const ovI = (a, b) => Math.min(a[1], b[1]) - Math.max(a[0], b[0]);
-  const vol = (x) => (x.max[0] - x.min[0]) * (x.max[1] - x.min[1]) * (x.max[2] - x.min[2]);
-  const info = objs.map((n) => {
+  return objs.map((n) => {
     const W = S.world(n);
     const lp = localParts(n);
     const parts = lp.parts.map((P) => worldPart(W, P));
     const k = K(n.ghostOf ?? n);
     return {
-      n, W, box: n._box, parts, pboxes: parts.map(partBox), approx: lp.approx, wb: boundsOf(parts.flatMap((P) => boxCorners(partBox(P)))),
+      n, path: n.path, kind: K(n), W, box: n._box, parts, pboxes: parts.map(partBox), approx: lp.approx, wb: boundsOf(parts.flatMap((P) => boxCorners(partBox(P)))),
       // 单块、可以当作“实心盒子”看待的物体，才做贴面判断
       boxy: lp.parts.length === 1 && !lp.approx && ['box', 'beam', 'wedge'].includes(n.geom?.type ?? 'box') && !CURVES.has(k),
       convex: lp.parts.length === 1 && !lp.approx,
     };
   });
+}
 
-  // 粗筛：按世界包围盒的 x 起点排序扫描，只留下三个方向都靠得足够近的对
-  const order = [...info].sort((p, q) => p.wb.min[0] - q.wb.min[0]);
+// 点在凸块里（含边界 tol）：凸多面体按各面法线方向的投影区间判断（面法线是完备的分离轴）
+function insidePart(P, p, tol = 1e-9) {
+  if (P.sphere) return len(sub(p, P.c)) <= P.r + tol;
+  return P.normals.every((nrm) => { const [lo, hi] = projOf(P, nrm), x = dot(p, nrm); return x >= lo - tol && x <= hi + tol; });
+}
+// 线段 a→b 与凸块的间隙：> 0 分离，< 0 穿过（线段当作只有一条棱的退化多面体；球按点到线段的距离）
+function segmentGap(a, b, P) {
+  if (P.sphere) {
+    const d = sub(b, a), L2 = dot(d, d), t = L2 > 0 ? Math.max(0, Math.min(1, dot(sub(P.c, a), d) / L2)) : 0;
+    return len(sub(P.c, add(a, scl(d, t)))) - P.r;
+  }
+  return partGap({ verts: [a, b], normals: [], edges: [sub(b, a)] }, P);
+}
+// 给提供者用的几何工具
+const FACT_GEO = { projOf, partGap, partBox, insidePart, segmentGap, apply, applyDir, boundsOf, boxCorners, overlap: ovAxis };
+
+// 粗筛：按世界包围盒的 x 起点排序扫描，只留下三个方向都靠得足够近的对
+function broadPairs(objs, margin) {
+  const order = [...objs].sort((p, q) => p.wb.min[0] - q.wb.min[0]);
   const active = [], cands = [];
   for (const P of order) {
-    for (let i = active.length - 1; i >= 0; i--) if (active[i].wb.max[0] < P.wb.min[0] - eps) active.splice(i, 1);
-    for (const Q of active) if (ov(P.wb, Q.wb, 1) > -eps && ov(P.wb, Q.wb, 2) > -eps) cands.push([P, Q]);
+    for (let i = active.length - 1; i >= 0; i--) if (active[i].wb.max[0] < P.wb.min[0] - margin) active.splice(i, 1);
+    for (const Q of active) if (ovAxis(P.wb, Q.wb, 1) > -margin && ovAxis(P.wb, Q.wb, 2) > -margin) cands.push([P, Q]);
     active.push(P);
   }
-  // 两个物体的最小间隙，以及哪些块彼此接触
-  const gapOf = (P, Q) => {
-    let best = Infinity;
-    const touching = [];
-    for (let i = 0; i < P.parts.length; i++) for (let j = 0; j < Q.parts.length; j++) {
-      const a = P.pboxes[i], b = Q.pboxes[j];
-      if (ov(a, b, 0) < -eps || ov(a, b, 1) < -eps || ov(a, b, 2) < -eps) continue;
-      const g = partGap(P.parts[i], Q.parts[j]);
-      if (g < best) best = g;
-      if (g <= eps) touching.push([i, j]);
-    }
-    return { gap: best, touching };
-  };
-  // A 立在 B 上：A 与 B 的竖直轴平行；A 的最低处贴着与它接触的那块 B 的最高处；两者在水平方向上有重叠
-  const onTest = (A, B, touching, flip) => {
-    const rel = compose(invT(B.W), A.W);
-    if (Math.abs(Math.abs(rel.R[1][1]) - 1) > 1e-6) return null;
-    const up = applyDir(B.W, [0, 1, 0]), bx = applyDir(B.W, [1, 0, 0]), bz = applyDir(B.W, [0, 0, 1]);
-    const span = (O, L) => { const iv = O.parts.map((P) => projOf(P, L)); return [Math.min(...iv.map((x) => x[0])), Math.max(...iv.map((x) => x[1]))]; };
-    const bottom = span(A, up)[0];
-    for (const [i, j] of touching) {
-      const [ia, jb] = flip ? [j, i] : [i, j];
-      const top = projOf(B.parts[jb], up)[1];
-      if (Math.abs(bottom - top) >= eps) continue;
-      if (ovI(projOf(A.parts[ia], bx), projOf(B.parts[jb], bx)) > eps && ovI(projOf(A.parts[ia], bz), projOf(B.parts[jb], bz)) > eps) return bottom - top;
-    }
-    return null;
-  };
-  // A 在 B 里：B 是单个凸块，A 的每一块在 B 的每个面法线方向上都不超出
-  const insideTest = (A, B) => {
-    if (!B.convex || vol(A.box) >= vol(B.box) * 0.9) return false;
-    const PB = B.parts[0];
-    if (PB.sphere) return A.parts.every((P) => (P.sphere ? len(sub(P.c, PB.c)) + P.r : Math.max(...P.verts.map((v) => len(sub(v, PB.c))))) <= PB.r + eps);
-    return PB.normals.every((nrm) => {
-      const hb = projOf(PB, nrm), nb = projOf(PB, scl(nrm, -1));
-      return A.parts.every((P) => projOf(P, nrm)[1] <= hb[1] + eps && projOf(P, scl(nrm, -1))[1] <= nb[1] + eps);
-    });
-  };
-  const facts = [];
-  const push = (rel, A, B, text, gap, approx) => facts.push({ rel, a: A.n.path, b: B.n.path, text, gap: +gap.toFixed(4), eps, ...(approx ? { approx: true } : {}) });
-  for (const [P, Q] of cands) {
-    if (P.n.isAncestorOf(Q.n) || Q.n.isAncestorOf(P.n)) continue;
-    const { gap, touching } = gapOf(P, Q);
-    if (gap > eps) continue;
-    const approx = P.approx || Q.approx;
-    let g;
-    if ((g = onTest(P, Q, touching, false)) !== null) { push('on', P, Q, `${P.n.path} on ${Q.n.path}`, g, approx); continue; }
-    if ((g = onTest(Q, P, touching, true)) !== null) { push('on', Q, P, `${Q.n.path} on ${P.n.path}`, g, approx); continue; }
-    // 贴面：两个都是实心盒子、坐标轴平行；在体积较大的那个的坐标系里判断，报“小的贴着大的”
-    const [A, B] = vol(P.box) <= vol(Q.box) ? [P, Q] : [Q, P];
-    if (A.boxy && B.boxy) {
+  return cands;
+}
+// 两个物体的最小间隙，以及哪些块彼此接触
+function gapBetween(P, Q, eps) {
+  let best = Infinity;
+  const touching = [];
+  for (let i = 0; i < P.parts.length; i++) for (let j = 0; j < Q.parts.length; j++) {
+    const a = P.pboxes[i], b = Q.pboxes[j];
+    if (ovAxis(a, b, 0) < -eps || ovAxis(a, b, 1) < -eps || ovAxis(a, b, 2) < -eps) continue;
+    const g = partGap(P.parts[i], Q.parts[j]);
+    if (g < best) best = g;
+    if (g <= eps) touching.push([i, j]);
+  }
+  return { gap: best, touching };
+}
+
+// 接触类事实（原来固定在 deriveFacts 里的五种）：on / against / inside / touching / intersects
+const contactProvider = {
+  name: 'contact',
+  rels: ['on', 'against', 'inside', 'touching', 'intersects'],
+  derive(objs, ctx) {
+    const { eps } = ctx;
+    // A 立在 B 上：A 与 B 的竖直轴平行；A 的最低处贴着与它接触的那块 B 的最高处；两者在水平方向上有重叠
+    const onTest = (A, B, touching, flip) => {
       const rel = compose(invT(B.W), A.W);
-      if (isAxisAligned(rel.R)) {
-        const a = transformBox(rel, A.box), b = B.box;
-        const [ox, oy, oz] = [0, 1, 2].map((k) => ov(a, b, k));
-        let face = null;
-        if (oy > eps) {
-          if (Math.abs(a.max[0] - b.min[0]) < eps && oz > eps) face = 'left';
-          else if (Math.abs(a.min[0] - b.max[0]) < eps && oz > eps) face = 'right';
-          else if (Math.abs(a.max[2] - b.min[2]) < eps && ox > eps) face = 'back';
-          else if (Math.abs(a.min[2] - b.max[2]) < eps && ox > eps) face = 'front';
+      if (Math.abs(Math.abs(rel.R[1][1]) - 1) > 1e-6) return null;
+      const up = applyDir(B.W, [0, 1, 0]), bx = applyDir(B.W, [1, 0, 0]), bz = applyDir(B.W, [0, 0, 1]);
+      const span = (O, L) => { const iv = O.parts.map((P) => projOf(P, L)); return [Math.min(...iv.map((x) => x[0])), Math.max(...iv.map((x) => x[1]))]; };
+      const bottom = span(A, up)[0];
+      for (const [i, j] of touching) {
+        const [ia, jb] = flip ? [j, i] : [i, j];
+        const top = projOf(B.parts[jb], up)[1];
+        if (Math.abs(bottom - top) >= eps) continue;
+        if (ovI(projOf(A.parts[ia], bx), projOf(B.parts[jb], bx)) > eps && ovI(projOf(A.parts[ia], bz), projOf(B.parts[jb], bz)) > eps) return bottom - top;
+      }
+      return null;
+    };
+    // A 在 B 里：B 是单个凸块，A 的每一块在 B 的每个面法线方向上都不超出
+    const insideTest = (A, B) => {
+      if (!B.convex || boxVol(A.box) >= boxVol(B.box) * 0.9) return false;
+      const PB = B.parts[0];
+      if (PB.sphere) return A.parts.every((P) => (P.sphere ? len(sub(P.c, PB.c)) + P.r : Math.max(...P.verts.map((v) => len(sub(v, PB.c))))) <= PB.r + eps);
+      return PB.normals.every((nrm) => {
+        const hb = projOf(PB, nrm), nb = projOf(PB, scl(nrm, -1));
+        return A.parts.every((P) => projOf(P, nrm)[1] <= hb[1] + eps && projOf(P, scl(nrm, -1))[1] <= nb[1] + eps);
+      });
+    };
+    const facts = [];
+    const push = (rel, A, B, text, gap, approx) => facts.push({ rel, a: A.path, b: B.path, text, gap: +gap.toFixed(4), eps, ...(approx ? { approx: true } : {}) });
+    for (const [P, Q] of ctx.pairs()) {
+      if (P.n.isAncestorOf(Q.n) || Q.n.isAncestorOf(P.n)) continue;
+      const { gap, touching } = ctx.gapOf(P, Q);
+      if (gap > eps) continue;
+      const approx = P.approx || Q.approx;
+      let g;
+      if ((g = onTest(P, Q, touching, false)) !== null) { push('on', P, Q, `${P.path} on ${Q.path}`, g, approx); continue; }
+      if ((g = onTest(Q, P, touching, true)) !== null) { push('on', Q, P, `${Q.path} on ${P.path}`, g, approx); continue; }
+      // 贴面：两个都是实心盒子、坐标轴平行；在体积较大的那个的坐标系里判断，报“小的贴着大的”
+      const [A, B] = boxVol(P.box) <= boxVol(Q.box) ? [P, Q] : [Q, P];
+      if (A.boxy && B.boxy) {
+        const rel = compose(invT(B.W), A.W);
+        if (isAxisAligned(rel.R)) {
+          const a = transformBox(rel, A.box), b = B.box;
+          const [ox, oy, oz] = [0, 1, 2].map((k) => ovAxis(a, b, k));
+          let face = null;
+          if (oy > eps) {
+            if (Math.abs(a.max[0] - b.min[0]) < eps && oz > eps) face = 'left';
+            else if (Math.abs(a.min[0] - b.max[0]) < eps && oz > eps) face = 'right';
+            else if (Math.abs(a.max[2] - b.min[2]) < eps && ox > eps) face = 'back';
+            else if (Math.abs(a.min[2] - b.max[2]) < eps && ox > eps) face = 'front';
+          }
+          if (face) { push('against', A, B, `${A.path} against ${B.path}.${face}`, gap, false); continue; }
         }
-        if (face) { push('against', A, B, `${A.n.path} against ${B.n.path}.${face}`, gap, false); continue; }
+      }
+      if (insideTest(A, B)) { push('inside', A, B, `${A.path} inside ${B.path}`, gap, approx); continue; }
+      if (gap >= -eps) push('touching', A, B, `${A.path} touching ${B.path}`, gap, approx);
+      else push('intersects', A, B, `${A.path} intersects ${B.path}`, gap, approx);
+    }
+    return facts;
+  },
+};
+
+// 示例提供者 walkable（默认不启用）：顶面朝上（局部上方向与竖直的夹角 ≤ maxTilt）、顶面上方净空 ≥ clearance 的部分面积 ≥ minArea 的物体，
+// 记一条一元事实“X walkable”。做法：在顶面上取均匀的格点（格子约 cell 见方，每边 2–12 个），点要落在物体自己的凸块里（圆柱、球的顶面
+// 是圆的）；从点往上 clearance 高的竖直线段不穿过任何别的物体，这一格就算空着。立在上面的东西（桌腿、墙）占掉格子，天花板低于净空时
+// 整块不可走。长度按米（clearance 2 m、minArea 0.36 m²、cell 0.5 m、maxTilt 10°），乘 ctx.metre 换算成场景单位；factOptions.walkable 可以改
+const walkableProvider = {
+  name: 'walkable',
+  rels: ['walkable'],
+  derive(objs, ctx) {
+    const { eps, metre } = ctx, o = ctx.options ?? {};
+    const clearance = (o.clearance ?? 2) * metre, minArea = (o.minArea ?? 0.36) * metre * metre, cell = (o.cell ?? 0.5) * metre;
+    const cosTilt = Math.cos(((o.maxTilt ?? 10) * Math.PI) / 180);
+    // 水平分格的空间索引：每个物体按世界包围盒的 xz 范围登记，查询一根竖直线段附近的物体
+    const G = Math.max(cell * 4, clearance);
+    const grid = new Map(), keyOf = (i, j) => i * 73856093 ^ j * 19349663;
+    for (const P of objs) {
+      for (let i = Math.floor(P.wb.min[0] / G); i <= Math.floor(P.wb.max[0] / G); i++) for (let j = Math.floor(P.wb.min[2] / G); j <= Math.floor(P.wb.max[2] / G); j++) {
+        const k = keyOf(i, j);
+        if (!grid.has(k)) grid.set(k, []);
+        grid.get(k).push(P);
       }
     }
-    if (insideTest(A, B)) { push('inside', A, B, `${A.n.path} inside ${B.n.path}`, gap, approx); continue; }
-    if (gap >= -eps) push('touching', A, B, `${A.n.path} touching ${B.n.path}`, gap, approx);
-    else push('intersects', A, B, `${A.n.path} intersects ${B.n.path}`, gap, approx);
+    const blocked = (self, a, b) => {
+      for (const Q of grid.get(keyOf(Math.floor(a[0] / G), Math.floor(a[2] / G))) ?? []) {
+        if (Q === self || Q.wb.min[0] > a[0] || Q.wb.max[0] < a[0] || Q.wb.min[2] > a[2] || Q.wb.max[2] < a[2] || Q.wb.max[1] <= a[1] || Q.wb.min[1] >= b[1]) continue;
+        if (self.n.isAncestorOf(Q.n) || Q.n.isAncestorOf(self.n)) continue;
+        for (let j = 0; j < Q.parts.length; j++) {
+          const pb = Q.pboxes[j];
+          if (pb.min[0] > a[0] || pb.max[0] < a[0] || pb.min[2] > a[2] || pb.max[2] < a[2] || pb.max[1] <= a[1] || pb.min[1] >= b[1]) continue;
+          if (segmentGap(a, b, Q.parts[j]) < -eps / 2) return true;
+        }
+      }
+      return false;
+    };
+    const facts = [];
+    for (const P of objs) {
+      // 凸块是近似的（旋转体的外接圆柱、网格的外包络）时顶面不可信，默认跳过；factOptions.walkable.approx = true 时照算并标 approx
+      if (P.approx && !o.approx) continue;
+      const up = applyDir(P.W, [0, 1, 0]);
+      if (up[1] / (len(up) || 1) < cosTilt) continue;
+      const b = P.box, w = b.max[0] - b.min[0], d = b.max[2] - b.min[2], h = b.max[1] - b.min[1];
+      if (w * d < minArea) continue;
+      const nx = Math.max(2, Math.min(12, Math.ceil(w / cell))), nz = Math.max(2, Math.min(12, Math.ceil(d / cell)));
+      const cellArea = (w * d) / (nx * nz), probe = Math.min(eps, h / 2);
+      let onTop = 0, free = 0;
+      for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+        const x = b.min[0] + ((i + 0.5) * w) / nx, z = b.min[2] + ((j + 0.5) * d) / nz;
+        const s = apply(P.W, [x, b.max[1] - probe, z]);
+        if (!P.parts.some((Q) => insidePart(Q, s, 1e-6))) continue; // 不在顶面上（圆柱、球的四角）
+        onTop++;
+        const q = apply(P.W, [x, b.max[1], z]);
+        if (!blocked(P, [q[0], q[1] + 2 * eps, q[2]], [q[0], q[1] + clearance, q[2]])) free++;
+      }
+      const area = free * cellArea;
+      if (area < minArea) continue;
+      facts.push({ rel: 'walkable', a: P.path, b: null, text: `${P.path} walkable`, area: +area.toFixed(4), share: +(free / onTop).toFixed(3), clearance: +clearance.toFixed(4), eps, ...(P.approx ? { approx: true } : {}) });
+    }
+    return facts;
+  },
+};
+
+// 注册表：名字 → 提供者。contact 默认启用，其余要在 compile 的 factProviders 里点名
+const FACT_PROVIDERS = new Map([[contactProvider.name, contactProvider], [walkableProvider.name, walkableProvider]]);
+export const DEFAULT_FACT_PROVIDERS = ['contact'];
+export function registerFactProvider(p) {
+  if (!p || typeof p.name !== 'string' || !p.name || typeof p.derive !== 'function') throw new Error('事实提供者要有 name（字符串）与 derive(objs, ctx) 函数');
+  FACT_PROVIDERS.set(p.name, p);
+  return p;
+}
+// 已注册的提供者（界面列出可以打开的）
+export const factProviderList = () => [...FACT_PROVIDERS.values()].map((p) => ({ name: p.name, rels: p.rels ?? [], default: DEFAULT_FACT_PROVIDERS.includes(p.name) }));
+// compile 的 factProviders：名字或提供者对象；没给时用默认的
+function resolveProviders(list) {
+  return (list ?? DEFAULT_FACT_PROVIDERS).map((p) => {
+    if (typeof p !== 'string') { if (!p || typeof p.derive !== 'function') throw new S3DError('factProviders 里的每一项要是名字或 { name, derive } 对象'); return p; }
+    if (!FACT_PROVIDERS.has(p)) throw new S3DError(`没有名为 ${p} 的事实提供者（已注册：${[...FACT_PROVIDERS.keys()].join(' ')}）`);
+    return FACT_PROVIDERS.get(p);
+  });
+}
+
+// 依次运行提供者；一个提供者出错不影响别的（错误交给 onError）
+function deriveFacts(root, S, eps = FACT_EPS, providers = resolveProviders(), { options = {}, onError = (e) => { throw e; } } = {}) {
+  const objs = factObjects(root, S);
+  const pairCache = new Map();
+  const base = {
+    eps, metre: eps / FACT_EPS, geo: FACT_GEO,
+    pairs: (margin = eps) => { if (!pairCache.has(margin)) pairCache.set(margin, broadPairs(objs, margin)); return pairCache.get(margin); },
+    gapOf: (P, Q) => gapBetween(P, Q, eps),
+  };
+  const facts = [];
+  for (const p of providers) {
+    try {
+      for (const f of p.derive(objs, { ...base, options: options[p.name] ?? {} })) facts.push({ ...f, b: f.b ?? null, provider: p.name });
+    } catch (e) { onError(e instanceof S3DError ? e : new S3DError(`事实提供者 ${p.name} 出错：${e.message}`)); }
   }
   return facts;
 }
@@ -2343,7 +2480,10 @@ function compileOnce(src, plan, opts) {
     }
   }
   let items = [], curves = [], facts = [];
-  try { facts = deriveFacts(root, S, opts.factEps ?? FACT_EPS); } catch (e) { errors.push(fail(e, root)); }
+  // 空间事实：按 opts.factProviders 列出的提供者推导（默认只有 contact）；某个提供者出错只记错误，不影响别的
+  let providers;
+  try { providers = resolveProviders(opts.factProviders); } catch (e) { errors.push(fail(e, root)); providers = resolveProviders(); }
+  try { facts = deriveFacts(root, S, opts.factEps ?? FACT_EPS, providers, { options: opts.factOptions, onError: (e) => errors.push(fail(e, root)) }); } catch (e) { errors.push(fail(e, root)); }
   S.buildRelations(facts);
 
   // —— 语义层：概念 → 样式 → 检查（都在求解之后，可以使用空间事实）——
@@ -2427,7 +2567,7 @@ function compileOnce(src, plan, opts) {
   return {
     plan: nextPlan,
     result: {
-      items, curves, facts, nodes, concepts, patterns, variants: variantSummary, checks, defs: [...defs.keys()], materials: Object.fromEntries(materials),
+      items, curves, facts, factProviders: providers.map((p) => p.name), nodes, concepts, patterns, variants: variantSummary, checks, defs: [...defs.keys()], materials: Object.fromEntries(materials),
       errors: errors.map((e) => ({ line: e.line ?? null, file: e.file ?? e.node?.file ?? null, message: e.message })),
     },
   };
