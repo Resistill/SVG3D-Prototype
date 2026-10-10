@@ -145,6 +145,10 @@ claude mcp add svg3d -- node --import ./bin/node-hooks.mjs bin/s3d-mcp.mjs --pro
 - 「交给 AI」→ `note`（`inbox.jsonl`，附选中的物体）；否决提议的理由也在 `inbox` 里；
 - 「提议」面板的预览 / 接受 / 否决就是 `preview` / `accept` / `reject`；工程栏的「评分」就是 `score`。
 
+- 视图右上角的视角预设（iso / top / front …）与 `render --view=` 是同一份相机（`src/views.js`）：人说“top 视角右下角那个”，你用 `render --view=top` 看到的是同一个取景；人点「离屏渲染」时，界面把它的取景范围作为 `--box` 传给 `render`，图存在 `renders/` 里；
+- 「空间事实」面板可以打开额外的事实提供者（如 `walkable`）——只影响界面里的编译，工具输出的事实仍只有默认的 `contact`（每条带 `provider` 字段）；
+- 人也可以在浏览器里直接逆向一个 GLB（结果与 `bin/reverse.mjs` 逐字节相同），那是没保存的草稿，不在工程目录里。
+
 界面经 HTTP 调用同一张命令表：`POST /api/run {dir, cmd, args}`（结果与命令行的 JSON 相同，文件路径另附 `url`），`GET /api/project?dir=`，`GET/PUT /api/selection?dir=`。层文件被你改过之后，界面切回前台时会重新读取；人有没保存的修改时，保存会提示冲突。
 
 ## 一轮工作的建议顺序

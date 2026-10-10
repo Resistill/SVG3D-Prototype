@@ -22,7 +22,10 @@ SVG3D 用这种方式描述场景，帮助 AI **理解场景**、从源模型**�
 npm run serve
 ```
 
-打开 <http://localhost:5178>：左边写代码，右边实时预览。点击物体会定位到源码；「语义」标签列出概念、模式、变体和检查；「空间事实」标签列出从几何反推出的关系。
+打开 <http://localhost:5178>：左边写代码，右边实时预览。点击物体会定位到源码；「语义」标签列出概念、模式、变体和检查；「空间事实」标签列出从几何反推出的关系（按提供者分组，面板上方可以打开 `walkable` 等额外的提供者）。编译在 Web Worker 里进行，几千个物体的工程打字时界面也不卡。
+
+- **浏览器内逆向**：「逆向 GLB…」选择、或直接把 `.glb` 拖进页面，在 Worker 里跑与 `bin/reverse.mjs` 相同的逆向（右边选档位：精细 / 结构 / 语义），结果作为没保存的新文件打开，「下载 .s3d」取走；与命令行的结果逐字节相同（同样的 `srcFile`，即 GLB 与 .s3d 放在同一目录时）。浏览器侧经 es-module-shims 在 Worker 里加载 `tools/*.mjs`，`@gltf-transform/core`、three 都从 CDN 取（版本写死），第一次要联网。
+- **视角预设**：视图右上角的 iso / iso2 / top / front / back / left / right 与离屏渲染 `render --view=` 是同一份相机（`src/views.js`）；「快照」按预设截正方形图，工程模式下「离屏渲染」调 `render` 并与界面快照并排显示（同一个取景范围），人和 AI 说“iso 视角左上角那个”指的是同一张图。
 
 打开任意 `.s3d` 文件：在地址后面加 `?file=路径`（相对于仓库根目录），例如工程的组合根 <http://localhost:5178/index.html?file=work/spaceport/scene.s3d>——它 import 的各层会一起加载。编辑器上方的「文件」列表列出组合根和它 import 的所有文件（缩进表示层级），可以切换查看、修改；点击物体会自动切到它所在的文件并选中那一行（类型实例的部件定位到放置实例的语句，Alt+点击才跳到 `def`）。修改后 Ctrl/⌘+S 或「保存」写回磁盘（只能覆盖已有的 `.s3d` 文件）；工具改过文件后刷新页面即可看到。
 
@@ -222,6 +225,7 @@ concept truss_leg : column = on(platform)   // 派生更细的概念
 - `on`、`against` 在参照物自身的坐标系里判断，所以 “A against B.left” 指的是 B 自己的左面，旋转后仍然成立。
 - 接触与相交按真实形状判断：盒子、楔形、梁是精确的多面体，圆柱、圆锥是 12 边棱柱，球是精确的，扫掠按每一段的凸包；revolve 和 mesh 暂用外接形状，标为近似。
 - 每条事实带实测间隙 `gap` 和容差 `eps`。
+- 事实由**提供者**推导（`{ name, derive(objs, ctx) → facts }`），每条带 `provider`。上面五种是默认的 `contact`；`walkable`（顶面朝上、上方净空 ≥ 2 m 的部分面积 ≥ 0.36 m² 的物体，一元事实 `X walkable`，b 为 null）默认不启用：`compile(src, { factProviders: ['contact', 'walkable'], factOptions: { walkable: { clearance: 1.8 } } })`。自己的提供者用 `registerFactProvider(p)` 注册后按名字打开，或直接把对象放进 `factProviders`。长度按米，随 `factEps` 换算成场景单位。
 
 事实是逆向管线的地基：从源模型拟合出的部件，通过事实得到关系，再压缩成可读的描述。
 
