@@ -7,7 +7,9 @@
     "test": "node --test \"test/*.test.mjs\"",
     "serve": "python3 -m http.server 5178",
     "inspect": "node bin/s3d.mjs examples/spaceport.s3d",
-    "roundtrip": "node bin/export.mjs examples/spaceport.s3d out/spaceport.L0.glb && node bin/reverse.mjs out/spaceport.L0.glb out/spaceport.L0.s3d && node bin/eval.mjs examples/spaceport.s3d out/spaceport.L0.s3d"
+    "roundtrip": "node bin/export.mjs examples/spaceport.s3d out/spaceport.L0.glb && node bin/reverse.mjs out/spaceport.L0.glb out/spaceport.L0.s3d && node bin/eval.mjs examples/spaceport.s3d out/spaceport.L0.s3d",
+    "tool": "node --import ./bin/node-hooks.mjs bin/s3d-tool.mjs",
+    "mcp": "node --import ./bin/node-hooks.mjs bin/s3d-mcp.mjs"
   },
   "devDependencies": {
     "@gltf-transform/core": "4.5.0",

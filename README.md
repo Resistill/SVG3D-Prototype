@@ -2,7 +2,7 @@
 
 AI 重建三维场景时，常用体素或点云逐格判断“这里有没有东西、是什么颜色”。人理解空间的方式不同：先看“它在谁上面、贴着谁、哪些是对称的、哪些在重复”，再给它起名字，比如墙、桥、门、梯。至于具体的墙长什么样，可以有很多种变体。
 
-SVG3D 用这种方式描述场景，帮助 AI **理解场景**、从源模型**重建场景**，重建之后还能**编辑**和**风格化**。演进计划见 [docs/PLAN.md](docs/PLAN.md)。
+SVG3D 用这种方式描述场景，帮助 AI **理解场景**、从源模型**重建场景**，重建之后还能**编辑**和**风格化**。最终的使用方式是人与多模态模型协作：导入目标模型、逆向成 SVG3D 工程，再一起逐步细化与纠偏，把整个世界压缩下来。计划见 [docs/PLAN.md](docs/PLAN.md)（语言与逆向）与 [docs/PLAN2.md](docs/PLAN2.md)（人与 AI 协作的工作台），进展记录在两份计划的末尾。
 
 ## 原则
 
@@ -14,6 +14,7 @@ SVG3D 用这种方式描述场景，帮助 AI **理解场景**、从源模型**�
 6. **外包络与外观分离**：语义决定外包络，变体和风格只填充外观，所以风格化不会破坏空间关系。
 7. **非破坏编辑**：基础描述和修改层是不同的文件，后面的层覆盖前面的层。
 8. **诚实的近似**：空间事实带间隙与容差，拟合结果可以带置信度。
+9. **保留语义就够**：逆向不要求 100% 复原，按档位（语义 / 结构 / 精细）决定精度，剩下的由人细化；粗糙而干净的语义也是风格化的好底子。
 
 ## 跑起来
 
@@ -228,7 +229,7 @@ node bin/export.mjs examples/spaceport.s3d out/spaceport.L0.glb --level=L0
 ```
 
 ```bash
-node bin/reverse.mjs out/spaceport.L0.glb out/spaceport.L0.s3d
+node bin/reverse.mjs out/spaceport.L0.glb out/spaceport.L0.s3d --fidelity=detail
 ```
 
 ```bash
@@ -242,7 +243,8 @@ node bin/eval.mjs examples/spaceport.s3d out/spaceport.L0.s3d
 3. **压缩**（压缩即理解）：同形状的物体之间如果总是同一个刚体运动，就是阵列——平移（直线、网格）、绕任意轴旋转（`rotate` 容器，整圈或一段圆弧）、螺旋（带 `turn` 的 `repeat`）；等弧长排在一条曲线上、朝向随切线变化的，拟合出这条曲线（Catmull-Rom 控制点 + 成员的固定偏移，Levenberg–Marquardt），写成 `spline` + `repeat … along=`；长度各不相同、都立在同一个物体上的竖直杆（过山车立柱），按顶点拟合曲线，写成 `span … from=顶点 drop=支撑物`——长度由关系决定，不再是各自的数；几组阵列在同一条曲线上时共用它；同一运动的几组阵列合并成多部件的 `repeat`；缺成员的阵列写成 `repeat` 加 `drop 阵列.k`（只在比逐个写出更短时才算规律）；成对对称的物体或阵列写成 `mirror … of=…`，镜像面写成“过某物中心、垂直于它的某根轴”。
 4. **关系**：先发射全坐标版本、编译得到空间事实，再自下而上为每个物体选一条主关系（`on` / `against` / 相对某物的锚点），朝向写成相对参照物的。
 5. **校验**：编译关系版本，逐个比对几何中心与（考虑对称的）朝向；不一致的阵列拆开、物体退回坐标。
-6. **命名**：源模型没有名字时（L1/L2），按通用语义库识别出的概念起名：`box46` → `terrain`，`cyls_2` → `columns`，阵列里的子物体 → `column`、`prop`。输出文件已经存在时，把它当作上一次的结果：几何上对得上的物体沿用原来的名字，所以源模型改动后重跑逆向，编辑层里的 `over` / `drop` 路径仍然有效（`--fresh` 重新起名）。
+6. **档位**（`--fidelity=semantic|structure|detail`）：一个容差参数同时决定拟合失败时是否退回网格、数字位数、角度取整、阵列与校验的容差。`semantic`（25 cm）一律用基本体当语义代理，得到干净的灰盒；`structure`（5 cm）结构清楚、细节交给人；`detail`（5 mm）尽量复原。阵列的步长按实例数单独取精度，取整误差不会逐级累加。
+7. **命名**：源模型没有名字时（L1/L2），按通用语义库识别出的概念起名：`box46` → `terrain`，`cyls_2` → `columns`，阵列里的子物体 → `column`、`prop`。输出文件已经存在时，把它当作上一次的结果：几何上对得上的物体沿用原来的名字，所以源模型改动后重跑逆向，编辑层里的 `over` / `drop` 路径仍然有效（`--fresh` 重新起名）。
 
 **评测**（`bin/eval.mjs`）：按紧包围盒 IoU 一一匹配对象，报告形状种类正确率、空间事实的 P/R/F1、语义识别的 P/R/F1（两边都附加通用语义库，逐个概念比较成员）、阵列与镜像的召回、世界坐标依赖率、语句数比。三个难度：L0 保留名字、L1 抹去名字并打乱、L2 按材质合并网格。
 
@@ -250,7 +252,7 @@ node bin/eval.mjs examples/spaceport.s3d out/spaceport.L0.s3d
 
 | 指标 | 结果 |
 |---|---|
-| 形状种类 | 101/101；10 个复杂形状（弯道、管线、抛物面天线…）保留为源网格引用 |
+| 形状种类 | 101/101；10 个复杂形状（弯道、管线、抛物面天线…）里 2 根弯管拟合成 `pipe`，其余保留为源网格引用 |
 | 平均 IoU | 1.0 |
 | on/against F1 | 0.976（on 为 1.0） |
 | 阵列召回 | 85/85：燃料罐 [罐, 顶, 环]、两座塔的平台 [平台, 斜撑]、2×2 的塔腿与灯塔、尾翼的旋转对称、24 级螺旋楼梯 |
@@ -261,14 +263,14 @@ node bin/eval.mjs examples/spaceport.s3d out/spaceport.L0.s3d
 
 稳定命名：把 spaceport 改成 spaceport_edit（火箭加长、塔改 10 层、罐 3 → 5 个、拆一根灯、加一座厂房）后带着上一次的结果重跑 L1 逆向，源里没改动的物体 25/25 沿用了原来的路径（不带上一次结果时只有 17/25）。拆掉一根灯后，逆向写出的是 `repeat lights n=(2,1,2) … drop lights.3`——和修改层里人写的那一句一样。
 
-已知局限：单独一对的镜像不会让描述变短，所以不写成 mirror；嵌套的规律（“每层一圈立柱”）会被识别成一个多部件的阵列而不是阵列套旋转；L2 的分割会把多块组成的部件拆碎；源模型带变体（`variant`）时，逆向描述的是变体的外观几何。
+已知局限：单独一对的镜像不会让描述变短，所以不写成 mirror；嵌套的规律没有嵌套地写出（斜塔各层的环是一个阵列，但每层的一圈立柱是 7 个各自独立的 rotate）；螺旋形的管（扶手）和“盒子减去门洞”这类构造还认不出来；从未在真实模型上验证过——目前的样例都能被基本体精确表达；L2 的分割会把多块组成的部件拆碎；源模型带变体（`variant`）时，逆向描述的是变体的外观几何。
 
 ## 协作工具：人与 AI 共用的工程
 
 最终的使用方式是人与多模态模型协作：模型读场景（图像 + 文本），用 SVG3D 的工具和自己的编码能力压缩场景；人在界面里选中物体、指出问题、确认或否决。两边共用同一个工程目录、同一套工具（计划见 [docs/PLAN2.md](docs/PLAN2.md)，工具手册见 [docs/agent.md](docs/agent.md)）。
 
 ```bash
-node bin/s3d-tool.mjs init out/spaceport.L2.glb --project=work/spaceport
+node bin/s3d-tool.mjs init out/spaceport.L2.glb --fidelity=structure --project=work/spaceport
 ```
 
 ```bash
@@ -279,10 +281,14 @@ node bin/s3d-tool.mjs score --project=work/spaceport
 node bin/s3d-tool.mjs render --focus=beam_1 --project=work/spaceport
 ```
 
-- **工程**：`base.s3d`（逆向结果，可重新生成）+ `edits.s3d` / `semantics.s3d` / `style.s3d` / `decisions.s3d`，由 `scene.s3d` 组合。
-- **看**：`render` 离屏渲染（纯 JS，零依赖），多视角、物体编号标注、聚焦时被选中的物体不会被遮挡，还可以渲染源模型做对照。
-- **查**：`outline`、`inspect`、`select`（集合表达式）、`similar`（同形部件，类型与阵列的候选）。
-- **评**：`score` 自评分数，不需要真值：描述长度 + 网格引用 + 双向几何残差，越低越好；`explain` 是相对“全部保留网格”的解释率，`worst` / `worstSources` 指出下一步最值得修的地方。在 spaceport L0 上：全部网格引用 8081 > 全世界坐标 3470 > 完整逆向 2109 > 手写原文 720。
+- **工程**：`base.s3d`（逆向结果，可重新生成）+ `edits.s3d` / `semantics.s3d` / `style.s3d` / `decisions.s3d`，由 `scene.s3d` 组合；档位记在 `project.json`。
+- **看**：`render` 离屏渲染（纯 JS，零依赖）：多视角、物体编号标注（去重叠）、聚焦时被选中的物体不会被遮挡、误差热图、源模型与重建结果共用取景对照（可用正交相机）。
+- **查**：`outline`、`inspect`（`--source` 看源模型的部件：包络、主轴尺寸、建议语句）、`select`（集合表达式）、`similar`（同形部件，类型与阵列的候选）。
+- **做**：AI 的修改以提议出现——`propose` / `preview`（逐物体的分数变化，可渲染提议后的场景）/ `accept` / `reject`；`check` 空跑；`note` / `inbox` 是人与 AI 之间的留言；每次调用都记在 `state/log.jsonl`。
+- **评**：`score` 自评分数，不需要真值：有效描述长度 + 网格引用 + 双向几何残差（容差以内不计、优先量到同材质的表面），越低越好；`explain` 是相对“全部保留网格”的解释率，`worst` / `worstSources` 指出下一步最值得修的地方。在 spaceport L0 上：全部网格引用 8081 > 全世界坐标 3027 > 完整逆向 1668 > 手写原文 720。
+- **MCP**：`node bin/s3d-mcp.mjs --project=…`，工具与命令行是同一张表，`render` 直接返回图像。
+
+第一次 AI 在环实验（[experiments/E1](experiments/E1/report.md)）：子 agent 只用这些工具和渲染图改进 spaceport L2 的逆向结果，20 条提议接受 12 条，分数降了 42%，真值评测的每一项几何、关系、语义指标都随之改进。
 
 ## 求解是怎么做的
 
@@ -298,4 +304,4 @@ node bin/s3d-tool.mjs render --focus=beam_1 --project=work/spaceport
 - 锚点基于包围盒；还没有曲面锚点（圆柱侧面的 θ 角）和地形。
 - copy 复制的是原对象的定义，不包括后来对原对象的 over。
 - 改模板参数会重建该实例，之前对其内部的修改需要写在参数修改之后。
-- 逆向管线的局限见上一节；后续计划见 [docs/PLAN.md](docs/PLAN.md)。
+- 逆向管线的局限见上一节；后续计划见 [docs/PLAN2.md](docs/PLAN2.md)。

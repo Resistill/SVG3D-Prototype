@@ -875,7 +875,6 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const ok = n && n.world && n.box && posOk() && (t.rod ? rodOk() : sameOrientation(t.o, n.world.R, !!t.mirror));
       if (ok) continue;
       if (process.env.S3D_DEBUG) console.error('校验不通过', t.path, n ? `中心差 ${len(sub(scl(add(n.box.min, n.box.max), 0.5), centerOf(t.o))).toFixed(4)}` : '找不到节点', n && !sameOrientation(t.o, n.world.R, !!t.mirror) ? '朝向不同' : '');
-      if (process.env.S3D_DEBUG && n && /pisa_galleries\.0\.ring/.test(t.path)) console.error(out.text.split('\n').filter((l) => /^repeat pisa_galleries /.test(l) || /^  cyl ring /.test(l)).slice(0, 3).join('\n'));
       changed = true;
       if (t.mirror) { droppedMirrors.add(t.mirror); for (const id of [t.mirror]) ghostPath.forEach((v, k) => { if (v === t.path || v.startsWith(t.mirror + '.')) ghostPath.delete(k); }); }
       else if (t.unit) dissolved.add(t.unit); else fallback.add(t.o.id);
