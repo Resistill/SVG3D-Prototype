@@ -28,6 +28,9 @@ const fmt = (x) => { const v = Math.round(x * 10000) / 10000; return Object.is(v
 const vec = (v) => v.map(fmt).join(',');
 const fmt6 = (x) => { const v = Math.round(x * 1e6) / 1e6; return Object.is(v, -0) ? '0' : String(v); };
 const vec6 = (v) => v.map(fmt6).join(',');
+// 拟合出来的数离 4 位小数很近（差不到 2e-6）时吸附过去：0.000001 → 0，8.999999 → 9
+const snap = (x) => { const r = Math.round(x * 1e4) / 1e4; return Math.abs(x - r) < 2e-6 ? r : x; };
+const vecS = (v) => vec6(v.map(snap));
 const linearToSrgb = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
 const hex = (rgb) => '#' + rgb.map((c) => Math.round(Math.max(0, Math.min(1, linearToSrgb(c))) * 255).toString(16).padStart(2, '0')).join('');
 
@@ -427,7 +430,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   // ── 压缩：阵列（平移 / 绕竖直轴旋转 / 螺旋）──
   const units = compress ? detectArrays(objs, related) : [];
   // 沿曲线的阵列：剩下的物体里，等间距排成一串、朝向随切线变化的（过山车枕木）
-  if (compress) units.push(...detectCurveArrays(objs, units));
+  if (compress) units.push(...detectCurveArrays(objs, units, onOf));
   const unitOf = new Map(); // 物体 id → { unit, child, k }
   for (const u of units) u.children.forEach((c, ci) => c.members.forEach((o, k) => unitOf.set(o.id, { unit: u, child: c, k: instOf(u, k) })));
   // 镜像：成对的物体或阵列关于同一个竖直平面对称 → 一个写出来，另一个是它的镜像副本
@@ -492,6 +495,16 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   const emit = (dissolved, fallback) => {
     const placed = new Set(), lines = [], targets = [], stats = { on: 0, against: 0, at: 0, coord: 0 };
     E = new Map();
+    // 曲线写在最前面：几个阵列可以共用一条，阵列被拆开时曲线留着也无害
+    for (const u of units) if (u.along && !u.along.shared && !dissolved.has(u.id)) {
+      const { ctrl, closed } = u.along;
+      lines.push(`spline ${u.along.id}${closed ? ' closed=true' : ''} path=[${ctrl.map((p) => `(${vecS(p)})`).join('; ')}]`);
+      stats.curve = (stats.curve ?? 0) + 1;
+    }
+    for (const u of units) if (u.along?.shared && !dissolved.has(u.id) && units.some((h) => h.along && !h.along.shared && h.along.id === u.along.id && dissolved.has(h.id))) {
+      const { ctrl, closed } = u.along;
+      lines.push(`spline ${u.along.id}${closed ? ' closed=true' : ''} path=[${ctrl.map((p) => `(${vecS(p)})`).join('; ')}]`);
+    }
     // 位姿：以几何中心为准，坐标系由来源决定
     const setPose = (o, cols, box = o.box) => E.set(o.id, { cols, box, at: sub(centerOf(o), mvC(cols, scl(add(box.min, box.max), 0.5))) });
     const isPlaced = (B) => B && placed.has(B.id);
@@ -526,17 +539,28 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       if (u.along) {
         // 曲线本身写成 spline（世界坐标），成员写在第 0 个实例的坐标系里
         const { ctrl, closed, mode } = u.along;
-        lines.push(`spline ${u.along.id}${closed ? ' closed=true' : ''} path=[${ctrl.map((p) => `(${vec6(p)})`).join('; ')}]`);
-        stats.curve = (stats.curve ?? 0) + 1;
         lines.push(`repeat ${u.id} n=${u.n} along=${u.along.id}${mode === 'yaw' ? '' : ` orient=${mode}`} {`);
         const poses = alongPoses(ctrl, closed, u.n, mode);
+        if (u.drop) {
+          // 长度由关系决定的杆：从顶点垂到支撑物
+          const ch = u.children[0], o = ch.members[0];
+          const lp = mvT(poses[0].M, sub(u.top(o), poses[0].q));
+          lines.push(`  span ${ch.id} from=(${vecS(lp)}) drop=${nameOf(byId.get(u.drop.support))} r=${u.drop.r} mat=${o.mat} ~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`);
+          for (const [k, m] of ch.members.entries()) {
+            targets.push({ o: m, path: `${u.id}.${k}.${ch.id}`, tol: 2e-3, unit: u.id, kind: 'along', rod: true });
+            setPose(m, m.cols, m.box);
+            placed.add(m.id);
+          }
+          lines.push('}');
+          continue;
+        }
         for (const ch of u.children) {
           const o = ch.members[0];
           const lp = mvT(poses[0].M, sub(o.at, poses[0].q));
           const colsL = o.cols.map((c) => mvT(poses[0].M, c));
           const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
           const orient = o.symY && Math.abs(colsL[1][1] - 1) < 1e-6 ? '' : orientText(colsL);
-          lines.push('  ' + [o.kind, ch.id, props, `at=${vec6(lp)}`, orient, `mat=${o.mat}`, `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' '));
+          lines.push('  ' + [o.kind, ch.id, props, `at=${vecS(lp)}`, orient, `mat=${o.mat}`, `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' '));
           for (const [k, m] of ch.members.entries()) {
             targets.push({ o: m, path: `${u.id}.${k}.${ch.id}`, tol: 2e-3, unit: u.id, kind: 'along' });
             setPose(m, colsL.map((c) => mvC(poses[k].M, c)), o.box);
@@ -635,7 +659,9 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const tolP = t.unit || t.mirror ? 2e-3 * Math.max(1, len(t.o.at) / 50) : t.tol;
       // 一律比较几何中心：中心与表示无关；加上考虑对称的朝向比较，位姿就完全确定了
       const posOk = () => len(sub(scl(add(n.box.min, n.box.max), 0.5), centerOf(t.o))) < tolP;
-      const ok = n && n.world && n.box && posOk() && sameOrientation(t.o, n.world.R, !!t.mirror);
+      // span 的杆轴是局部 x：比较杆轴与圆柱轴线
+      const rodOk = () => Math.abs(n.world.R[0][0] * t.o.cols[1][0] + n.world.R[1][0] * t.o.cols[1][1] + n.world.R[2][0] * t.o.cols[1][2]) > 1 - 1e-6;
+      const ok = n && n.world && n.box && posOk() && (t.rod ? rodOk() : sameOrientation(t.o, n.world.R, !!t.mirror));
       if (ok) continue;
       if (process.env.S3D_DEBUG) console.error('校验不通过', t.path, n ? `中心差 ${len(sub(scl(add(n.box.min, n.box.max), 0.5), centerOf(t.o))).toFixed(4)}` : '找不到节点', n && !sameOrientation(t.o, n.world.R, !!t.mirror) ? '朝向不同' : '');
       if (process.env.S3D_DEBUG && n && /pisa_galleries\.0\.ring/.test(t.path)) console.error(out.text.split('\n').filter((l) => /^repeat pisa_galleries /.test(l) || /^  cyl ring /.test(l)).slice(0, 3).join('\n'));
@@ -780,10 +806,22 @@ function detectMirrors(objs, units, unitOf) {
   return out;
 }
 
+// 阵列的名字：成员名的最长公共前缀作为阵列名、最长公共后缀作为部件名（coaster_ties_17_tie → coaster_ties / tie）；
+// 没有名字（L1/L2）时用形状编号，之后由语义命名改掉
+function memberNames(members, unit, child) {
+  const toks = members.map((o) => o.id.split('_'));
+  const common = (lists) => { const out = []; for (let i = 0; lists.every((t) => i < t.length - 1 && t[i] === lists[0][i]); i++) out.push(lists[0][i]); return out; };
+  const pre = common(toks), suf = common(toks.map((t) => [...t].reverse())).reverse();
+  return {
+    unit: pre.length && !/^\d+$/.test(pre.at(-1)) ? sanitize(pre.join('_')) : unit,
+    child: suf.length && !/^\d+$/.test(suf[0]) ? sanitize(suf.join('_')) : child,
+  };
+}
+
 // ───────── 沿曲线的阵列 ─────────
 // 同形状、同尺寸、同材质、还没进阵列的物体，按最近邻排成等间距的链（至少 8 个），再拟合一条样条：
 // 第 k 个成员 = 曲线上等弧长的第 k 个点 + 随切线转动的固定偏移。拟合与校验都通过才算。
-function detectCurveArrays(objs, units) {
+function detectCurveArrays(objs, units, onOf) {
   const inUnit = new Set(units.flatMap((u) => u.children.flatMap((c) => c.members.map((o) => o.id))));
   const nums = (o) => Object.entries(o.props).filter(([k]) => !['src', 'pivot', 'axis'].includes(k)).flatMap(([, v]) => String(v).split(',').map(Number));
   const sameSize = (a, b) => { const x = nums(a), y = nums(b); return x.length === y.length && x.every((v, i) => Math.abs(v - y[i]) < 0.01 + 0.005 * Math.abs(v)); };
@@ -806,10 +844,11 @@ function detectCurveArrays(objs, units) {
       if (!f) continue;
       if (f.reversed) members = [members[0], ...members.slice(1).reverse()];
       if (f.start) members = [...members.slice(f.start), ...members.slice(0, f.start)];
-      let id = `${g[0].kind}s`, k = 2;
-      while (taken.has(id)) id = `${g[0].kind}s_${k++}`;
+      const nm = memberNames(members, `${g[0].kind}s`, g[0].kind);
+      let id = nm.unit, k = 2;
+      while (taken.has(id)) id = `${nm.unit}_${k++}`;
       taken.add(id);
-      out.push({ id, children: [{ id: g[0].kind, members }], n: members.length, along: { id: `curve${++ci}`, ctrl: f.ctrl, closed: f.closed, mode: f.mode } });
+      out.push({ id, children: [{ id: nm.child, members }], n: members.length, along: { id: `curve${++ci}`, ctrl: f.ctrl, closed: f.closed, mode: f.mode } });
     }
   }
   // 合并：同一条水平曲线上的几组（路灯的灯杆与灯臂）。yaw 模式下实例坐标系的 y 朝上，
@@ -834,8 +873,54 @@ function detectCurveArrays(objs, units) {
     while (ids.has(cid)) cid += '_';
     host.children.push({ id: cid, members: how.rev ? [...u.children[0].members].reverse() : u.children[0].members });
   }
+  // 由关系决定长度的竖直杆：半径、材质相同，都立在同一个物体上，长度各不相同（过山车的立柱、栈桥的桩）。
+  // 规律在顶点上：顶点沿曲线等弧长分布，长度由“垂到支撑物”决定 → span from=顶点 drop=支撑物
+  const taken2 = new Set(merged.flatMap((u) => u.children.flatMap((c) => c.members.map((o) => o.id))));
+  const poleGroups = new Map();
+  for (const o of objs) {
+    if (o.kind !== 'cyl' || inUnit.has(o.id) || taken2.has(o.id) || o.props.axis || !o.symY || Math.abs(o.cols[1][1] - 1) > 1e-6) continue;
+    const sup = onOf.get(o.id) ?? [];
+    if (sup.length !== 1) continue;
+    const key = `${o.props.r}|${o.mat}|${sup[0]}`;
+    if (!poleGroups.has(key)) poleGroups.set(key, []);
+    poleGroups.get(key).push(o);
+  }
+  const topOf = (o) => add(o.at, mvC(o.cols, [(o.box.min[0] + o.box.max[0]) / 2, o.box.max[1], (o.box.min[2] + o.box.max[2]) / 2]));
+  for (const g of poleGroups.values()) {
+    if (g.length < 8 || g.every((o) => Math.abs(o.box.max[1] - g[0].box.max[1]) < 1e-3)) continue;
+    for (const ch of chainsOf(g.map(topOf))) {
+      let members = ch.order.map((i) => g[i]);
+      // drop 的方向是实例坐标系的“下”，只有 yaw（保持竖直）时才是世界的下
+      let f = fitAlong(members.map(topOf), { closed: ch.closed, modes: ['yaw'] });
+      if (!f && !ch.closed) { members = [...members].reverse(); f = fitAlong(members.map(topOf), { closed: false, modes: ['yaw'] }); }
+      if (!f) continue;
+      if (f.reversed) members = [members[0], ...members.slice(1).reverse()];
+      if (f.start) members = [...members.slice(f.start), ...members.slice(0, f.start)];
+      // 与已有曲线只差一个竖直平移（yaw 模式下等价于部件的高度偏移）就引用它
+      let curve = { id: `curve${++ci}`, ctrl: f.ctrl, closed: f.closed, mode: 'yaw' };
+      for (const h of merged) {
+        const hc = h.along.ctrl;
+        if (h.along.closed !== f.closed || hc.length !== f.ctrl.length) continue;
+        const cands = f.closed ? [f.ctrl, [f.ctrl[0], ...f.ctrl.slice(1).reverse()]] : [f.ctrl, [...f.ctrl].reverse()];
+        if (cands.some((c) => { const d = sub(c[0], hc[0]); return Math.abs(d[0]) < 1e-4 && Math.abs(d[2]) < 1e-4 && c.every((p, j) => len(sub(sub(p, hc[j]), d)) < 1e-4); })) {
+          // 方向必须和那条曲线一致：用它重新核对一遍（反向时成员顺序也反过来）
+          for (const ms of f.closed ? [members, [members[0], ...members.slice(1).reverse()]] : [members, [...members].reverse()]) {
+            const poses = alongPoses(hc, h.along.closed, ms.length, 'yaw');
+            const off = mvT(poses[0].M, sub(topOf(ms[0]), poses[0].q));
+            if (ms.every((o, k) => len(sub(add(poses[k].q, mvC(poses[k].M, off)), topOf(o))) < 5e-4)) { curve = { ...h.along, mode: 'yaw', shared: true }; members = ms; break; }
+          }
+          if (curve.shared) { ci--; break; }
+        }
+      }
+      const nm = memberNames(members, 'poles', 'pole');
+      let id = nm.unit, k = 2;
+      while (taken.has(id)) id = `${nm.unit}_${k++}`;
+      taken.add(id);
+      merged.push({ id, children: [{ id: nm.child, members }], n: members.length, along: curve, drop: { support: onOf.get(members[0].id)[0], r: members[0].props.r }, top: topOf });
+    }
+  }
   // 水平曲线的高度是任意的（部件的高度偏移可以补上）：放到成员的最低点，曲线就是它们立着的那条路
-  for (const u of merged) if (u.along.mode === 'yaw') {
+  for (const u of merged) if (u.along.mode === 'yaw' && !u.drop) {
     const corner = (o, b) => add(o.at, mvC(o.cols, [0, 1, 2].map((k) => ((b >> k) & 1 ? o.box.max[k] : o.box.min[k]))));
     const bottom = Math.min(...u.children.flatMap((c) => c.members.flatMap((o) => [0, 1, 2, 3, 4, 5, 6, 7].map((b) => corner(o, b)[1]))));
     u.along.ctrl = u.along.ctrl.map((p) => [p[0], bottom, p[2]]);

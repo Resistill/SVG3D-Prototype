@@ -107,11 +107,12 @@ export function chainsOf(points, { min = 8, ratio = 3 } = {}) {
 // 水平的曲线上 full 与 yaw 完全一样（x 沿切线、y 朝上），写成默认的 yaw
 const flat = (ctrl) => ctrl.every((p) => Math.abs(p[1] - ctrl[0][1]) < 1e-6);
 
-export function fitAlong(centers, { closed, tol = 5e-4, maxK = 16 } = {}) {
+export function fitAlong(centers, { closed, tol = 5e-4, maxK = 16, modes = ['full', 'yaw'] } = {}) {
   const N = centers.length;
   const per = 12; // 与 catmullRom 的默认采样数一致：第 j 个控制点是折线的第 j·per 个顶点
-  for (const mode of ['full', 'yaw']) {
-    for (let K = closed ? 3 : 2; K <= Math.min(maxK, Math.floor(N / 3)); K++) {
+  for (const mode of modes) {
+    for (let K = closed ? 3 : 2; K <= Math.min(maxK, Math.floor((N - 1) / 2)); K++) {
+      // 方程（3N 个）至少是未知量（3K + 3 个）的两倍
       const pick = (j) => centers[Math.round(closed ? (j * N) / K : (j * (N - 1)) / (K - 1))];
       const p0 = [...Array.from({ length: K }, (_, j) => pick(j)).flat(), 0, 0, 0];
       const unpack = (p) => ({ ctrl: Array.from({ length: K }, (_, j) => p.slice(3 * j, 3 * j + 3)), off: [0, p[3 * K], p[3 * K + 1]], phase: closed ? p[3 * K + 2] : 0 });

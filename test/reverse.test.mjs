@@ -174,3 +174,18 @@ test('部分圆弧上的旋转阵列：沿 300° 弧排的路灯写成 rotate', 
   assert.equal(ev.compression.array.recall, 1, JSON.stringify(ev.compression.array));
   assert.match(out.src, /^rotate \S+ n=10 angle=30 /m);
 });
+
+test('由关系决定长度的阵列：轨道下垂到地面的立柱写成 span … drop=，与枕木共用一条曲线', () => {
+  const src = `
+    box ground size=80,1,80 pin=top
+    spline loop closed=true path=[(0,4,0); (15,8,8); (5,11,18); (-12,6,10)]
+    repeat ties n=40 along=loop orient=full { box tie size=0.2,0.1,1.5 pin=top }
+    repeat legs n=12 along=loop { span col from=(0,-0.3,0) drop=ground r=0.2 }
+  `;
+  const out = reverse(partsOfDocument(sceneToGLB(src, { level: 'L1' }).doc), { level: 'L1' });
+  const ev = evaluate(src, out.src);
+  assert.equal(ev.errors.recon, 0);
+  assert.equal(ev.compression.array.recall, 1, JSON.stringify(ev.compression.array));
+  assert.equal((out.src.match(/^spline /gm) ?? []).length, 1, '只有一条曲线');
+  assert.match(out.src, /^repeat \S+ n=12 along=\S+ \{\n  span \S+ from=\(0,-0\.3,0\) drop=\S+ r=0\.2 /m);
+});

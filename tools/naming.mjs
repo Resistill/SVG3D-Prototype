@@ -151,8 +151,8 @@ export function semanticNames(text, { library = SEMANTICS, previous = null } = {
     let s = line;
     const newName = scope ? childMaps.get(scope)?.get(d.name) ?? d.name : rename.get(d.name) ?? d.name;
     s = s.replace(/^(\s*\S+\s+)(\S+)/, (m, a) => a + newName);
-    // 属性值里的引用：on=… at=… of=… across=… about=… against=…（字符串里的不动）
-    return s.replace(/(\s(?:on|at|of|across|about|against|align|gap|offset)=)([\p{L}_][\p{L}\p{N}_.]*)/gu, (m, k, p) => k + ref(p, scope));
+    // 属性值里的引用：on=… at=… of=… across=… about=… against=… drop=… along=…（字符串里的不动）
+    return s.replace(/(\s(?:on|at|of|across|about|against|align|gap|offset|drop|along|from|to)=)([\p{L}_][\p{L}\p{N}_.]*)/gu, (m, k, p) => k + ref(p, scope));
   });
   return { text: out.join('\n'), map: Object.fromEntries(rename), renamed: rename.size + [...childMaps.values()].reduce((s, m) => s + [...m].filter(([a, b]) => a !== b).length, 0) };
 }
