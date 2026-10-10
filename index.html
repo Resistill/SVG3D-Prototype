@@ -33,7 +33,11 @@
   button:hover, select:hover { border-color: #3b4450; }
   button.on { border-color: #1f5fd6; color: #9cc0ff; }
   main { display: grid; grid-template-columns: minmax(340px, 42%) 1fr; min-height: 0; }
-  #left { display: grid; grid-template-rows: 1fr auto; min-height: 0; border-right: 1px solid var(--line); }
+  #left { display: grid; grid-template-rows: auto 1fr auto; min-height: 0; border-right: 1px solid var(--line); }
+  #filebar { display: flex; gap: 6px; align-items: center; padding: 5px 8px; border-bottom: 1px solid var(--line); background: var(--panel, #161a20); }
+  #filebar[hidden] { display: none; }
+  #filebar select { flex: 1; min-width: 0; font: 12.5px var(--mono); }
+  #filebar .lbl { color: #8a93a3; font-size: 12px; }
   .editor { display: grid; grid-template-columns: 44px 1fr; min-height: 0; background: var(--bg); }
   #gutter { overflow: hidden; padding: 10px 0; text-align: right; color: #4c5563; font: 12.5px/1.6 var(--mono); user-select: none; border-right: 1px solid var(--line); }
   #gutter div { padding-right: 8px; }
@@ -123,6 +127,7 @@
 </header>
 <main>
   <section id="left">
+    <div id="filebar" hidden><span class="lbl">文件</span><select id="file" aria-label="工程里的文件" title="组合根及其 import 的各层；点击物体会自动切到它所在的文件"></select><button id="save" hidden title="把修改写回磁盘（Ctrl/⌘+S）">保存</button></div>
     <div class="editor">
       <div id="gutter"></div>
       <textarea id="src" spellcheck="false" autocomplete="off" aria-label="SVG3D 源码"></textarea>
@@ -130,7 +135,7 @@
     <div id="errors" hidden></div>
   </section>
   <section id="right">
-    <div id="view"><div id="tip" hidden></div><div class="hint">拖动旋转 · 右键平移 · 滚轮缩放 · 点击物体定位到源码</div></div>
+    <div id="view"><div id="tip" hidden></div><div class="hint">拖动旋转 · 右键平移 · 滚轮缩放 · 点击物体定位到源码（Alt+点击：类型的 def）</div></div>
     <div id="panel">
       <div class="tabs">
         <button class="on" data-pane="objects-pane">对象</button>

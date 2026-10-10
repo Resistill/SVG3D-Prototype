@@ -51,20 +51,30 @@ async function scoreWith(P, overrides = {}, consts = {}) {
 async function refineAuto(P, parts, { to, budget, target }) {
   const consts = { delta: FIDELITY[to].tau };
   let cur = await scoreWith(P, {}, consts);
-  const start = cur.s.S, log = [], tried = new Set();
+  const start = cur.s.S, log = [], tried = new Set(), done = new Set();
   for (let i = 0; i < budget && cur.s.explain < target; i++) {
-    const cands = [...cur.s.objects].filter((o) => !o.mesh && !tried.has(o.path)).sort((x, y) => (y.rSrc + y.rRecon) - (x.rSrc + x.rRecon));
+    // 已经细化过的物体，它内部新拆出来的部件不再细化（它们没有自己的源部件，局部分数不可靠）
+    const inside = (p) => [...done].some((d) => p.startsWith(d + '.'));
+    const cands = [...cur.s.objects].filter((o) => !o.mesh && !tried.has(o.path) && !inside(o.path)).sort((x, y) => (y.rSrc + y.rRecon) - (x.rSrc + x.rRecon));
     let pr = null;
-    while (cands.length && !pr) { const o = cands.shift(); tried.add(o.path); const x = refineProposal(cur.r, parts, o.path, { to }); if (x.error) log.push({ path: o.path, skipped: x.error }); else if (tried.has('T:' + x.target)) log.push({ path: o.path, skipped: '同一种类型已经试过' }); else { tried.add('T:' + x.target); pr = x; } }
+    // 局部分数（只看这个物体）先筛一遍：最好的候选都不如现在的写法，就不必编译、评分整个场景
+    while (cands.length && !pr) {
+      const o = cands.shift();
+      tried.add(o.path);
+      const x = refineProposal(cur.r, parts, o.path, { to });
+      if (x.error) log.push({ path: o.path, skipped: x.error });
+      else if (tried.has('T:' + x.target)) log.push({ path: o.path, skipped: '同一种类型已经试过' });
+      else { tried.add('T:' + x.target); if (x.gain < 0) pr = x; else log.push({ path: o.path, target: x.target, skipped: '局部分数没有变好', local: { current: x.current.S, best: x.local.S, chosen: x.name } }); }
+    }
     if (!pr) break;
-    const edits = (P.exists('edits.s3d') ? P.read('edits.s3d') : '').replace(/\n*$/, '\n') + `// 细化到 ${to}：${pr.target}（${pr.boxes} 个盒子）\n${pr.text}\n`;
+    const edits = (P.exists('edits.s3d') ? P.read('edits.s3d') : '').replace(/\n*$/, '\n') + `// 细化到 ${to}：${pr.target}（${pr.name}，${pr.boxes} 个部件）\n${pr.text}\n`;
     const next = await scoreWith(P, { 'edits.s3d': edits }, consts);
     const known = new Set(cur.r.errors.map((e) => `${e.file}:${e.message}`));
     const errors = next.r.errors.filter((e) => !known.has(`${e.file}:${e.message}`));
     const delta = +(next.s.S - cur.s.S).toFixed(2);
     const ok = delta < 0 && !errors.length;
-    if (ok) { P.write('edits.s3d', edits); cur = next; }
-    log.push({ path: pr.path, target: pr.target, kind: pr.kind, boxes: pr.boxes, delta, accepted: ok, errors: errors.map((e) => e.message).slice(0, 3) });
+    if (ok) { P.write('edits.s3d', edits); cur = next; done.add(pr.path); }
+    log.push({ path: pr.path, target: pr.target, kind: pr.kind, chosen: pr.name, boxes: pr.boxes, local: +pr.gain.toFixed(1), delta, accepted: ok, errors: errors.map((e) => e.message).slice(0, 3) });
   }
   P.write('score.json', JSON.stringify(cur.s, null, 2) + '\n');
   return { to, start, end: cur.s.S, explain: cur.s.explain, accepted: log.filter((x) => x.accepted).length, log };
@@ -314,7 +324,7 @@ export const COMMANDS = {
     },
   },
   refine: {
-    desc: '细化：把物体对应的源网格按更细的档位拆成一组盒子（类型实例 → 细化类型本身，所有实例一起变；普通物体 → 保名换形成 group），名字与引用不变。默认生成提议；--apply 分数下降就接受；--auto 从最差的物体开始逐个细化，直到解释率达到 --target 或用完 --budget',
+    desc: '细化：把物体对应的源网格按更细的档位重新描述（类型实例 → 细化类型本身，所有实例一起变；普通物体 → 保名换形成 group），名字与引用不变。生成几个候选（全部分量 / 按面积只留大块 / 体素），用只看这个物体的局部分数挑最好的——粗档位下窗框、饰条这类小构件会被舍弃。默认生成提议；--apply 分数下降就接受；--auto 从最差的物体开始逐个细化（局部分数没变好的直接跳过），直到解释率达到 --target 或用完 --budget',
     args: { paths: '要细化的物体（可选）', worst: '可选：细化分数里最差的 N 个', to: '目标档位：structure / detail（默认比工程档位细一档）', apply: '可选：分数下降就直接接受', auto: '可选：自动模式', budget: '自动模式最多尝试几个物体（默认 10）', target: '自动模式的解释率目标（默认 1，即直到预算用完）' },
     async run(P, a) {
       const to = a.to ?? finer(P.cfg.fidelity ?? 'semantic');
@@ -334,10 +344,10 @@ export const COMMANDS = {
         if (seen.has(pr.target)) continue; // 同一种类型只细化一次
         seen.add(pr.target);
         const d = FIDELITY[to].tau;
-        const pv = await COMMANDS.propose.run(P, { text: pr.text, why: `细化到 ${to}（按 δ=${d} 衡量）：${pr.kind === 'type' ? '类型' : '物体'} ${pr.target} 拆成 ${pr.boxes} 个部件`, title: `refine-${pr.target}`.slice(0, 40), delta: d });
+        const pv = await COMMANDS.propose.run(P, { text: pr.text, why: `细化到 ${to}（按 δ=${d} 衡量）：${pr.kind === 'type' ? '类型' : '物体'} ${pr.target} → ${pr.name}，${pr.boxes} 个部件；局部分数 ${pr.current.S} → ${pr.local.S}`, title: `refine-${pr.target}`.slice(0, 40), delta: d });
         let accepted = false;
         if (a.apply && pv.delta < 0 && !pv.errors.length) { await COMMANDS.accept.run(P, { id: pv.id, delta: d }); accepted = true; }
-        out.push({ path, target: pr.target, kind: pr.kind, boxes: pr.boxes, id: pv.id, delta: pv.delta, errors: pv.errors, accepted });
+        out.push({ path, target: pr.target, kind: pr.kind, chosen: pr.name, boxes: pr.boxes, local: { current: pr.current.S, best: pr.local.S, instances: pr.instances }, candidates: pr.candidates, id: pv.id, delta: pv.delta, errors: pv.errors, accepted });
       }
       return out;
     },

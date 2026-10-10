@@ -21,7 +21,7 @@ reverse [--fidelity=…] [--fresh]                                          重�
 
 | 文件 | 内容 | 谁改 |
 |---|---|---|
-| `base.s3d` | 逆向结果（机器层） | 只由 `reverse` 重写；**不要手改** |
+| `base.s3d` | 逆向结果（机器层）；超过 `splitLines`（默认 400）行时只是索引，内容拆在 `base/types.s3d`（材质与类型）和 `base/NN-名字.s3d`（按水平位置分区的物体）里 | 只由 `reverse` 重写；**不要手改** |
 | `edits.s3d` | 修改层：`over` / `drop` / `copy` / 新物体 / `def` 扩展 | 人；AI 经提议 |
 | `semantics.s3d` | 语义层：`concept` / `pattern` / `check`（已 import 通用语义库） | 人；AI 经提议 |
 | `style.s3d` | 风格层：只改外观 | 人；AI 经提议 |
@@ -95,6 +95,19 @@ inbox                     读留言与否决理由
 ```
 
 提议文件在 `proposals/NNN-标题.s3d`：首行 `// layer=edits why=…`，`// retract <行号>` 撤销目标层的某一行，其余是追加的语句。每次工具调用都记在 `state/log.jsonl`。
+
+## 做：细化
+
+```
+refine <路径…> | --worst=N [--to=structure|detail] [--apply]
+refine --auto [--to=…] [--budget=10] [--target=解释率]
+```
+
+把物体对应的源网格按更细的档位（默认比工程档位细一档）重新描述，名字与引用不变：类型实例 → `def T : T { drop body; group body envelope=… { … } }`（所有实例一起变）；普通物体 → `over x : group envelope=… { … }`。名义外包络 `envelope` 保证挂在它上面的物体不动。
+
+- **候选**：全部分量（在物体坐标系里再逆向一次：逐块拟合、关系、阵列、镜像）/ 按面积只留前 99% · 97% · 90% 的分量 / 上面每种再把“面积大、拟合差”的分量换成体素盒子 / 整体体素（三种粒度）。
+- **局部分数**：只看这个物体——描述长度 + 它的源网格与候选几何之间的双向残差，δ 取目标档位；类型的残差按实例数计。返回值里的 `candidates` 列出每个候选的分数，`local.current` 是现在写法的局部分数，`chosen` 是被选中的候选。粗档位下窗框、饰条这类小构件“写出来的代价 > 省掉的误差”，自然被舍弃。
+- `--auto`：从残差最大的物体开始；局部分数没变好的直接跳过（日志里 `skipped: 局部分数没有变好`），其余按目标档位全场评分，变好才写进 `edits.s3d`。
 
 ## MCP
 

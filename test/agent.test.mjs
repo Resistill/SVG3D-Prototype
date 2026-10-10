@@ -189,3 +189,35 @@ test('细化：两柱一梁的类型被拆成部件（同名扩展 + 名义外�
   assert.deepEqual(after.nodes.find((n) => n.path === 'sign').box, before, '挂在门上的牌子不动（骨架保留）');
   assert.ok(after.items.filter((i) => i.path.startsWith(insts[2] + '.')).length >= 3, '所有实例一起变细');
 });
+
+const SPREAD = `
+  material steel color=#7f8b96
+  box ground size=200,1,40 pin=top
+` + [-80, -20, 40].map((x, i) => `  box shed${i} size=6,3,4 on=ground at=${x},0,0
+  wedge roof${i} size=6,1.5,4 on=shed${i}
+  cyl tank${i} r=1 h=4 on=ground at=${x + 8},0,5 mat=steel
+`).join("");
+
+test('文件拆分：基础层超过 splitLines 行就拆成 base/ 下的类型文件与空间分区，编译结果与分数不变，重跑逆向名字不变', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 's3d-'));
+  const { doc, io } = sceneToGLB(SPREAD, { level: 'L1' });
+  const glb = join(dir, 'world.glb');
+  writeFileSync(glb, await io.writeBinary(doc));
+  const proj = join(dir, 'proj');
+  await runCommand('init', proj, { source: glb });
+  const one = await runCommand('score', proj, {});
+  const nodes0 = (await runCommand('outline', proj, { depth: 9 })).outline.length;
+  const cfgPath = join(proj, 'project.json');
+  writeFileSync(cfgPath, JSON.stringify({ ...JSON.parse(readFileSync(cfgPath, 'utf8')), splitLines: 6 }));
+  await runCommand('reverse', proj, {});
+  const index = readFileSync(join(proj, 'base.s3d'), 'utf8');
+  const imports = [...index.matchAll(/^import "([^"]+)"/gm)].map((m) => m[1]);
+  assert.ok(imports.length >= 3 && imports.every((f) => f.startsWith('base/') && existsSync(join(proj, f))), index);
+  assert.ok(!/^\s*(box|cyl|repeat)\s/m.test(index), '索引里只有 import');
+  const two = await runCommand('score', proj, {});
+  assert.equal(two.S, one.S, '拆分不改变分数');
+  assert.equal((await runCommand('outline', proj, { depth: 9 })).outline.length, nodes0);
+  const files0 = imports.map((f) => readFileSync(join(proj, f), 'utf8')).join('\n');
+  await runCommand('reverse', proj, {});
+  assert.equal(imports.map((f) => readFileSync(join(proj, f), 'utf8')).join('\n'), files0, '重跑逆向：拼回的旧文本作为名字记忆，结果不变');
+});

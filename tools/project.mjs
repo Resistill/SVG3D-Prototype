@@ -1,16 +1,17 @@
 // 工程：人与 AI 共用的一个目录（docs/PLAN2.md 2.2）。工具与界面都只通过这里读写，没有隐藏状态。
 //   project.json   源模型、分数常数、容差
 //   scene.s3d      组合根：import 各层（工具与界面只编译它）
-//   base.s3d       逆向基础层（机器生成，重跑逆向会重写；人和 AI 不直接改）
+//   base.s3d       逆向基础层（机器生成，重跑逆向会重写；人和 AI 不直接改）；大的时候是索引，内容拆在 base/ 下
 //   edits.s3d      修改层；semantics.s3d 语义层；style.s3d 风格层；decisions.s3d 决定层（逆向的约束，不进 scene）
 //   state/         选中状态等；renders/ 渲染图；score.json 最近一次评分
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, relative, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compile } from '../src/s3d.js';
 import { readParts, reverse, FIDELITY } from './reverse.mjs';
 import { SCORE_DEFAULTS } from './score.mjs';
+import { splitSource, joinSource, importedFiles } from './split.mjs';
 
 const LIB = resolve(dirname(fileURLToPath(import.meta.url)), '../lib/semantics.s3d');
 export const LAYERS = ['base.s3d', 'edits.s3d', 'semantics.s3d', 'style.s3d'];
@@ -45,12 +46,26 @@ export function openProject(dir) {
       return compile(text, { file: main, resolve: (p) => overrides[p] ?? readFileSync(resolve(dir, p), 'utf8') });
     },
     // 计入描述长度的文本
-    geometryFiles: (overrides = {}) => GEOMETRY_LAYERS.filter((f) => overrides[f] != null || P.exists(f)).map((f) => ({ file: f, text: overrides[f] ?? P.read(f) })),
+    // 基础层可能拆成了多个文件（base.s3d 是索引），它 import 的文件一并计入
+    geometryFiles: (overrides = {}) => GEOMETRY_LAYERS.flatMap((f) => (f === 'base.s3d' ? importedFiles((x) => overrides[x] ?? P.read(x), f) : [f]))
+      .filter((f) => overrides[f] != null || P.exists(f)).map((f) => ({ file: f, text: overrides[f] ?? P.read(f) })),
     _parts: null,
     async sourceParts() { return (P._parts ??= await readParts(P.sourcePath(), { split: cfg.split ?? 'auto' })); },
     selection() { try { return JSON.parse(P.read('state/selection.json')); } catch { return { paths: [] }; } },
   };
   return P;
+}
+
+// 写基础层：超过 splitLines 行（默认 400，0 = 不拆）就拆成 base/ 下的多个文件，base.s3d 只做索引；旧的分区文件先清掉
+export function writeBase(P, text) {
+  const dir = P.path('base');
+  if (existsSync(dir)) for (const f of readdirSync(dir)) if (f.endsWith('.s3d')) rmSync(join(dir, f));
+  const lim = P.cfg.splitLines ?? 400;
+  const sp = lim > 0 ? splitSource(text, { maxLines: lim }) : null;
+  if (!sp) { P.write('base.s3d', text); return null; }
+  for (const [f, t] of Object.entries(sp.files)) P.write(f, t);
+  P.write('base.s3d', sp.index);
+  return sp.zones;
 }
 
 // 新建工程：记录源模型，跑一次逆向，生成各层文件
@@ -80,9 +95,9 @@ export async function runReverse(P, { fresh = false, fidelity = null } = {}) {
     writeFileSync(P.path('project.json'), JSON.stringify(P.cfg, null, 2) + '\n');
   }
   const parts = await P.sourceParts();
-  const previous = !fresh && P.exists('base.s3d') ? P.read('base.s3d') : null;
+  const previous = !fresh && P.exists('base.s3d') ? joinSource(P.read) : null;
   const out = reverse(parts, { srcFile: P.cfg.source, level: 'project', previous, fidelity: P.cfg.fidelity ?? 'detail' });
-  P.write('base.s3d', out.src);
+  writeBase(P, out.src);
   P.write('base.report.json', JSON.stringify(out.report, null, 2) + '\n');
   const hash = sha1(P.sourcePath());
   if (hash !== P.cfg.sourceHash) { P.cfg.sourceHash = hash; writeFileSync(P.path('project.json'), JSON.stringify(P.cfg, null, 2) + '\n'); }

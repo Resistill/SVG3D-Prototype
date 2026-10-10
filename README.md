@@ -24,7 +24,7 @@ npm run serve
 
 打开 <http://localhost:5178>：左边写代码，右边实时预览。点击物体会定位到源码；「语义」标签列出概念、模式、变体和检查；「空间事实」标签列出从几何反推出的关系。
 
-打开任意 `.s3d` 文件：在地址后面加 `?file=路径`（相对于仓库根目录），例如工程的组合根 <http://localhost:5178/index.html?file=work/spaceport/scene.s3d>——它 import 的各层会一起加载。文件模式下在网页里的修改不会写回磁盘；工具改过文件后刷新页面即可看到。
+打开任意 `.s3d` 文件：在地址后面加 `?file=路径`（相对于仓库根目录），例如工程的组合根 <http://localhost:5178/index.html?file=work/spaceport/scene.s3d>——它 import 的各层会一起加载。编辑器上方的「文件」列表列出组合根和它 import 的所有文件（缩进表示层级），可以切换查看、修改；点击物体会自动切到它所在的文件并选中那一行（类型实例的部件定位到放置实例的语句，Alt+点击才跳到 `def`）。修改后 Ctrl/⌘+S 或「保存」写回磁盘（只能覆盖已有的 `.s3d` 文件）；工具改过文件后刷新页面即可看到。
 
 ```bash
 npm test
@@ -284,11 +284,11 @@ node bin/s3d-tool.mjs score --project=work/spaceport
 node bin/s3d-tool.mjs render --focus=beam_1 --project=work/spaceport
 ```
 
-- **工程**：`base.s3d`（逆向结果，可重新生成）+ `edits.s3d` / `semantics.s3d` / `style.s3d` / `decisions.s3d`，由 `scene.s3d` 组合；档位记在 `project.json`。
+- **工程**：`base.s3d`（逆向结果，可重新生成）+ `edits.s3d` / `semantics.s3d` / `style.s3d` / `decisions.s3d`，由 `scene.s3d` 组合；档位记在 `project.json`。基础层超过 400 行（`project.json` 的 `splitLines`）时自动拆成多个文件：`base/types.s3d`（材质与类型）+ 按水平位置分区的 `base/NN-名字.s3d`，`base.s3d` 只做索引；名字跨文件可见，拆分不改变编译结果与分数。
 - **看**：`render` 离屏渲染（纯 JS，零依赖）：多视角、物体编号标注（去重叠）、聚焦时被选中的物体不会被遮挡、误差热图、源模型与重建结果共用取景对照（可用正交相机）。
 - **查**：`outline`、`inspect`（`--source` 看源模型的部件：包络、主轴尺寸、建议语句）、`select`（集合表达式）、`similar`（同形部件，类型与阵列的候选）。
 - **做**：AI 的修改以提议出现——`propose` / `preview`（逐物体的分数变化，可渲染提议后的场景）/ `accept` / `reject`；`check` 空跑；`note` / `inbox` 是人与 AI 之间的留言；每次调用都记在 `state/log.jsonl`。
-- **细化**：`refine <物体> --to=structure|detail` 把物体对应的源网格按更细的档位拆开（多块的网格在物体坐标系里再逆向一次，单块用体素拆成盒子），类型实例细化的是类型本身；名字、关系、阵列都不变，名义外包络 `envelope` 保证挂在它上面的物体不动；`--auto` 从最差的物体开始逐个细化，按目标档位的尺子评分，变好才保留。
+- **细化**：`refine <物体> --to=structure|detail` 把物体对应的源网格按更细的档位重新描述：生成几个候选（全部分量在物体坐标系里再逆向一次 / 按面积只留大块 / 拟合差的大块换成体素 / 整体体素），用只看这个物体的局部分数挑最好的——粗档位下窗框、饰条这类“写出来比省掉的误差还贵”的小构件自然被舍弃。类型实例细化的是类型本身（局部分数按实例数计）；名字、关系、阵列都不变，名义外包络 `envelope` 保证挂在它上面的物体不动；`--auto` 从最差的物体开始逐个细化，局部分数没变好的直接跳过，其余按目标档位的尺子全场评分，变好才保留。
 - **评**：`score` 自评分数，不需要真值：有效描述长度 + 网格引用 + 双向几何残差（容差以内不计、优先量到同材质的表面），越低越好；`explain` 是相对“全部保留网格”的解释率，`worst` / `worstSources` 指出下一步最值得修的地方。在 spaceport L0 上：全部网格引用 8081 > 全世界坐标 3027 > 完整逆向 1668 > 手写原文 720。
 - **MCP**：`node bin/s3d-mcp.mjs --project=…`，工具与命令行是同一张表，`render` 直接返回图像。
 

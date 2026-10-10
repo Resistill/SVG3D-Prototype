@@ -56,7 +56,7 @@ export class Viewer {
     this.renderer.domElement.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
     this.renderer.domElement.addEventListener('pointerup', (e) => {
       if (this.fly.on) return;
-      if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 4 && this.clickCb) this.clickCb(this.pick(ptr(e)));
+      if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 4 && this.clickCb) this.clickCb(this.pick(ptr(e)), e);
     });
     this.initFly();
     let tPrev = performance.now();

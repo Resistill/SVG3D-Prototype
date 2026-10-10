@@ -1,4 +1,4 @@
-// 细化：把一个物体对应的源网格，按更细的档位拆成一组盒子，写回工程（名字与引用不变）。
+// 细化：把一个物体对应的源网格，按更细的档位重新描述，写回工程（名字与引用不变）。
 //   类型的实例 → 细化类型本身：def T : T { drop body ; box … }（所有实例一起变细——享元的好处）
 //   普通物体   → 保名换形：over x : group pin=origin { box … }
 // 拆分用通用的“体素占据 + 贪心合并成盒子”：体素只是中间步骤，输出的是若干干净的盒子（两柱一梁、带门洞的墙）。
@@ -104,13 +104,57 @@ export function toLocal(tris, world) {
 // ── 生成细化的提议 ──
 import { fitPart, orientText, setFidelity, FIDELITY, splitComponents, reverse as reverseParts } from './reverse.mjs';
 import { sceneObjects } from './worldtris.mjs';
+import { localScore } from './score.mjs';
+import { compile } from '../src/s3d.js';
 
 const mvT = (cols, v) => [dot(cols[0], v), dot(cols[1], v), dot(cols[2], v)];
 const mvC = (cols, v) => [0, 1, 2].map((k) => cols[0][k] * v[0] + cols[1][k] * v[1] + cols[2][k] * v[2]);
 const ORDER = ['semantic', 'structure', 'detail'];
 export const finer = (f) => ORDER[Math.min(ORDER.length - 1, ORDER.indexOf(f) + 1)];
+const areaOf = (tris) => tris.reduce((s2, [a, b, c]) => { const u = sub(b, a), w = sub(c, a); return s2 + Math.hypot(u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]) / 2; }, 0);
 
-// 一个物体（编译结果里的节点路径）→ { target, kind: 'type' | 'object', text, boxes }；拆不了返回 { error }
+// 体素拆盒子（在拟合坐标系里切：斜放的网格也能用少量盒子贴紧）→ 语句
+function voxelLines(tris, { voxel, maxBoxes, digits }) {
+  const fit = fitPart({ tris, name: null, material: null }, 0);
+  const cols = fit.frame.cols;
+  const res = voxelBoxes(tris.map((t) => t.map((p) => mvT(cols, p))), { voxel, maxBoxes });
+  if (!res) return null;
+  const orient = orientText(cols);
+  const lines = boxLines(res.boxes, digits).map((l) => {
+    // 盒子在拟合坐标系里：位置换回物体坐标系，朝向写成拟合坐标系的朝向
+    const m = / at=([-\d.]+),([-\d.]+),([-\d.]+)$/.exec(l);
+    const at = mvC(cols, [+m[1], +m[2], +m[3]]);
+    return l.replace(/ at=[^ ]+$/, ` at=${at.map((x) => fmt(x, digits)).join(',')}${orient ? ' ' + orient : ''}`);
+  });
+  return { lines, boxes: res.boxes.length, voxel: res.voxel };
+}
+
+// 一组分量 → 在物体自己的坐标系里跑一遍逆向（逐块拟合、找关系、找阵列与镜像）；
+// 面积大、又拟合不好的分量（一整栋楼的外壳）换成同名的一组体素盒子
+function nestedLines(comps, { to, digits, voxel, substitute = true }) {
+  const out = reverseParts(comps.map((c) => ({ ...c, name: null })), { srcFile: 'refine', fidelity: to, types: false, names: false });
+  setFidelity(to);
+  const total = comps.reduce((s2, c) => s2 + c.area, 0);
+  const bySrc = new Map(comps.map((c) => [c.from, c]));
+  const poor = new Map();
+  for (const o of out.objs) { const c = bySrc.get(o.src); if (substitute && c && (o.fit ?? 1) < 0.5 && c.area > 0.03 * total) poor.set(o.id, c); }
+  const materials = out.src.split('\n').filter((l) => /^material /.test(l));
+  const lines = [];
+  let voxels = 0;
+  for (const l of out.src.split('\n')) {
+    if (!l.trim() || /^(\/\/|material )/.test(l)) continue;
+    const m = /^([\p{L}_][\p{L}\p{N}_]*) ([\p{L}_][\p{L}\p{N}_]*) /u.exec(l);
+    const c = m && poor.get(m[2]);
+    const v = c && voxelLines(c.tris, { voxel, maxBoxes: 8, digits });
+    if (v) { lines.push(`group ${m[2]} {`, ...v.lines.map((x) => '  ' + x), '}'); voxels += v.boxes; continue; }
+    lines.push(l.replace(/ ~fit=\S+/, '').replace(/ ~src="[^"]*"/, ''));
+  }
+  return { lines, materials, boxes: out.objs.length - poor.size + voxels, arrays: out.report.arrays.length, voxelized: voxels ? poor.size : 0 };
+}
+
+// 一个物体（编译结果里的节点路径）→ 细化提议 { target, kind: 'type' | 'object', text, boxes, candidates, current, local }；拆不了返回 { error }
+// 候选：全部分量 / 按面积只留大块（99%、97%、90%）/ 整体体素（几种粒度）。用只看这个物体的局部分数挑最好的（按目标档位的 δ）：
+// 窗框、饰条这种小构件在粗档位下“写出来的代价 > 省掉的残差”，自然被舍弃
 export function refineProposal(result, parts, path, { to = 'structure' } = {}) {
   const byPath = new Map(result.nodes.map((n) => [n.path, n]));
   let n = byPath.get(path);
@@ -134,52 +178,81 @@ export function refineProposal(result, parts, path, { to = 'structure' } = {}) {
   if (!n.world || Math.abs(Math.abs(det3(n.world.R)) - 1) > 1e-6 || det3(n.world.R) < 0) return { path, error: '物体的变换不是刚体（缩放或镜像），暂不支持' };
   if (n.kind === 'mesh' || part && result.items.find((i) => i.path === n.path)?.geom?.type === 'mesh') return { path, error: '它是网格引用（几何已经精确），细化只针对用基本体近似的物体' };
   const F = FIDELITY[to] ?? FIDELITY.structure;
+  const consts = { delta: F.tau };
   const local = toLocal(part.tris, n.world);
-  // 保住骨架：把物体现在的包络（在它自己的坐标系里）写成名义外包络 envelope，
-  // 关系、锚点、定位点都按它算——拆成多少块，挂在它上面的物体都不动
-  const env = envelopeOf(result, n, parts);
+  // 现在的几何（物体坐标系里）：局部分数的基准；它的包围盒写成名义外包络 envelope——
+  // 关系、锚点、定位点都按它算，拆成多少块，挂在它上面的物体都不动（保住第一遍的骨架）
+  const cur = localObjects(result, n, parts);
+  const env = boxOf(cur);
   const envTxt = env ? ` envelope=${[...env.min, ...env.max].map((x) => fmt(x, 4)).join(',')}` : '';
-  const wrap = (body, how) => (n.types
-    ? { path: n.path, target: n.types[0], kind: 'type', ...how, envelope: env, text: `def ${n.types[0]} : ${n.types[0]} {\n  drop body\n  group body${envTxt} {\n${body.map((l) => '    ' + l).join('\n')}\n  }\n}` }
-    : { path: n.path, target: n.path, kind: 'object', ...how, envelope: env, text: `over ${n.path} : group${envTxt} {\n${body.map((l) => '  ' + l).join('\n')}\n}` });
-  // 网格由多块组成（一层层阳台板、两柱一梁）：在物体自己的坐标系里对这些块跑一遍逆向——逐块拟合、找关系、找阵列与镜像
-  const comps = splitComponents({ ...part, tris: local });
+  const wrap = (body) => (n.types
+    ? { path: n.path, target: n.types[0], kind: 'type', envelope: env, text: `def ${n.types[0]} : ${n.types[0]} {\n  drop body\n  group body${envTxt} {\n${body.map((l) => '    ' + l).join('\n')}\n  }\n}` }
+    : { path: n.path, target: n.path, kind: 'object', envelope: env, text: `over ${n.path} : group${envTxt} {\n${body.map((l) => '  ' + l).join('\n')}\n}` });
+  // 类型：改 def 会让所有实例一起变好（享元），残差的变化按实例数计；描述只写一次
+  const N = n.types ? Math.max(1, result.nodes.filter((m) => m.types?.[0] === n.types[0] && !m.path.includes('.') === !n.path.includes('.')).length) : 1;
+  const total = (x) => +(x.L + N * (x.R_src + x.R_recon)).toFixed(2);
+  const current = localScore({ objs: cur, srcTris: local, consts });
+  current.S = total(current);
+  const cands = [];
+  const seen = new Set();
+  const add = (name, c) => {
+    if (!c) return;
+    const key = c.lines.join('\n');
+    if (seen.has(key)) return;
+    seen.add(key);
+    const r = compile([...(c.materials ?? []), ...c.lines].join('\n'));
+    if (r.errors.length) { cands.push({ name, error: r.errors[0].message }); return; }
+    const w = wrap(c.lines);
+    const ls = localScore({ lines: w.text.split('\n'), objs: sceneObjects(r), srcTris: local, consts });
+    ls.S = total(ls);
+    cands.push({ name, ...w, boxes: c.boxes, parts: c.parts, arrays: c.arrays, voxel: c.voxel, local: ls });
+  };
+  const digits = F.digits, voxel = Math.max(2 * F.tau, 1e-3);
+  const comps = splitComponents({ ...part, tris: local }).map((c) => ({ ...c, area: areaOf(c.tris) })).sort((a, b) => b.area - a.area);
   if (comps.length > 1) {
-    const out = reverseParts(comps.map((c) => ({ ...c, name: null })), { srcFile: 'refine', fidelity: to, types: false });
-    setFidelity(to);
-    const lines = out.src.split('\n').filter((l) => l.trim() && !/^(\/\/|material )/.test(l)).map((l) => l.replace(/ ~fit=\S+/, '').replace(/ ~src="[^"]*"/, ''));
-    return wrap(lines, { parts: comps.length, boxes: out.objs.length, arrays: out.report.arrays.length });
+    const total = comps.reduce((s2, c) => s2 + c.area, 0);
+    const kept = new Set();
+    for (const frac of [1, 0.99, 0.97, 0.9]) {
+      let acc = 0, k = 0;
+      while (k < comps.length && acc < frac * total * (1 - 1e-9)) acc += comps[k++].area;
+      k = Math.max(1, k);
+      if (kept.has(k)) continue;
+      kept.add(k);
+      const label = frac === 1 ? `全部 ${comps.length} 块` : `面积前 ${Math.round(frac * 100)}%（${k}/${comps.length} 块）`;
+      add(label, { ...nestedLines(comps.slice(0, k), { to, digits, voxel, substitute: false }), parts: k });
+      const v = nestedLines(comps.slice(0, k), { to, digits, voxel });
+      if (v.voxelized) add(`${label}，拟合差的 ${v.voxelized} 块换成体素`, { ...v, parts: k });
+    }
   }
   setFidelity(to);
-  // 在拟合坐标系里切体素：斜放的网格也能用少量盒子贴紧
-  const fit = fitPart({ ...part, tris: local }, 0);
-  const cols = fit.frame.cols;
-  const inFrame = local.map((t) => t.map((p) => mvT(cols, p)));
-  const res = voxelBoxes(inFrame, { voxel: Math.max(2 * F.tau, 1e-3), maxBoxes: to === 'detail' ? 120 : 40 });
-  if (!res) return { path, error: '拆出来的盒子太多' };
-  const digits = F.digits;
-  const orient = orientText(cols);
-  const lines = boxLines(res.boxes, digits).map((l) => {
-    // 盒子在拟合坐标系里：位置换回物体坐标系，朝向写成拟合坐标系的朝向
-    const m = / at=([-\d.]+),([-\d.]+),([-\d.]+)$/.exec(l);
-    const atF = [+m[1], +m[2], +m[3]];
-    const at = mvC(cols, atF);
-    return l.replace(/ at=[^ ]+$/, ` at=${at.map((x) => fmt(x, digits)).join(',')}${orient ? ' ' + orient : ''}`);
-  });
-  // 单独一块、基本体又拟合得不好：用体素拆成盒子
-  return wrap(lines, { parts: 1, boxes: res.boxes.length, voxel: res.voxel });
-}
-// 物体（及其内部各部件）现在的几何，在物体自己的坐标系里的包围盒
-function envelopeOf(result, n, parts) {
-  const items = result.items.filter((i) => i.path === n.path || i.path.startsWith(n.path + '.'));
-  if (!items.length) return null;
-  const objs = sceneObjects({ ...result, items }, { sourceParts: parts });
-  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
-  const { R, t } = n.world;
-  for (const o of objs) for (let i = 0; i < o.pos.length; i += 3) {
-    const d = [o.pos[i] - t[0], o.pos[i + 1] - t[1], o.pos[i + 2] - t[2]];
-    for (let k = 0; k < 3; k++) { const v = R[0][k] * d[0] + R[1][k] * d[1] + R[2][k] * d[2]; lo[k] = Math.min(lo[k], v); hi[k] = Math.max(hi[k], v); }
+  for (const [v, mb] of [[voxel, to === 'detail' ? 120 : 40], [voxel * 4, 16], [voxel * 16, 6]]) {
+    const c = voxelLines(local, { voxel: v, maxBoxes: mb, digits });
+    if (c) add(`体素 ${fmt(c.voxel, 3)}（${c.boxes} 块）`, { ...c, parts: comps.length });
   }
+  const ok = cands.filter((c) => !c.error).sort((a, b) => a.local.S - b.local.S);
+  if (!ok.length) return { path, error: '没有可用的候选', candidates: cands.map((c) => ({ name: c.name, error: c.error })) };
+  const best = ok[0];
+  return {
+    ...best, current, instances: N, gain: +(best.local.S - current.S).toFixed(2),
+    candidates: cands.map((c) => ({ name: c.name, ...(c.error ? { error: c.error } : { boxes: c.boxes, S: c.local.S, L: c.local.L, R: +(c.local.R_src + c.local.R_recon).toFixed(2) }) })),
+  };
+}
+// 物体（及其内部各部件）现在的几何，变换到物体自己的坐标系
+function localObjects(result, n, parts) {
+  const items = result.items.filter((i) => i.path === n.path || i.path.startsWith(n.path + '.'));
+  const { R, t } = n.world;
+  return sceneObjects({ ...result, items }, { sourceParts: parts }).map((o) => {
+    const pos = new Float32Array(o.pos.length);
+    for (let i = 0; i < o.pos.length; i += 3) {
+      const d = [o.pos[i] - t[0], o.pos[i + 1] - t[1], o.pos[i + 2] - t[2]];
+      for (let k = 0; k < 3; k++) pos[i + k] = R[0][k] * d[0] + R[1][k] * d[1] + R[2][k] * d[2];
+    }
+    return { ...o, pos };
+  });
+}
+function boxOf(objs) {
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (const o of objs) for (let i = 0; i < o.pos.length; i += 3) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], o.pos[i + k]); hi[k] = Math.max(hi[k], o.pos[i + k]); }
   return Number.isFinite(lo[0]) ? { min: lo, max: hi } : null;
 }
 const det3 = (R) => R[0][0] * (R[1][1] * R[2][2] - R[1][2] * R[2][1]) - R[0][1] * (R[1][0] * R[2][2] - R[1][2] * R[2][0]) + R[0][2] * (R[1][0] * R[2][1] - R[1][1] * R[2][0]);

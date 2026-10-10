@@ -143,9 +143,11 @@ export function score({ result, files, sourceParts, consts = {} }) {
   // R_recon：重建物体 → 源。权重以顶层语句为单位：一个物体被细化成很多块、一个类型实例里的各个部件，
   // 共享一个权重、内部按面积分摊——拆分不会因为“块数多”而受罚；凭空多出来的语句照样各算一份
   const triArea = (t) => len3(cross3(sub3(t[1], t[0]), sub3(t[2], t[0]))) / 2;
-  const rec = recon.map((o, i) => {
+  // 采样种子取自路径（不取序号）：语句挪了位置、换了文件，分数不变
+  const seedOf = (s) => { let h = 2166136261; for (let j = 0; j < s.length; j++) h = Math.imul(h ^ s.charCodeAt(j), 16777619); return 1000 + ((h >>> 0) % 1000003); };
+  const rec = recon.map((o) => {
     const tris = triList(o.pos);
-    const res = residual(samplePoints(tris, k.samples, 1000 + i), srcBVH, k, o.color);
+    const res = residual(samplePoints(tris, k.samples, seedOf(o.path)), srcBVH, k, o.color);
     return { o, res, tris: tris.length, area: tris.reduce((s2, t) => s2 + triArea(t), 0), top: o.path.split('.')[0] };
   });
   const groups = new Map();
@@ -176,4 +178,22 @@ export function score({ result, files, sourceParts, consts = {} }) {
     consts: k, objects, sources: srcOut,
     worst: [...objects].sort((a, b) => (b.mesh + b.rSrc + b.rRecon) - (a.mesh + a.rSrc + a.rRecon)).slice(0, 20).map((o) => ({ path: o.path, cost: +(o.mesh + o.rSrc + o.rRecon).toFixed(2), meanErr: o.meanErr, mesh: o.mesh > 0 })),
   };
+}
+
+// 局部分数：只看一个物体——它的源网格 srcTris 与一组重建物体 objs（[{pos}]，同一坐标系），lines 是描述它的语句。
+// 与全场景分数同一套计价（δ、面积权重、铰链残差；重建侧整组共享一个权重），但不分材质、只和这一块源网格比，
+// 用来在细化的几个候选之间挑一个，不必每个候选都编译、评分整个场景
+export function localScore({ lines = [], objs, srcTris, consts = {}, samples = 2000 }) {
+  const k = { ...SCORE_DEFAULTS, ...consts };
+  const L = lines.reduce((s, l) => s + lineCost(l), 0);
+  const recon = objs.filter((o) => o.pos.length);
+  const reconBVH = surfaces(recon.map((o) => ({ ...o, color: null })));
+  const srcBVH = surfaces([{ pos: trisToArray(srcTris), color: null }]);
+  const resS = residual(samplePoints(srcTris, samples, 7), reconBVH, k);
+  const Rsrc = k.cRes * Math.log2(1 + areaOf(srcTris) / (k.delta * k.delta)) * resS.r;
+  const parts = recon.map((o, i) => { const tris = triList(o.pos); return { area: areaOf(tris), res: residual(samplePoints(tris, Math.max(50, Math.round(samples / recon.length)), 11 + i), srcBVH, k) }; });
+  const A = parts.reduce((s, x) => s + x.area, 0);
+  const Rrecon = A > 0 ? k.cRes * Math.log2(1 + A / (k.delta * k.delta)) * parts.reduce((s, x) => s + (x.area / A) * x.res.r, 0) : 0;
+  const r3 = (x) => +x.toFixed(2);
+  return { S: r3(L + Rsrc + Rrecon), L: r3(L), R_src: r3(Rsrc), R_recon: r3(Rrecon), meanErr: +resS.mean.toFixed(4), maxErr: +resS.max.toFixed(4) };
 }

@@ -962,7 +962,7 @@ function elaborate(program, errors) {
       if (s.props.has('use')) {
         const u = s.props.get('use');
         if (u.k !== 'path' || u.segs.length !== 1) errors.push(new S3DError('use= 后面写模板名', s.line));
-        else variants.push({ kind: 'variant', sel: s.sel, src: s.src, use: u.segs[0], params: new Map([...s.props].filter(([k]) => k !== 'use')), line: s.line });
+        else variants.push({ kind: 'variant', sel: s.sel, src: s.src, use: u.segs[0], params: new Map([...s.props].filter(([k]) => k !== 'use')), line: s.line, file: s.file });
       } else styles.push({ kind: 'style', sel: s.sel, src: s.src, props: s.props, line: s.line });
       s.appearance = true;
     } else if (s.kind === 'pattern') patterns.push(s);
@@ -1025,6 +1025,7 @@ function elaborate(program, errors) {
         for (let k = 0; k < nk; k++) for (let j = 0; j < nj; j++) for (let i = 0; i < ni; i++) {
           const inst = new Node('group', String(flatIdx), new Map(), [], s.line, env, n);
           inst.inst = { index: [i, j, k], flat: flatIdx, grid: dims.length > 1 };
+          inst.file = s.file;
           flat.push(inst);
           walk(s.children, inst, new Env(env, { i, j, k, idx: flatIdx }), depth);
           flatIdx++;
@@ -1089,6 +1090,7 @@ function buildCopies(root, flat, S, errors) {
   const shadow = (src, parent) => {
     const g = new Node(K(src), src.id, new Map(), src.tags, src.line, src.env, parent);
     g.ghostOf = src;
+    g.file = src.file;
     if (parent.skin) g.skin = true;
     flat.push(g);
     for (const c of src.children) shadow(c, g);
@@ -1122,6 +1124,7 @@ function buildCopies(root, flat, S, errors) {
         for (let k = 1; k <= count; k++) {
           const G = new Node('group', n.kind === 'mirror' ? 'mirrored' : `r${k}`, new Map(), [], n.line, n.env, n);
           G.copyOf = { container: n, k };
+          G.file = n.file;
           if (n.skin) G.skin = true;
           flat.push(G);
           for (const c of originals) shadow(c, G);
@@ -1167,6 +1170,7 @@ function expandCopies(elab, S, errors, fail) {
           // 没有源语句的对象（如阵列实例）：复制它的每个子语句到一个新组里
           const G = new Node('group', s.id, own, s.tags, s.line, env, parent);
           elab.flat.push(G);
+          G.file = s.file;
           for (const c of A.children) if (c.stmt) elab.walk([c.stmt], G, c.srcEnv, depth);
         }
         const R = parent.children[before];
@@ -2321,7 +2325,7 @@ function compileOnce(src, plan, opts) {
         applied.get(st).push(path);
       } catch (e) { errors.push(fail(e, { line: st.line })); }
     }
-    for (const st of elab.variants) variantSummary.push({ line: st.line, use: st.use, src: st.src, members: applied.get(st) ?? [] });
+    for (const st of elab.variants) variantSummary.push({ line: st.line, file: st.file ?? null, use: st.use, src: st.src, members: applied.get(st) ?? [] });
     // 变体里的 mirror / rotate 也要生成副本
     buildCopies(root, flat, S, errors);
   }
@@ -2351,18 +2355,18 @@ function compileOnce(src, plan, opts) {
       const v = semantic.lookup(pt.name, S).v;
       for (const m of v.matches) for (const [r, val] of m) for (const n of isSet(val) ? val.nodes : [val]) (n.concepts ??= []).push(`${pt.name}.${r}`);
       patterns.push({
-        name: pt.name, line: pt.line, roles: pt.roles.map((r) => r.name + (r.set ? '*' : '')),
+        name: pt.name, line: pt.line, file: pt.file ?? null, roles: pt.roles.map((r) => r.name + (r.set ? '*' : '')),
         matches: v.matches.map((m) => Object.fromEntries([...m].map(([r, val]) => [r, isSet(val) ? val.nodes.map((n) => n.path) : val.path]))),
       });
-    } catch (e) { errors.push(fail(e, { line: pt.line })); patterns.push({ name: pt.name, line: pt.line, roles: [], matches: [], error: e.message }); }
+    } catch (e) { errors.push(fail(e, { line: pt.line, file: pt.file })); patterns.push({ name: pt.name, line: pt.line, file: pt.file ?? null, roles: [], matches: [], error: e.message }); }
   }
   const concepts = [];
   for (const c of elab.concepts) {
     try {
       const set = asSet(semantic.lookup(c.name, S).v);
       for (const m of set.nodes) (m.concepts ??= []).push(c.name);
-      concepts.push({ name: c.name, parent: c.parent, line: c.line, src: c.src, members: set.nodes.map((m) => m.path) });
-    } catch (e) { errors.push(fail(e, { line: c.line })); concepts.push({ name: c.name, parent: c.parent, line: c.line, src: c.src, members: [], error: e.message }); }
+      concepts.push({ name: c.name, parent: c.parent, line: c.line, file: c.file ?? null, src: c.src, members: set.nodes.map((m) => m.path) });
+    } catch (e) { errors.push(fail(e, { line: c.line, file: c.file })); concepts.push({ name: c.name, parent: c.parent, line: c.line, file: c.file ?? null, src: c.src, members: [], error: e.message }); }
   }
   S.styleMap = new Map();
   for (const st of elab.styles) {
@@ -2389,9 +2393,9 @@ function compileOnce(src, plan, opts) {
       const v = evalTop(c.ast);
       if (setLike(v)) {
         const bad = asSet(v).nodes;
-        checks.push({ line: c.line, message: label, ok: bad.length === 0, violators: bad.map((m) => m.path) });
-      } else checks.push({ line: c.line, message: label, ok: asBool(v), violators: [] });
-    } catch (e) { checks.push({ line: c.line, message: label, ok: false, violators: [], error: e.message }); }
+        checks.push({ line: c.line, file: c.file ?? null, message: label, ok: bad.length === 0, violators: bad.map((m) => m.path) });
+      } else checks.push({ line: c.line, file: c.file ?? null, message: label, ok: asBool(v), violators: [] });
+    } catch (e) { checks.push({ line: c.line, file: c.file ?? null, message: label, ok: false, violators: [], error: e.message }); }
   }
 
   // 第一遍：按语义决定哪些对象换成哪个变体（后写的覆盖先写的）
@@ -2419,7 +2423,7 @@ function compileOnce(src, plan, opts) {
     tight: n._world && n._box && n.geom && LEAVES.has(K(n)) ? tightBox(n) : null,
   }));
   errors.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
-  if (!plan && !nextPlan) for (const st of elab.variants) variantSummary.push({ line: st.line, use: st.use, src: st.src, members: [] });
+  if (!plan && !nextPlan) for (const st of elab.variants) variantSummary.push({ line: st.line, file: st.file ?? null, use: st.use, src: st.src, members: [] });
   return {
     plan: nextPlan,
     result: {
