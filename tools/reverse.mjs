@@ -266,7 +266,7 @@ export function fitPart(part, i) {
   const pts = samplePoints(part.tris, 600, i + 1);
   const vol = meshVolume(part.tris);
   const vmap = new Map();
-  for (const t of part.tris) for (const v of t) vmap.set(v.map((x) => x.toFixed(5)).join(), v);
+  for (const t of part.tris) for (const v of t) vmap.set(vkey(v), v);
   const verts = [...vmap.values()];
   const frames = [uprightFrame(pts), pcaFrame(pts), normalFrame(part.tris, pts)].filter(Boolean);
   const fits = frames.map((F) => fitInFrame(F, pts, vol, verts));
@@ -274,7 +274,7 @@ export function fitPart(part, i) {
   const best = fits[0];
   const lo = [0, 1, 2].map((k) => Math.min(...pts.map((p) => p[k]))), hi = [0, 1, 2].map((k) => Math.max(...pts.map((p) => p[k])));
   const uniq = new Map();
-  for (const t of part.tris) for (const v of t) uniq.set(v.map((x) => x.toFixed(5)).join(), v);
+  for (const t of part.tris) for (const v of t) uniq.set(vkey(v), v);
   const vc = scl([...uniq.values()].reduce((s, v) => add(s, v), [0, 0, 0]), 1 / Math.max(1, uniq.size));
   return { ...best, aabb: { min: lo, max: hi }, vc };
 }
@@ -282,6 +282,19 @@ export function fitPart(part, i) {
 // ───────── 发射：每个物体的原语、自身包围盒与世界朝向 ─────────
 const TOL = 0.02; // 相对误差阈值，超过就保留为 mesh
 const sanitize = (s) => { let t = String(s).replace(/[^\p{L}\p{N}_]/gu, '_'); if (!/^[\p{L}_]/u.test(t)) t = 'p_' + t; return t; };
+
+// 把世界 y 转到方向 u 的最小旋转（绕 y×u 转），返回它的三个列向量
+function minRot(u) {
+  const ax = cross([0, 1, 0], u), s = len(ax), c = u[1];
+  if (s < 1e-12) return c > 0 ? [[1, 0, 0], [0, 1, 0], [0, 0, 1]] : [[1, 0, 0], [0, -1, 0], [0, 0, -1]];
+  const k = scl(ax, 1 / s);
+  const rot = (v) => add(add(scl(v, c), scl(cross(k, v), s)), scl(k, dot(k, v) * (1 - c)));
+  return [rot([1, 0, 0]), rot([0, 1, 0]), rot([0, 0, 1])];
+}
+
+// 顶点去重的键：四舍五入到 1e-5，并把 −0 归零（toFixed 会把 ±0.000001 写成 "-0.00000" / "0.00000" 两个键，
+// 同一个顶点被算两次，圆柱的横向中心就偏了）
+function vkey(v) { return v.map((x) => Math.round(x * 1e5) || 0).join(); }
 
 function primitiveOf(fit, part, srcFile) {
   const fitScore = Math.max(0, Math.min(1, 1 - fit.e / TOL));
@@ -309,11 +322,17 @@ function primitiveOf(fit, part, srcFile) {
       }
     }
     if (Math.abs(cols[1][1] - 1) >= 1e-9) {
-      // 不直立的盒子：局部 y 取最长边、x 取次长边（同一个盒子转到任何方向都得到同样的表示）
-      const ord = [0, 1, 2].sort((p2, q2) => hh[q2] - hh[p2]);
-      const ny = cols[ord[0]], nx = cols[ord[1]];
+      // 不直立的盒子：局部 y 取最接近世界“上”的那条轴（朝上），这样站立方向不丢——倾斜的面板仍是“立在柱子上、带一个倾角”，
+      // 关系（on / against）才成立；x 取其余两条里较长的，符号取最接近“从世界 y 转过去的最小旋转”的那一个
+      const k = [0, 1, 2].reduce((b2, i) => (Math.abs(cols[i][1]) > Math.abs(cols[b2][1]) + 1e-6 ? i : b2), 0);
+      const ny = cols[k][1] < 0 ? scl(cols[k], -1) : cols[k];
+      const [i1, i2] = [0, 1, 2].filter((i) => i !== k);
+      const ix = hh[i2] > hh[i1] + 1e-6 ? i2 : i1, iz = ix === i1 ? i2 : i1;
+      const ref = minRot(ny);
+      let nx = cols[ix];
+      if (dot(nx, ref[0]) < -1e-9 || (Math.abs(dot(nx, ref[0])) <= 1e-9 && dot(nx, ref[2]) < 0)) nx = scl(nx, -1);
       cols = [nx, ny, cross(nx, ny)];
-      hh = [hh[ord[1]], hh[ord[0]], hh[ord[2]]];
+      hh = [hh[ix], hh[k], hh[iz]];
     } else if (hh[2] > hh[0] + 1e-6) { hh = [hh[2], hh[1], hh[0]]; cols = [cols[2], cols[1], scl(cols[0], -1)]; }
     return { ...base, kind: 'box', props: { size: vec(scl(hh, 2)) }, cols, at: sub(F.c, scl(cols[1], hh[1])), box: { min: [-hh[0], 0, -hh[2]], max: [hh[0], 2 * hh[1], hh[2]] }, sym180: true };
   }
@@ -330,7 +349,13 @@ function primitiveOf(fit, part, srcFile) {
       const cx = perp([1, 0, 0], [0, 0, 1]), cols = [cx, dy, cross(cx, dy)];
       return { ...base, kind: fit.shape, props, cols, at: sub(c, scl(dy, H / 2)), box: { min: [-R, 0, -R], max: [R, H, R] } };
     }
-    // 轴不竖直：用 axis=x，局部 x 沿轴，局部 y 尽量朝上
+    if (Math.abs(d[1]) > 0.7) {
+      // 轴偏离竖直不多（斜塔里的立柱）：仍然是竖着的圆柱，只是倾斜了——局部 y 沿轴、朝上，
+      // 坐标系取从世界 y 转过去的最小旋转，于是一起倾斜的物体之间相对朝向为零，关系照常成立
+      const dy = d[1] < 0 ? scl(d, -1) : d, cols = minRot(dy);
+      return { ...base, kind: fit.shape, props, cols, at: sub(c, scl(dy, H / 2)), box: { min: [-R, 0, -R], max: [R, H, R] } };
+    }
+    // 轴接近水平：用 axis=x，局部 x 沿轴，局部 y 尽量朝上
     const cy = perp([0, 1, 0], [0, 0, 1]), cols = [d, cy, cross(d, cy)];
     return { ...base, kind: fit.shape, props: { ...props, axis: 'x' }, cols, at: sub(c, scl(cy, R)), box: { min: [-H / 2, 0, -R], max: [H / 2, 2 * R, R] }, axisSym: true, sym180: fit.shape === 'cyl' };
   }
@@ -379,6 +404,47 @@ function rotAbout(u, deg, c, p) {
   return add(c, add(add(scl(v, co), scl(cross(u, v), si)), scl(u, dot(u, v) * (1 - co))));
 }
 
+// 同一种盒子（形状、材质相同，三边排序后相同）的轴标注统一：倾斜的盒子按“最朝上的轴是 y”标注，
+// 坡度不同时同一种盒子会写出不同的尺寸顺序（过山车的枕木在陡坡处厚度与宽度互换），阵列检测就认不出它们是同一种。
+// 倾斜的成员改用该组多数成员的标注；直立的成员不动（它们的 y 就是站立方向，on 关系依赖它）
+function unifyBoxLabels(objs) {
+  const sizes = (o) => o.props.size.split(',').map(Number);
+  const close = (a, b) => Math.abs(a - b) < 0.01 + 0.005 * Math.abs(a);
+  const groups = [];
+  for (const o of objs) {
+    if (o.kind !== 'box') continue;
+    const sorted = [...sizes(o)].sort((a, b) => a - b);
+    const g = groups.find((x) => x.mat === JSON.stringify(o.material) && x.sorted.every((v, i) => close(v, sorted[i])));
+    if (g) g.items.push(o); else groups.push({ mat: JSON.stringify(o.material), sorted, items: [o] });
+  }
+  for (const g of groups) {
+    if (g.items.length < 3) continue;
+    // 目标标注：有直立成员时以直立成员为准（它们的 y 是站立方向，最有意义；风车三片叶片里竖直的那一片），
+    // 否则按多数（过山车枕木）；按尺寸顺序计票
+    const upright = g.items.filter((o) => Math.abs(o.cols[1][1]) > 1 - 1e-9);
+    const votes = new Map();
+    for (const o of upright.length ? upright : g.items) { const k = sizes(o).map((v) => g.sorted.findIndex((x) => close(x, v))).join(','); votes.set(k, (votes.get(k) ?? 0) + 1); }
+    const [best] = [...votes].sort((a, b) => b[1] - a[1])[0];
+    const target = best.split(',').map(Number).map((i) => g.sorted[i]);
+    for (const o of g.items) {
+      const sz = sizes(o);
+      if (Math.abs(o.cols[1][1]) > 1 - 1e-9 || sz.every((v, i) => close(v, target[i]))) continue;
+      // 找排列 π：新轴 i 用旧轴 π[i]
+      const pi = [], used = new Set();
+      for (let i = 0; i < 3; i++) { const j = [0, 1, 2].find((jj) => !used.has(jj) && close(sz[jj], target[i])); if (j == null) break; pi.push(j); used.add(j); }
+      if (pi.length < 3) continue;
+      const c = centerOf(o);
+      let cols = pi.map((j) => o.cols[j]);
+      if (dot(cols[0], cross(cols[1], cols[2])) < 0) cols = [cols[0], cols[1], scl(cols[2], -1)];
+      const hh = pi.map((j) => sz[j]);
+      o.cols = cols;
+      o.props = { ...o.props, size: vec(hh) };
+      o.box = { min: [-hh[0] / 2, 0, -hh[2] / 2], max: [hh[0] / 2, hh[1], hh[2] / 2] };
+      o.at = sub(c, scl(cols[1], hh[1] / 2));
+    }
+  }
+}
+
 // ───────── 3 & 4. 关系与校验 ─────────
 export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null } = {}) {
   const fits = parts.map((p, i) => fitPart(p, i));
@@ -393,6 +459,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     if (symY && Math.abs(prim.cols[1][1] - 1) < 1e-6) prim.cols = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
     return { id, src: p.name ?? p.from ?? null, material: p.material, ...prim, vol, symY };
   });
+  unifyBoxLabels(objs);
   // 材质
   const mats = new Map();
   for (const o of objs) {
@@ -598,24 +665,41 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
         emitMirror(u);
         continue;
       }
-      // 阵列整体的定位：用锚定成员（第 0 个实例里最大的那个）与外部已放好物体的关系，pin=origin 把阵列原点钉上去
+      // 阵列整体的定位：用锚定成员与外部已放好物体的关系，pin=origin 把阵列原点钉上去。
+      // 锚定成员优先取立在阵列外某物上的那个（光伏阵列的立柱立在地上，面板只架在立柱上），否则取最大的；
+      // 平移阵列的原点随之取锚定成员的原点（螺旋的原点在轴上，不动）
+      const standsOutside = (ch) => (onOf.get(ch.members[0].id) ?? []).some((id) => !inUnit(byId.get(id)) && isPlaced(byId.get(id)));
+      const anchorCh = (!u.turn && u.children.find(standsOutside)) || anchor, a1 = anchorCh.members[0];
+      const origin = anchorCh === anchor ? u.origin : a1.at;
+      const kids = [anchorCh, ...u.children.filter((ch) => ch !== anchorCh)];
       let place = null, ref = null;
-      const c = fallback.has(u.id) ? null : chooseFor(a0, u.origin, (B) => isPlaced(B) && !inUnit(B), nameOf);
+      const c = fallback.has(u.id) ? null : chooseFor(a1, origin, (B) => isPlaced(B) && !inUnit(B), nameOf);
+      // 网格写成 n=(a,1,b)：两个方向必须是阵列坐标系的 x 与 z。on / against 会继承参照物的朝向，
+      // 参照物转过一个角度时就对不上——改用 at=参照物[u,v,w]：落点相同，但不继承朝向
+      const gridOk = (R) => !u.grid || (Math.abs(Math.abs(dot(R[0], unit(u.step))) - 1) < 1e-9 && Math.abs(Math.abs(R[2][2]) - 1) < 1e-9);
+      // 参照物倾斜时（斜塔里一层的环立在下一层倾斜的立柱上）同样改用 at=：阵列坐标系保持世界朝向
+      // 改用 at= 时参照物重新挑：所有相关的（立在其上的、贴着的、相交的）里最大的那个，归一化坐标才好读
+      if (c && c.kind !== 'at' && (!gridOk(c.ref.cols) || (c.kind === 'on' && Math.abs(c.ref.cols[1][1] - 1) >= 1e-9))) {
+        const rel = [...(onOf.get(a1.id) ?? []), ...(againstOf.get(a1.id) ?? []).map((x) => x.b), ...(nearOf.get(a1.id) ?? [])]
+          .map((id) => byId.get(id)).filter((B) => B && isPlaced(B) && !inUnit(B)).sort((x, y) => y.vol - x.vol);
+        const B = poseOf(rel[0]);
+        c.place = `at=${nameOf(B)}[${vec6(norm(B, toB(B, origin)))}]`; c.kind = 'at'; c.ref = B;
+      }
       if (c && (c.kind !== 'on' || Math.abs(c.ref.cols[1][1] - 1) < 1e-9)) { place = `${c.place} pin=origin`; ref = c.ref; stats[c.kind]++; }
-      else { place = `at=${vec(u.origin)} pin=origin`; stats.coord++; }
+      else { place = `at=${vec(origin)} pin=origin`; stats.coord++; }
       // 阵列坐标系：参照物的朝向（on / against 继承），否则世界朝向
       const RF = ref && c.kind !== 'at' ? ref.cols : [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-      const local = (p) => mvT(RF, sub(p, u.origin));
+      const local = (p) => mvT(RF, sub(p, origin));
       const stepL = mvT(RF, u.step);
       const dims = u.grid ? `n=(${u.n[0]},1,${u.n[1]})` : `n=${u.n}`;
       const stepTxt = u.grid ? `step=${vec([stepL[0], 0, u.step2Local ?? 0])}` : `step=${vec(stepL)}`;
       lines.push(`repeat ${u.id} ${dims} ${stepTxt}${u.turn ? ` turn=${fmt(u.turn)}` : ''} ${place} {`);
       // 实例里的成员：锚定成员放在原点附近；其余成员优先相对同一实例里的兄弟定位
       const sib = new Set();
-      for (const ch of u.children) {
+      for (const ch of kids) {
         const o = ch.members[0];
         const cand = (B) => sib.has(B.id) && B !== o;
-        const cc = ch === anchor ? null : chooseFor(o, o.at, cand, (B) => unitOf.get(B.id).child.id);
+        const cc = ch === anchorCh ? null : chooseFor(o, o.at, cand, (B) => unitOf.get(B.id).child.id);
         const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
         const lp = local(o.at);
         const placeTxt = cc ? cc.place : lp.every((v) => Math.abs(v) < 1e-6) ? '' : `at=${vec(lp)}`;
@@ -649,6 +733,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   for (let round = 0; round < 6; round++) {
     out = emit(dissolved, fallback);
     const r1 = compile(out.text);
+    if (process.env.S3D_DUMP && round === 0) dumpText(process.env.S3D_DUMP, out.text);
     const byPath = new Map(r1.nodes.map((n) => [n.path, n]));
     let changed = false;
     for (const t of out.targets) {
@@ -692,6 +777,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
 }
 
 // 阵列里第 i 个成员所在的实例编号（有缺位的阵列不是 0, 1, 2…）
+// 调试：S3D_DUMP=文件 时把第一轮发射的文本写出来
+const dumpText = (p, t) => import('node:fs').then((fs) => fs.writeFileSync(p, t));
 const instOf = (u, i) => (u.ks ? u.ks[i] : i);
 
 // 几何中心：与表示方式无关的物理点（“原点”是包围盒底面中心，取决于局部 y 轴选了哪一头）
@@ -702,7 +789,8 @@ function sameOrientation(o, Rw, mirrored = false) {
   const col = (k) => [Rw[0][k], Rw[1][k], Rw[2][k]];
   const near = (u, v) => len(sub(u, v)) < 3e-3;
   if (o.kind === 'mesh') return mirrored || [0, 1, 2].every((k) => near(col(k), o.cols[k]));
-  if (o.symY) return Math.abs(Math.abs(Rw[1][1]) - Math.abs(o.cols[1][1])) < 2e-3;
+  // 绕自身 y 轴对称（球、y 轴圆柱 / 圆锥，可以是倾斜的）：只比较这条轴的方向；球怎么转都一样
+  if (o.symY) return o.kind === 'sphere' || Math.abs(dot(col(1), o.cols[1])) > 1 - 2e-3;
   if (o.axisSym) return near(col(0), o.cols[0]) || ((o.sym180 || mirrored) && near(col(0), scl(o.cols[0], -1)));
   // 盒子关于自己的三个中面都对称：镜像副本里任意轴取反都是同一个盒子
   const signs = mirrored && o.kind === 'box' ? [[1, 1, 1], [-1, 1, 1], [1, -1, 1], [1, 1, -1], [-1, -1, 1], [-1, 1, -1], [1, -1, -1], [-1, -1, -1]]
@@ -1019,7 +1107,8 @@ function detectArrays(objs, related) {
     // 4 个的留给平移（2×2 的网格更自然），平移之后剩下的再认
     const findRings = (accept) => {
     if (g[0].symY || g[0].axisSym) {
-      const ax = g[0].symY ? [0, 1, 0] : g[0].cols[0];
+      // 环绕的轴取形状自己的对称轴（竖直的圆柱就是世界 y；斜塔里一起倾斜的立柱是那条倾斜的轴）
+      const ax = g[0].symY ? (g[0].kind === 'sphere' ? [0, 1, 0] : g[0].cols[1]) : g[0].cols[0];
       const ctr = (o) => add(o.at, mvC(o.cols, scl(add(o.box.min, o.box.max), 0.5)));
       const e1 = unit(cross(ax, Math.abs(ax[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0])), e2 = cross(ax, e1);
       const levels = [];
@@ -1077,7 +1166,7 @@ function detectArrays(objs, related) {
       for (const a of free) if (!hasPrev.has(a.id) && next.has(a.id)) chains.push(follow(a));
       // 闭环（例如绕一圈的旋转对称）：每个成员都有前驱，任选一个开始
       for (const a of free) if (!inChain.has(a.id) && next.has(a.id)) chains.push(follow(a));
-      for (const ch of chains) if (ch.length >= 3) { raw.push({ motion, members: ch }); ch.forEach((o) => used.add(o.id)); }
+      // 先试着把等长的链拼成网格，剩下的链再单独作为直线阵列（否则 5×4 的网格会被拆成 4 排）
       // 网格：等长的平移链，起点又按另一个平移排成一列；写成 n=(a,1,b) 需要两个方向分别平行于 x 与 z
       if (!motion.delta && !motion.rot) {
         const byLen = new Map();
@@ -1119,6 +1208,7 @@ function detectArrays(objs, related) {
           all.forEach((o) => used.add(o.id));
         }
       }
+      for (const ch of chains) if (ch.length >= 3 && !ch.some((o) => used.has(o.id))) { raw.push({ motion, members: ch }); ch.forEach((o) => used.add(o.id)); }
     }
     findRings(() => true);
     // 有缺口的阵列：常规检测剩下的物体按格点拟合，允许少数缺位（写成 repeat 加 drop 阵列.k）。
