@@ -580,7 +580,8 @@ const dirOf = (f) => (f && f.includes('/') ? f.slice(0, f.lastIndexOf('/') + 1) 
 function joinPath(base, rel) {
   if (rel.startsWith('/')) return rel;
   const parts = (dirOf(base) + rel).split('/'), out = [];
-  for (const x of parts) { if (x === '..') out.pop(); else if (x !== '.' && x !== '') out.push(x); }
+  // 开头多出来的 .. 要保留（工程目录里的层 import 仓库里的语义库：../../lib/semantics.s3d）
+  for (const x of parts) { if (x === '..') { if (out.length && out.at(-1) !== '..') out.pop(); else out.push('..'); } else if (x !== '.' && x !== '') out.push(x); }
   return (base && base.startsWith('/') ? '/' : '') + out.join('/');
 }
 function loadProgram(src, opts, errors, stack = []) {

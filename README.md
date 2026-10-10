@@ -257,6 +257,27 @@ node bin/eval.mjs examples/spaceport.s3d out/spaceport.L0.s3d
 
 已知局限：单独一对的镜像不会让描述变短，所以不写成 mirror；嵌套的规律（“每层一圈立柱”）会被识别成一个多部件的阵列而不是阵列套旋转；L2 的分割会把多块组成的部件拆碎；源模型带变体（`variant`）时，逆向描述的是变体的外观几何。
 
+## 协作工具：人与 AI 共用的工程
+
+最终的使用方式是人与多模态模型协作：模型读场景（图像 + 文本），用 SVG3D 的工具和自己的编码能力压缩场景；人在界面里选中物体、指出问题、确认或否决。两边共用同一个工程目录、同一套工具（计划见 [docs/PLAN2.md](docs/PLAN2.md)，工具手册见 [docs/agent.md](docs/agent.md)）。
+
+```bash
+node bin/s3d-tool.mjs init out/spaceport.L2.glb --project=work/spaceport
+```
+
+```bash
+node bin/s3d-tool.mjs score --project=work/spaceport
+```
+
+```bash
+node bin/s3d-tool.mjs render --focus=beam_1 --project=work/spaceport
+```
+
+- **工程**：`base.s3d`（逆向结果，可重新生成）+ `edits.s3d` / `semantics.s3d` / `style.s3d` / `decisions.s3d`，由 `scene.s3d` 组合。
+- **看**：`render` 离屏渲染（纯 JS，零依赖），多视角、物体编号标注、聚焦时被选中的物体不会被遮挡，还可以渲染源模型做对照。
+- **查**：`outline`、`inspect`、`select`（集合表达式）、`similar`（同形部件，类型与阵列的候选）。
+- **评**：`score` 自评分数，不需要真值：描述长度 + 网格引用 + 双向几何残差，越低越好；`explain` 是相对“全部保留网格”的解释率，`worst` / `worstSources` 指出下一步最值得修的地方。在 spaceport L0 上：全部网格引用 8081 > 全世界坐标 3470 > 完整逆向 2109 > 手写原文 720。
+
 ## 求解是怎么做的
 
 1. **解析与导入**：源码解析成语句树，`import` 的文件按顺序展开。

@@ -7,6 +7,7 @@
 //   4. 校验：编译关系版本，逐个比对位置与朝向，不一致的退回坐标
 import { semanticNames } from './naming.mjs';
 import { chainsOf, fitAlong, alongPoses } from './curvefit.mjs';
+import { lineCost } from './score.mjs';
 import { NodeIO } from '@gltf-transform/core';
 import { compile } from '../src/s3d.js';
 
@@ -78,7 +79,7 @@ function splitComponents(part) {
 }
 
 // ───────── 2. 拟合基本体 ─────────
-function samplePoints(tris, n, seed) {
+export function samplePoints(tris, n, seed) {
   const areas = tris.map(([a, b, c]) => len(cross(sub(b, a), sub(c, a))) / 2);
   const total = areas.reduce((s, x) => s + x, 0) || 1;
   const pts = [];
@@ -522,14 +523,35 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   // 对旋转对称的形状来说，这和拟合时规范选出的坐标系不一样（几何相同，坐标系不同）
   let E = new Map();
   const poseOf = (B) => { const e = E.get(B.id); return e ? { ...B, ...e } : B; };
-  const chooseFor = (A, p, cand, name0) => {
+  // 锚点坐标的最短写法：参照物在第 k 轴上的半宽为 hh，取 d 位小数的误差是 0.5·10^−d·hh，
+  // 取满足“误差 ≤ τ”的最少位数（数字越短，描述越短；τ 由校验容差决定）
+  const anchorTxt = (B, uvw, tau) => uvw.map((v, k) => {
+    const hh = (B.box.max[k] - B.box.min[k]) / 2;
+    const d = Math.max(0, Math.min(6, Math.ceil(Math.log10(Math.max(hh, 1e-9) * 0.5 / tau))));
+    const x = Math.round(v * 10 ** d) / 10 ** d;
+    return Object.is(x, -0) ? '0' : String(x);
+  }).join(',');
+  // 米制偏移的最短写法：取 d 位小数的误差是 0.5·10^−d，取满足“误差 ≤ τ”的最少位数；接近 0 的分量写 0
+  const offsetTxt = (v, tau) => {
+    const d = Math.max(0, Math.min(6, Math.ceil(Math.log10(0.5 / tau))));
+    return v.map((x) => { const r = Math.round(x * 10 ** d) / 10 ** d; return Object.is(r, -0) ? '0' : String(r); }).join(',');
+  };
+  // 两种写法取短的：归一化锚点 B[u,v,w]，或者参照点加父坐标系里的米制偏移 B offset=…（描述长度按 score 的计价）
+  const shorter = (...alts) => alts.reduce((a, b) => (lineCost(b) < lineCost(a) ? b : a));
+  const chooseFor = (A, p, cand, name0, tau = 0.005, frame = null) => {
     const name = (B) => name0(B);
+    // 世界向量 → 父坐标系（顶层是世界；阵列里是实例的坐标系）
+    const toParent = (v) => (frame ? mvT(frame, v) : v);
     const sup0 = (onOf.get(A.id) ?? []).map((id) => byId.get(id)).filter(cand).sort((x, y) => y.vol - x.vol)[0];
     const sup = sup0 && poseOf(sup0);
     if (sup) {
       const uvw = norm(sup, toB(sup, p));
       const plain = Math.abs(uvw[0]) < 1e-6 && Math.abs(uvw[2]) < 1e-6;
-      return { place: plain ? `on=${name(sup)}` : `on=${name(sup)}[${vec6([uvw[0], 1, uvw[2]])}]`, ref: sup, kind: 'on' };
+      if (plain) return { place: `on=${name(sup)}`, ref: sup, kind: 'on' };
+      const top = add(sup.at, mvC(sup.cols, [(sup.box.min[0] + sup.box.max[0]) / 2, sup.box.max[1], (sup.box.min[2] + sup.box.max[2]) / 2]));
+      const off = toParent(sub(p, top));
+      const place = shorter(`on=${name(sup)}[${anchorTxt(sup, [uvw[0], 1, uvw[2]], tau)}]`, `on=${name(sup)} offset=${offsetTxt(off, tau)}`);
+      return { place, ref: sup, kind: 'on' };
     }
     const ag = (againstOf.get(A.id) ?? []).map((x) => ({ ...x, B: byId.get(x.b) })).filter((x) => x.B && cand(x.B)).sort((x, y) => y.B.vol - x.B.vol)[0];
     if (ag && p === A.at && det3c(poseOf(ag.B).cols) > 0) {
@@ -539,10 +561,15 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const cA = [0, 1, 2].map((k) => (A.box.min[k] + A.box.max[k]) / 2 + bestF[k] * (A.box.max[k] - A.box.min[k]) / 2);
       const uvw = norm(B, toB(B, add(A.at, mvC(A.cols, cA))));
       FACE[ag.face].forEach((v, k) => { if (v) uvw[k] = v; });
-      return { place: `against=${name(B)}[${vec6(uvw)}]`, ref: B, kind: 'against' };
+      return { place: `against=${name(B)}[${anchorTxt(B, uvw, tau)}]`, ref: B, kind: 'against' };
     }
     const near0 = (nearOf.get(A.id) ?? []).map((id) => byId.get(id)).filter(cand).sort((x, y) => y.vol - x.vol)[0];
-    if (near0) { const near = poseOf(near0); return { place: `at=${name(near)}[${vec6(norm(near, toB(near, p)))}]`, ref: null, kind: 'at' }; }
+    if (near0) {
+      const near = poseOf(near0), t2 = Math.min(tau, 5e-4);
+      const ctr = add(near.at, mvC(near.cols, scl(add(near.box.min, near.box.max), 0.5)));
+      const place = shorter(`at=${name(near)}[${anchorTxt(near, norm(near, toB(near, p)), t2)}]`, `at=${name(near)} offset=${offsetTxt(toParent(sub(p, ctr)), t2)}`);
+      return { place, ref: null, kind: 'at' };
+    }
     return null;
   };
   const orientRel = (o, ref0, cols = o.cols) => {
@@ -650,7 +677,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
         for (const ch of u.children) {
           const o = ch.members[0];
           const cand = (B) => (isPlaced(B) && !inUnit(B)) || (sib.has(B.id) && B !== o);
-          const cc = chooseFor(o, o.at, cand, (B) => (sib.has(B.id) ? unitOf.get(B.id).child.id : nameOf(B)));
+          // 阵列成员的校验更严（2 mm），数字精度也要跟上
+          const cc = chooseFor(o, o.at, cand, (B) => (sib.has(B.id) ? unitOf.get(B.id).child.id : nameOf(B)), 5e-4);
           const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
           lines.push('  ' + [o.kind, ch.id, props, cc ? cc.place : `at=${vec(o.at)}`, cc ? orientRel(o, cc.ref) : orientText(o.cols), `mat=${o.mat}`, `~fit=${fmt(Math.min(...ch.members.map((mm) => mm.fit)))}`].filter(Boolean).join(' '));
           if (cc) stats[cc.kind]++; else stats.coord++;
@@ -673,7 +701,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const origin = anchorCh === anchor ? u.origin : a1.at;
       const kids = [anchorCh, ...u.children.filter((ch) => ch !== anchorCh)];
       let place = null, ref = null;
-      const c = fallback.has(u.id) ? null : chooseFor(a1, origin, (B) => isPlaced(B) && !inUnit(B), nameOf);
+      const c = fallback.has(u.id) ? null : chooseFor(a1, origin, (B) => isPlaced(B) && !inUnit(B), nameOf, 5e-4);
       // 网格写成 n=(a,1,b)：两个方向必须是阵列坐标系的 x 与 z。on / against 会继承参照物的朝向，
       // 参照物转过一个角度时就对不上——改用 at=参照物[u,v,w]：落点相同，但不继承朝向
       const gridOk = (R) => !u.grid || (Math.abs(Math.abs(dot(R[0], unit(u.step))) - 1) < 1e-9 && Math.abs(Math.abs(R[2][2]) - 1) < 1e-9);
@@ -683,7 +711,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
         const rel = [...(onOf.get(a1.id) ?? []), ...(againstOf.get(a1.id) ?? []).map((x) => x.b), ...(nearOf.get(a1.id) ?? [])]
           .map((id) => byId.get(id)).filter((B) => B && isPlaced(B) && !inUnit(B)).sort((x, y) => y.vol - x.vol);
         const B = poseOf(rel[0]);
-        c.place = `at=${nameOf(B)}[${vec6(norm(B, toB(B, origin)))}]`; c.kind = 'at'; c.ref = B;
+        c.place = `at=${nameOf(B)}[${anchorTxt(B, norm(B, toB(B, origin)), 5e-4)}]`; c.kind = 'at'; c.ref = B;
       }
       if (c && (c.kind !== 'on' || Math.abs(c.ref.cols[1][1] - 1) < 1e-9)) { place = `${c.place} pin=origin`; ref = c.ref; stats[c.kind]++; }
       else { place = `at=${vec(origin)} pin=origin`; stats.coord++; }
@@ -699,7 +727,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       for (const ch of kids) {
         const o = ch.members[0];
         const cand = (B) => sib.has(B.id) && B !== o;
-        const cc = ch === anchorCh ? null : chooseFor(o, o.at, cand, (B) => unitOf.get(B.id).child.id);
+        const cc = ch === anchorCh ? null : chooseFor(o, o.at, cand, (B) => unitOf.get(B.id).child.id, 5e-4, RF);
         const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
         const lp = local(o.at);
         const placeTxt = cc ? cc.place : lp.every((v) => Math.abs(v) < 1e-6) ? '' : `at=${vec(lp)}`;
