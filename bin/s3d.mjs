@@ -15,21 +15,18 @@ const ol = process.argv.find((a) => a.startsWith('--outline'));
 if (ol) {
   for (const e of r.errors) console.log(`错误  ${e.file ? e.file + ' ' : ''}第 ${e.line ?? '?'} 行  ${e.message}`);
   console.log(outline(r, { depth: +(ol.split('=')[1] ?? 2) }));
-  process.exit(r.errors.length ? 1 : 0);
-}
-
-if (process.argv.includes('--json')) {
+} else if (process.argv.includes('--json')) {
   console.log(JSON.stringify(r, null, 2));
-  process.exit(r.errors.length ? 1 : 0);
+} else {
+  const f = (v) => v.map((x) => x.toFixed(2).padStart(7)).join(' ');
+  for (const e of r.errors) console.log(`错误  ${e.file ? e.file + ' ' : ''}第 ${e.line ?? '?'} 行  ${e.message}`);
+  console.log(`\n对象 ${r.nodes.length} 个，几何条目 ${r.items.length} 个\n`);
+  for (const n of r.nodes) {
+    if (n.depth > 1 || !n.box) continue;
+    console.log(`${'  '.repeat(n.depth)}${n.path.padEnd(28)} ${n.kind.padEnd(9)} min[${f(n.box.min)}]  max[${f(n.box.max)}]${n.late ? '  (后置)' : ''}`);
+  }
+  console.log(`\n空间事实 ${r.facts.length} 条`);
+  for (const x of r.facts.slice(0, 60)) console.log('  ' + x.text);
 }
-
-const f = (v) => v.map((x) => x.toFixed(2).padStart(7)).join(' ');
-for (const e of r.errors) console.log(`错误  ${e.file ? e.file + ' ' : ''}第 ${e.line ?? '?'} 行  ${e.message}`);
-console.log(`\n对象 ${r.nodes.length} 个，几何条目 ${r.items.length} 个\n`);
-for (const n of r.nodes) {
-  if (n.depth > 1 || !n.box) continue;
-  console.log(`${'  '.repeat(n.depth)}${n.path.padEnd(28)} ${n.kind.padEnd(9)} min[${f(n.box.min)}]  max[${f(n.box.max)}]${n.late ? '  (后置)' : ''}`);
-}
-console.log(`\n空间事实 ${r.facts.length} 条`);
-for (const x of r.facts.slice(0, 60)) console.log('  ' + x.text);
-process.exit(r.errors.length ? 1 : 0);
+// 用 exitCode 而不是 exit()：输出到管道时 exit() 会截断还没写完的内容
+process.exitCode = r.errors.length ? 1 : 0;

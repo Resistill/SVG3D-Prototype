@@ -222,6 +222,8 @@
           <tr><td><code>def B : A(floors=3) { over body … ; drop door ; box chimney … }</code></td><td>类型派生；<code>kind(A)</code> 包含派生类型</td></tr>
           <tr><td><code>def A : A { … }</code></td><td>就地扩展类型，所有实例随之改变</td></tr>
           <tr><td><code>copy R of=A on=… { over … ; drop … }</code></td><td>结构派生：照着 A 的定义再建一个，之后可以改</td></tr>
+          <tr><td><code>over farm.1.t : rusty_turbine</code></td><td>换类型：阵列里的某一台换成派生类型，父类型的变化继续传下来</td></tr>
+          <tr><td><code>over farm.1.t.rotor.r1.blade size=…</code></td><td>改副本：只改 rotate / mirror 生成的那一个，其余仍跟随原物体</td></tr>
           <tr><td><code>over 选择器 属性=值 { … }</code> · <code>drop 选择器</code></td><td>修改 / 删除；只改外观（mat color use）的在求解后生效，可按概念选择</td></tr>
           <tr><td><code>import "base.s3d"</code></td><td>修改层、风格层叠在基础描述上，后写的覆盖先写的</td></tr>
           <tr><td><code>concept 双开门 : 门 = where w &gt; 1.6</code></td><td>概念层级</td></tr>

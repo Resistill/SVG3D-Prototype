@@ -120,9 +120,10 @@ concept deck = kind(box) & on(pier, 2)
 | `def name(p=默认值) { … }` | 类型（参数化模板）。模板声明的参数优先于同名的定位关键字 |
 | `def B(新参数) : A(覆盖的默认值) { over … ; drop … ; 新部件 }` | **类型派生**。`kind(A)` 包含派生类型（is-a） |
 | `def A : A { … }` | 就地扩展类型：所有实例随之改变 |
-| `mirror R of=A across=B axis=x` · `rotate R of=A about=B axis=z angle=90` | **变换派生**：副本精确跟随原物体，不能单独修改 |
+| `mirror R of=A across=B axis=x` · `rotate R of=A about=B axis=z angle=90` | **变换派生**：副本跟随原物体；可以单独修改副本里的某个部件（见下） |
 | `mirror across=… { … }` · `rotate n= about= axis= { … }` | 对称组 / 旋转对称 |
 | `copy R of=A [定位] { over … ; drop … ; 新部件 }` | **结构派生**：把 A 的定义在 R 处重新展开，之后可以随意修改 |
+| `over 实例 : 类型` | **换类型**：把一个实例（例如阵列里的某一台）换成另一个类型，通常是派生类型；它仍然是阵列的成员，父类型的变化继续传下来 |
 
 ### 修改：over 与 drop
 
@@ -135,7 +136,24 @@ drop 选择器
 - 改了定位关系（on/at…）时，原来的定位关系作废。改模板参数或阵列数量时，按新值重建该节点。
 - 表达式在**写它的地方**求值，所以修改层里的 `let` 变量可以直接用。
 - **两个时机**：改几何、结构的 over/drop 在求解之前生效，选择器不能依赖空间事实；**只改外观**（`mat`、`color`、`use=`）的 over 在求解之后生效，选择器可以用概念和关系谓词。
-- 后写的覆盖先写的；不能覆盖 mirror/rotate 生成的副本（请覆盖原物体，或改用 copy）。
+- 后写的覆盖先写的。
+- **改副本**：路径经过 mirror / rotate 副本的修改（`over farm.1.t.rotor.r1.blade size=1,5,0.3`）在副本生成之后生效，只改那一个副本；没改的部分仍然跟随原物体。改原物体（`rotor.blade`）则所有副本一起变。副本不能单独换类型或改模板参数（改用 copy）。
+
+一个完整的例子：三台风车是同一个类型的实例，一台换成派生类型、另一台的一片扇叶折断；之后父类型加一片扇叶，三台都变成四片，生锈和折断都还在。
+
+```
+def turbine(h=20) {
+  cyl tower r=0.8 h=h
+  sphere hub r=0.8 on=tower
+  rotate rotor n=2 axis=z at=hub.center pin=origin { box blade size=1,9,0.3 pin=bottom }
+}
+def rusty_turbine : turbine { over rotor.r1.blade mat=rust }
+repeat farm n=3 step=20,0,0 on=ground { turbine t }
+
+over farm.1.t : rusty_turbine                 // 这一台换成派生类型
+over farm.2.t.rotor.r2.blade size=1,5,0.3     // 那一台的一片扇叶折断
+def turbine : turbine { over rotor n=3 }      // 父类型：三片 → 四片
+```
 
 ### 层：import
 

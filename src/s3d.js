@@ -486,9 +486,18 @@ function makeStmt(words, children) {
   }
   if (kind === 'if' || kind === 'else') throw new S3DError('if / else 已移出语言：结构上的差别请用派生类型表达，例如 def 带烟囱的房子 : 房子 { box chimney … }', line);
   if (kind === 'over' || kind === 'drop') {
-    // over 选择器… [key=value …] [{ … }]；drop 选择器…
+    // over 选择器… [: 类型] [key=value …] [{ … }]；drop 选择器…
+    // over farm.1.t : rusty_turbine 把这个实例换成另一个（通常是派生的）类型，其余不变
     const selWords = [], props = new Map();
-    for (const w of words.slice(1)) {
+    let retype = null;
+    const ws = words.slice(1);
+    const ci = kind === 'over' ? ws.findIndex((w) => w.v === ':') : -1;
+    if (ci >= 0) {
+      if (ci === 0 || !ws[ci + 1] || !/^[\p{L}_][\p{L}\p{N}_]*$/u.test(ws[ci + 1].v)) throw new S3DError('换类型写成：over 对象 : 类型', line);
+      retype = ws[ci + 1].v;
+      ws.splice(ci, 2);
+    }
+    for (const w of ws) {
       const kv = kind === 'over' && !selWords.length ? null : kind === 'over' ? splitProp(w.v) : null;
       if (kv && /^[\p{L}_][\p{L}\p{N}_]*$/u.test(kv[0])) props.set(kv[0], parseValue(kv[1], w.line));
       else if (props.size) throw new S3DError(`${kind}：属性写完之后不能再出现选择器 “${w.v}”`, w.line);
@@ -497,7 +506,7 @@ function makeStmt(words, children) {
     if (!selWords.length) throw new S3DError(`${kind} 需要选择器，例如 ${kind} hangar.door、${kind} #wall`, line);
     if (kind === 'drop' && children.length) throw new S3DError('drop 不能带 { }', line);
     const src = selWords.join(' ');
-    return { kind, sel: parseValue(src, line), src, props, children, line };
+    return { kind, sel: parseValue(src, line), src, props, children, line, retype };
   }
   if (kind === 'variant') {
     // variant 集合 use=模板 参数=…：把集合里每个对象的外观换成这个模板，外包络不变
@@ -945,7 +954,7 @@ function elaborate(program, errors) {
       const prev = concepts.findIndex((c) => c.name === s.name);
       if (prev >= 0) concepts.splice(prev, 1);
       concepts.push(s);
-    } else if (s.kind === 'over' && !s.children.length && s.props.size && [...s.props.keys()].every((k) => APPEARANCE.has(k) || s.props.has('use'))) {
+    } else if (s.kind === 'over' && !s.retype && !s.children.length && s.props.size && [...s.props.keys()].every((k) => APPEARANCE.has(k) || s.props.has('use'))) {
       // 只改外观的覆盖：求解后应用，选择器可以依赖空间事实与概念
       if (s.props.has('use')) {
         const u = s.props.get('use');
@@ -1077,6 +1086,7 @@ function buildCopies(root, flat, S, errors) {
   const shadow = (src, parent) => {
     const g = new Node(K(src), src.id, new Map(), src.tags, src.line, src.env, parent);
     g.ghostOf = src;
+    if (parent.skin) g.skin = true;
     flat.push(g);
     for (const c of src.children) shadow(c, g);
     return g;
@@ -1087,7 +1097,9 @@ function buildCopies(root, flat, S, errors) {
     if (state.get(n) === 'busy') throw new S3DError(`复制关系形成循环：${n.path}`, n.line, n);
     state.set(n, 'busy');
     for (const c of [...n.children]) ensure(c);
-    if (COPIES.has(n.kind) && !n.ghostOf) {
+    // 已经生成过副本的不再生成（变体挂上之后会再跑一遍，只处理新挂上的部分）
+    if (COPIES.has(n.kind) && !n.ghostOf && !n.copiesBuilt) {
+      n.copiesBuilt = true;
       if (n.props.has('of')) {
         const ast = n.props.get('of');
         if (ast.k !== 'path' || ast.coords) throw new S3DError(`${n.path}：of 需要写一个对象名`, n.line, n);
@@ -1107,6 +1119,7 @@ function buildCopies(root, flat, S, errors) {
         for (let k = 1; k <= count; k++) {
           const G = new Node('group', n.kind === 'mirror' ? 'mirrored' : `r${k}`, new Map(), [], n.line, n.env, n);
           G.copyOf = { container: n, k };
+          if (n.skin) G.skin = true;
           flat.push(G);
           for (const c of originals) shadow(c, G);
         }
@@ -1166,9 +1179,14 @@ function expandCopies(elab, S, errors, fail) {
 
 // over / drop：在求解之前修改几何与结构。选择器只能与空间事实无关（路径、#标签、kind、按尺寸的 where）。
 // 写在模板体或块里的 over / drop 只作用于该实例或成员内部。后写的覆盖先写的。
-function applyOpinions(elab, S, errors, fail) {
-  const q = elab.opinions;
+// 分两轮：第一轮在 mirror / rotate 生成副本之前（改原物体，副本随之改变）；
+// 选不中的（路径经过副本，例如 rotor.r1.blade）留到第二轮，在副本生成之后应用到那一个副本上。
+const COPY_MISS = /没有子对象或锚点|没有选中任何对象|找不到/;
+function applyOpinions(elab, S, errors, fail, queue = elab.opinions, pass = 1) {
+  const q = queue;
+  const later = [];
   let dropped = false;
+  const mark = (n) => { n.dropped = true; n.children.forEach(mark); };
   for (let i = 0; i < q.length; i++) {
     const { s, env, scope, depth } = q[i];
     try {
@@ -1176,28 +1194,49 @@ function applyOpinions(elab, S, errors, fail) {
       try { members = asSet(evalAst(s.sel, { env, node: scope, scope, frame: scope, S })).nodes; }
       catch (e) {
         if (/求解后的空间事实/.test(e.message)) throw new S3DError(`${s.kind} 改的是几何，在求解之前生效，不能按空间事实选择（只改外观的 over 可以）`, s.line);
+        if (pass === 1 && COPY_MISS.test(e.message)) { later.push(q[i]); continue; }
         throw e;
       }
       members = members.filter((m) => !m.dropped && (scope.kind === 'root' || scope.isAncestorOf(m)));
-      if (!members.length) throw new S3DError(`${s.kind} ${s.src} 没有选中任何对象（副本跟随原物体，请覆盖原物体）`, s.line);
+      if (!members.length) {
+        if (pass === 1) { later.push(q[i]); continue; }
+        throw new S3DError(`${s.kind} ${s.src} 没有选中任何对象`, s.line);
+      }
       if (s.kind === 'drop') {
-        const mark = (n) => { n.dropped = true; n.children.forEach(mark); };
         for (const m of members) { mark(m); m.parent.children.splice(m.parent.children.indexOf(m), 1); }
         dropped = true;
         continue;
       }
       for (let m of members) {
-        if (COPIES.has(m.kind) && m.props.has('of')) throw new S3DError(`${m.path} 是 ${m.kind} 生成的副本，副本跟随原物体：请覆盖原物体，或改用 copy`, s.line);
-        // 改模板参数或阵列数量：用新的值重建这个节点（结构会随之变化）
+        if (COPIES.has(m.kind) && m.props.has('of') && !m.ghostOf) throw new S3DError(`${m.path} 是 ${m.kind} 生成的副本，副本跟随原物体：请覆盖原物体、覆盖副本里的某个部件，或改用 copy`, s.line);
+        if (m.ghostOf) {
+          // 改某一个副本：给它一个“孪生体”——挂在原物体的父级下（不进场景树）、属性 = 原物体的属性 + 这次的修改，
+          // 副本改为跟随孪生体。孪生体在原物体的坐标系里求解，再由副本的镜像 / 旋转带过去，所以关系的含义不变；
+          // 没改的部分仍然来自原物体（父类型以后加的东西照样传下来）
+          if (s.retype) throw new S3DError(`${m.path} 是副本，不能单独换类型：请对原物体换类型，或改用 copy`, s.line);
+          if (m.ghostOf.params && [...s.props.keys()].some((k) => m.ghostOf.params.has(k))) throw new S3DError(`${m.path} 是副本，不能单独改模板参数：请改用 copy`, s.line);
+          const T = twinOf(m);
+          for (const [k, ast] of s.props) {
+            if (k === 'use') throw new S3DError('use= 只能写在最外层的 over / variant 里', s.line);
+            if (REL_KEYS.includes(k)) for (const r of REL_KEYS) T.props.delete(r);
+            T.props.set(k, { k: 'envd', env, ast });
+          }
+          if (s.children.length) elab.walk(s.children, m, new Env(env, { it: mkRef(m) }), depth);
+          continue;
+        }
+        // 改模板参数、阵列数量或换类型：用新的值重建这个节点（结构会随之变化）
         const paramKeys = m.params ? [...s.props.keys()].filter((k) => m.params.has(k))
           : m.kind === 'repeat' && m.stmt ? [...s.props.keys()].filter((k) => k === 'n') : [];
-        if (paramKeys.length) {
+        if (s.retype) {
+          if (!elab.defs.has(s.retype)) throw new S3DError(`over ${s.src} : ${s.retype}：类型 ${s.retype} 没有定义`, s.line);
+          if (!m.stmt || !m.template) throw new S3DError(`${m.path} 不是模板的实例，不能换类型`, s.line);
+        }
+        if (paramKeys.length || s.retype) {
           const P = m.parent, idx = P.children.indexOf(m);
           const props = new Map(m.stmt.props);
           for (const k of paramKeys) props.set(k, { k: 'envd', env, ast: s.props.get(k) });
-          const mark = (n) => { n.dropped = true; n.children.forEach(mark); };
           mark(m); P.children.splice(idx, 1); dropped = true;
-          elab.walk([{ ...m.stmt, props }], P, m.srcEnv, depth);
+          elab.walk([{ ...m.stmt, kind: s.retype ?? m.stmt.kind, props }], P, m.srcEnv, depth);
           const fresh = P.children.pop();
           P.children.splice(idx, 0, fresh);
           m = fresh;
@@ -1217,8 +1256,26 @@ function applyOpinions(elab, S, errors, fail) {
     const keep = elab.flat.filter((n) => !n.dropped);
     elab.flat.length = 0;
     elab.flat.push(...keep);
-    S.rebuildIndex();
   }
+  // 新增或删除了节点（包括第二轮在副本里加的部件）都要重建名字索引
+  S.rebuildIndex();
+  return later;
+}
+
+// 副本的孪生体（见上）：同一个副本改多次时共用一个
+function twinOf(g) {
+  if (g.twin) return g.ghostOf;
+  const src = g.ghostOf;
+  const T = new Node(src.kind, src.id, new Map(src.props), src.tags, src.line, src.env, src.parent);
+  src.parent.children.pop(); // 不进场景树：只用来求解这个副本的位置与形状
+  for (const k of ['asKind', 'stmt', 'srcEnv', 'meta', 'types', 'template', 'params', 'bodyEnv', 'inst', 'counts', 'total', 'src', 'copyOf', 'file']) if (src[k] !== undefined) T[k] = src[k];
+  T.path = src.path;
+  T.ownProps = true;
+  T.children = src.children; // 结构与原物体相同：容器的包围盒由原物体的部件算出
+  g.ghostOf = T;
+  g.twin = true;
+  g.twinOf = src;
+  return T;
 }
 
 // ───────────────────────── 求解 ─────────────────────────
@@ -2195,8 +2252,10 @@ function compileOnce(src, plan, opts) {
   };
 
   expandCopies(elab, S, errors, fail);
-  applyOpinions(elab, S, errors, fail);
+  const pending = applyOpinions(elab, S, errors, fail);
   buildCopies(root, flat, S, errors);
+  // 第二轮：路径经过副本的修改（只改那一个副本）
+  if (pending.length) applyOpinions(elab, S, errors, fail, pending, 2);
 
   // 第二遍：把变体挂到被选中的对象上。原物体仍参与求解（外包络、锚点、关系都不变），只是不再渲染
   const variantSummary = [];
@@ -2230,6 +2289,8 @@ function compileOnce(src, plan, opts) {
       } catch (e) { errors.push(fail(e, { line: st.line })); }
     }
     for (const st of elab.variants) variantSummary.push({ line: st.line, use: st.use, src: st.src, members: applied.get(st) ?? [] });
+    // 变体里的 mirror / rotate 也要生成副本
+    buildCopies(root, flat, S, errors);
   }
 
   for (const n of flat) {
@@ -2319,7 +2380,7 @@ function compileOnce(src, plan, opts) {
     path: n.path,
     kind: n.template ? n.template : n.inst ? 'instance' : n.src ? `${n.kind}→${K(n)}` : n.copyOf ? n.copyOf.container.kind : K(n),
     id: n.id, tags: n.tags, concepts: n.concepts ?? [], line: n.line, file: n.file ?? null, types: n.types ?? null, meta: (n.ghostOf ?? n).meta ?? {},
-    depth: n.path.split('.').length - 1, late: !!n.late, ghost: !!n.ghostOf, of: (n.ghostOf ?? n.src)?.path ?? null, curve: CURVES.has(K(n)), hidden: !!n.hidden, skin: !!n.skin,
+    depth: n.path.split('.').length - 1, late: !!n.late, ghost: !!n.ghostOf, of: (n.twinOf ?? n.ghostOf ?? n.src)?.path ?? null, curve: CURVES.has(K(n)), hidden: !!n.hidden, skin: !!n.skin,
     world: n._world ?? null, box: n._world && n._box ? transformBox(n._world, n._box) : null,
     // 紧包围盒：按真实形状（与空间事实同一套凸块）求，旋转后的圆柱、球不会被放大
     tight: n._world && n._box && n.geom && LEAVES.has(K(n)) ? tightBox(n) : null,

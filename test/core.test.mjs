@@ -808,3 +808,77 @@ test('where 里的 top / bottom 是真实形状的世界高度', () => {
   assert.deepEqual(r.errors, []);
   assert.deepEqual(r.concepts[0].members, ['tilted']);
 });
+
+// 风车：三台是同一个类型的实例；改一台的一片扇叶不影响别的；父类型加扇叶，所有实例与派生都跟着加，单独的修改保留
+const windfarm = `
+  material white color=#eeeeee
+  material rust color=#8b4a2b
+  box ground size=100,1,100 pin=top
+  def turbine(h=20) {
+    cyl tower r=0.8 h=h mat=white
+    sphere hub r=0.8 on=tower mat=white
+    rotate rotor n=2 axis=z at=hub.center pin=origin {
+      box blade size=1,9,0.3 pin=bottom mat=white
+    }
+  }
+  def rusty_turbine : turbine { over rotor.r1.blade mat=rust }
+  repeat farm n=3 step=20,0,0 on=ground { turbine t }
+`;
+const blades = (r, prefix) => r.items.filter((it) => it.path.startsWith(prefix + '.rotor') && /blade$/.test(it.path))
+  .map((b) => `${b.path.slice(prefix.length + 7)}:${b.material?.name}${b.geom.h !== 9 ? `:h${b.geom.h}` : ''}`);
+
+test('派生：改一台风车的一片扇叶（旋转副本），父类型加扇叶后修改仍在、其余风车不受影响', () => {
+  const r = compile(windfarm + `
+    over farm.1.t.rotor.r1.blade size=1,5,0.3
+    over farm.1.t.rotor.r2.blade mat=rust
+    def turbine : turbine { over rotor n=3 }
+  `);
+  assert.deepEqual(r.errors, []);
+  assert.deepEqual(blades(r, 'farm.0.t'), ['blade:white', 'r1.blade:white', 'r2.blade:white', 'r3.blade:white']);
+  assert.deepEqual(blades(r, 'farm.1.t'), ['blade:white', 'r1.blade:white:h5', 'r2.blade:rust', 'r3.blade:white']);
+  assert.deepEqual(blades(r, 'farm.2.t'), blades(r, 'farm.0.t'));
+  // 折断的那片仍从轮毂伸出、方向不变（与另一台的同一片只差风车间距）
+  const W = (p) => r.nodes.find((n) => n.path === p).world;
+  const a = W('farm.1.t.rotor.r1.blade'), b = W('farm.0.t.rotor.r1.blade');
+  a.R.forEach((row, i) => row.forEach((v, j) => near(v, b.R[i][j], `R[${i}][${j}]`)));
+  near(a.t[0] - b.t[0], 20, '间距'); near(a.t[1], b.t[1], 'y'); near(a.t[2], b.t[2], 'z');
+  // 副本仍然记得自己来自哪里
+  assert.equal(r.nodes.find((n) => n.path === 'farm.1.t.rotor.r1.blade').of, 'farm.1.t.rotor.blade');
+});
+
+test('换类型：over 实例 : 派生类型；派生类型里可以改旋转副本；父类型的变化继续传下来', () => {
+  const r = compile(windfarm + `
+    over farm.1.t : rusty_turbine
+    def turbine : turbine { over rotor n=3 }
+  `);
+  assert.deepEqual(r.errors, []);
+  assert.deepEqual(blades(r, 'farm.1.t'), ['blade:white', 'r1.blade:rust', 'r2.blade:white', 'r3.blade:white']);
+  assert.deepEqual(blades(r, 'farm.0.t'), ['blade:white', 'r1.blade:white', 'r2.blade:white', 'r3.blade:white']);
+  assert.deepEqual(r.nodes.find((n) => n.path === 'farm.1.t').types, ['rusty_turbine', 'turbine']);
+  // copy 块里也可以改副本；copy 复制的是定义，所以也跟着父类型变成 4 片
+  const c = compile(windfarm + `
+    copy extra of=farm.1.t on=ground[0,1,0.4] { over rotor.r1.blade mat=rust }
+    def turbine : turbine { over rotor n=3 }
+  `);
+  assert.deepEqual(c.errors, []);
+  assert.deepEqual(blades(c, 'extra'), ['blade:white', 'r1.blade:rust', 'r2.blade:white', 'r3.blade:white']);
+});
+
+test('换类型与改副本的错误提示', () => {
+  const msg = (extra) => compile(windfarm + extra).errors.map((e) => e.message).join(' | ');
+  assert.match(msg('over farm.1.t : nothing'), /类型 nothing 没有定义/);
+  assert.match(msg('over farm.1.t.rotor.r1.blade : turbine'), /副本，不能单独换类型/);
+  assert.match(msg('over farm.1.t.rotor.r9.blade mat=rust'), /没有/);
+});
+
+test('变体（外观）里的 mirror / rotate 也会生成副本', () => {
+  const r = compile(`
+    def fancy(w=1,h=1,d=1) { box core size=w,h,d
+      rotate fins n=3 { box fin size=0.2,h,1 at=w/2,0,0 } }
+    box ground size=50,1,50 pin=top
+    cyl tower r=1 h=10 on=ground
+    over tower use=fancy
+  `);
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.items.filter((i) => /\.fin$/.test(i.path)).length, 4);
+});
