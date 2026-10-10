@@ -13,6 +13,7 @@ import { rasterize } from '../tools/raster.mjs';
 import { runCommand } from '../tools/agent.mjs';
 import { splitSource } from '../tools/split.mjs';
 import { panelLines } from '../tools/panels.mjs';
+import { parseCSV, attachSidecar } from '../tools/sidecar.mjs';
 
 test('描述长度的计价：名字与关键字各 1，数字按小数位，注释与元数据不计', () => {
   assert.equal(numberCost('26'), 1);
@@ -355,4 +356,30 @@ box slab size=19.4,0.3,11.4 at=0,4,0
   const panels = scorer(plain(sceneObjects(rc)), p.lines);
   assert.ok(panels.R_src < 0.1 * solid.R_src, `板件解释了内部：${JSON.stringify(panels)} 对 ${JSON.stringify(solid)}`);
   assert.ok(panels.S < solid.S, `总分更低：${panels.S} < ${solid.S}`);
+});
+
+test('旁路表：按节点名对上源部件（匹配列、位置列自动推断），同名实例按位置区分，分类列写成 ~元数据', () => {
+  const cube = (x) => [[[x, 0, 0], [x + 1, 0, 0], [x, 1, 0]], [[x, 0, 1], [x + 1, 1, 1], [x, 1, 1]]];
+  const parts = [
+    { name: 'Props/zone_a/SM_Crate@1', tris: cube(0) }, { name: 'Props/zone_a/SM_Crate@2', tris: cube(10) },
+    { name: 'Props/zone_b/SM_Lamp', tris: cube(20) }, { name: 'Walls/zone_a/SM_Wall', tris: cube(30) },
+  ];
+  const rows = parseCSV(`level,category,mesh,collidable,profile,pos_x,pos_y,pos_z,note
+zone_a,Props,SM_Crate,1,BlockAll,10.5,0.5,0.5,same
+zone_a,Props,SM_Crate,0,NoCollision,0.5,0.5,0.5,same
+zone_b,Props,SM_Lamp,0,"No,Collision",20.5,0.5,0.5,same
+zone_a,Walls,SM_Wall,1,BlockAll,30.5,0.5,0.5,same`);
+  const rep = attachSidecar(parts, rows);
+  assert.equal(rep.matched, 4, JSON.stringify(rep));
+  assert.deepEqual(rep.match, ['category', 'level', 'mesh']);
+  assert.deepEqual(rep.position, ['pos_x', 'pos_y', 'pos_z']);
+  assert.ok(!rep.fields.includes('note'), '全场都一样的列不挂');
+  assert.equal(parts[0].meta.profile, 'NoCollision', '同名实例按位置区分');
+  assert.equal(parts[1].meta.profile, 'BlockAll');
+  assert.equal(parts[2].meta.profile, 'No,Collision', '带引号的字段');
+  // 逆向写成 ~元数据，可以在 where 里读
+  const out = reverse(parts.map((p) => ({ ...p, material: { name: 'm', color: '#888888' } })), { srcFile: 'x.glb', fidelity: 'structure', compress: false });
+  assert.match(out.src, /~profile="NoCollision"/);
+  const r = compile(out.src);
+  assert.deepEqual(r.errors, []);
 });

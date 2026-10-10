@@ -154,9 +154,9 @@ async function inspectSource(P, names) {
 export const COMMANDS = {
   init: {
     desc: '从源模型（GLB）新建工程：记录源模型、按档位跑一次逆向、生成各层文件。档位：semantic（只保留语义，一律用基本体当代理，最适合风格化）/ structure（默认）/ detail（尽量复原）',
-    args: { source: '源模型 .glb 的路径', fidelity: '档位：semantic / structure（默认）/ detail', copy: '可选：把源模型复制进工程（source/world.glb）', unit: '可选：场景单位，每个单位多少米（米 1、厘米 0.01、stud 0.28）；不给时按部件尺寸猜，并在结果的 unitNote 里提示确认' },
+    args: { source: '源模型 .glb 的路径', fidelity: '档位：semantic / structure（默认）/ detail', copy: '可选：把源模型复制进工程（source/world.glb）', unit: '可选：场景单位，每个单位多少米（米 1、厘米 0.01、stud 0.28）；不给时按部件尺寸猜，并在结果的 unitNote 里提示确认', sidecar: '可选：旁路表（CSV）：按节点名对上源部件，类别、碰撞类型等分类列写成物体的 ~元数据（匹配列、位置列、字段自动推断，记在 project.json 的 sidecar 里，可以改）' },
     noProject: true,
-    async run(dir, a) { return initProject(dir, a.source ?? a._?.[0], { copy: !!a.copy, fidelity: a.fidelity ?? 'structure', unit: a.unit != null ? +a.unit : null }); },
+    async run(dir, a) { return initProject(dir, a.source ?? a._?.[0], { copy: !!a.copy, fidelity: a.fidelity ?? 'structure', unit: a.unit != null ? +a.unit : null, sidecar: a.sidecar ?? null }); },
   },
   reverse: {
     desc: '重跑逆向，重写 base.s3d（上一次的结果作为名字记忆，修改层的路径保持有效）；可以换档位、改场景单位',

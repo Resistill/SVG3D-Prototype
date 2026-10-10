@@ -12,6 +12,7 @@ import { compile, FACT_EPS } from '../src/s3d.js';
 import { readParts, reverse, FIDELITY } from './reverse.mjs';
 import { SCORE_DEFAULTS, scoreCache } from './score.mjs';
 import { splitSource, joinSource, importedFiles } from './split.mjs';
+import { loadSidecar, attachSidecar } from './sidecar.mjs';
 
 // 写进文件的相对路径一律用 /（Windows 上 path.relative 给的是反斜杠，浏览器与 import 都认不了）
 const rel = (from, to) => relative(from, to).split(sep).join('/');
@@ -63,7 +64,13 @@ export function openProject(dir) {
       if (P._parts) return P._parts;
       const path = P.sourcePath(), st = statSync(path), key = `${path}|${st.size}|${st.mtimeMs}|${cfg.split ?? 'auto'}`;
       let ses = SESSIONS.get(dir);
-      if (!ses || ses.key !== key) SESSIONS.set(dir, (ses = { key, parts: await readParts(path, { split: cfg.split ?? 'auto' }), cache: scoreCache() }));
+      if (!ses || ses.key !== key) {
+        const parts = await readParts(path, { split: cfg.split ?? 'auto' });
+        // 旁路表（project.json 的 sidecar）：对上的列挂到部件上，逆向写成 ~元数据
+        const sidecar = cfg.sidecar ? attachSidecar(parts, loadSidecar(resolve(dir, cfg.sidecar.file)), cfg.sidecar) : null;
+        SESSIONS.set(dir, (ses = { key, parts, sidecar, cache: scoreCache() }));
+      }
+      P.sidecar = ses.sidecar;
       return (P._parts = ses.parts);
     },
     // 增量评分的缓存（与 sourceParts() 读到的源部件配套；缓存自己会核对源部件是不是同一组）
@@ -98,7 +105,7 @@ const checkUnit = (u) => { if (!(u > 0) || !Number.isFinite(u)) throw new Error(
 const writeCfg = (path, cfg) => writeFileSync(path, JSON.stringify(cfg, null, 2) + '\n');
 
 // 新建工程：记录源模型，跑一次逆向，生成各层文件。unit 不给时按部件尺寸猜一个，并在结果里提示确认
-export async function initProject(dir, source, { split = 'auto', copy = false, fidelity = 'structure', unit = null } = {}) {
+export async function initProject(dir, source, { split = 'auto', copy = false, fidelity = 'structure', unit = null, sidecar = null } = {}) {
   if (!FIDELITY[fidelity]) throw new Error(`没有档位 ${fidelity}（可用：${Object.keys(FIDELITY).join(' / ')}）`);
   if (unit != null) checkUnit(unit);
   dir = resolve(dir);
@@ -108,9 +115,10 @@ export async function initProject(dir, source, { split = 'auto', copy = false, f
   if (copy) { mkdirSync(join(dir, 'source'), { recursive: true }); const to = join(dir, 'source', 'world.glb'); writeFileSync(to, readFileSync(src)); src = to; }
   const parts = await readParts(src, { split });
   const guess = unit == null ? guessUnit(parts) : null;
+  const side = sidecar ? attachSidecar(parts, loadSidecar(resolve(sidecar)), {}) : null;
   // 档位：逆向不要求 100% 复原；它同时决定逆向的精度与分数的 δ（几何误差的单位，按米）
   const { unit: _u, ...score } = SCORE_DEFAULTS;
-  const cfg = { version: 1, source: rel(dir, src), sourceHash: sha1(src), unit: unit ?? guess.unit, split, fidelity, score: { ...score, delta: FIDELITY[fidelity].tau } };
+  const cfg = { version: 1, source: rel(dir, src), sourceHash: sha1(src), unit: unit ?? guess.unit, split, fidelity, ...(side ? { sidecar: { file: rel(dir, resolve(sidecar)), match: side.match, position: side.position, fields: side.fields } } : {}), score: { ...score, delta: FIDELITY[fidelity].tau } };
   writeCfg(join(dir, 'project.json'), cfg);
   writeFileSync(join(dir, 'scene.s3d'), '// 组合根：按顺序叠加各层（工具与界面只编译这个文件）\n' + LAYERS.map((f) => `import "${f}"`).join('\n') + '\n');
   for (const [f, h] of Object.entries(HEADERS)) if (!existsSync(join(dir, f))) writeFileSync(join(dir, f), typeof h === 'function' ? h(dir) : h);
@@ -119,7 +127,7 @@ export async function initProject(dir, source, { split = 'auto', copy = false, f
   P._parts = parts;
   const rep = await runReverse(P, { fresh: true });
   const note = guess && `场景单位按 1 = ${cfg.unit} 米（部件尺寸的中位数是 ${guess.median} 个单位，猜的）；不对的话用 reverse --unit=<每个单位多少米> --fresh 改（stud 是 0.28）`;
-  return { dir, ...rep, ...(note ? { unitNote: note } : {}) };
+  return { dir, ...rep, ...(note ? { unitNote: note } : {}), ...(side ? { sidecar: side } : {}) };
 }
 
 // 重跑逆向：上一次的 base.s3d 作为名字记忆（稳定命名），除非 fresh。fidelity / unit 给了就先改工程设置

@@ -643,7 +643,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     if (ty) {
       // 类型的实例：位姿就是节点的刚体变换
       const { T, R, t } = ty, b = T.box;
-      return { id: uniqueId(sanitize(cleanName(p.name) ?? T.name)), src: p.uid ?? p.name ?? null, material: p.material, kind: T.name, props: {}, cols: R, at: add(t, mvC(R, T.c0)), box: b,
+      return { id: uniqueId(sanitize(cleanName(p.name) ?? T.name)), src: p.uid ?? p.name ?? null, meta: p.meta, material: p.material, kind: T.name, props: {}, cols: R, at: add(t, mvC(R, T.c0)), box: b,
         fit: Math.max(0, Math.min(1, 1 - T.fit.e / TOL)), err: T.fit.e, vol: (b.max[0] - b.min[0]) * (b.max[1] - b.min[1]) * (b.max[2] - b.min[2]), symY: false, instance: true };
     }
     const prim = primitiveOf(fits[i], p, srcFile);
@@ -652,7 +652,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     const vol = (prim.box.max[0] - prim.box.min[0]) * (prim.box.max[1] - prim.box.min[1]) * (prim.box.max[2] - prim.box.min[2]);
     const symY = prim.kind === 'sphere' || (['cyl', 'cone'].includes(prim.kind) && !prim.props.axis);
     if (symY && Math.abs(prim.cols[1][1] - 1) < 1e-6) prim.cols = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-    return { id, src: p.uid ?? p.name ?? p.from ?? null, material: p.material, ...prim, vol, symY };
+    return { id, src: p.uid ?? p.name ?? p.from ?? null, meta: p.meta, material: p.material, ...prim, vol, symY };
   });
   const typeLines = types.flatMap((T) => {
     const props = Object.entries(T.prim.props).map(([k, v]) => `${k}=${v}`).join(' ');
@@ -678,7 +678,9 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   const line = (o, place, orient) => {
     if (o.absolute) { place = ''; orient = ''; } // 管道的点列本身就是位置
     const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
-    return [o.kind, o.id, props, place, orient, `mat=${o.mat}`, `~fit=${fmt(o.fit)}`, o.src ? `~src=${JSON.stringify(o.src)}` : ''].filter(Boolean).join(' ');
+    // 旁路信息（sidecar 表里对上的列）也写成 ~元数据：不计描述长度，可以在 where 里读
+    const meta = Object.entries(o.meta ?? {}).filter(([, v]) => v !== '').map(([k, v]) => `~${k}=${/^-?\d+(\.\d+)?$/.test(v) ? v : JSON.stringify(String(v))}`);
+    return [o.kind, o.id, props, place, orient, `mat=${o.mat}`, `~fit=${fmt(o.fit)}`, o.src ? `~src=${JSON.stringify(o.src)}` : '', ...meta].filter(Boolean).join(' ');
   };
   const absLine = (o) => line(o, `at=${vec(o.at)}`, orientText(o.cols));
   const absSrc = header.concat(objs.map(absLine)).join('\n');

@@ -7,7 +7,7 @@
 ## 工程
 
 ```
-init <源模型.glb> [--fidelity=semantic|structure|detail] [--unit=米] --project=dir   新建工程：按档位跑一次逆向，生成 scene.s3d 与各层
+init <源模型.glb> [--fidelity=semantic|structure|detail] [--unit=米] [--sidecar=表.csv] --project=dir   新建工程：按档位跑一次逆向，生成 scene.s3d 与各层
 reverse [--fidelity=…] [--unit=…] [--fresh]                               重跑逆向（可以换档位、改场景单位）
 ```
 

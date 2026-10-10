@@ -278,6 +278,8 @@ node bin/eval.mjs examples/spaceport.s3d out/spaceport.L0.s3d
 node bin/s3d-tool.mjs init out/spaceport.L2.glb --fidelity=structure --project=work/spaceport
 ```
 
+源模型之外还有关卡导出的表（类别、碰撞类型……）时加 `--sidecar=表.csv`：按节点名对上源部件（匹配列、位置列自动推断），分类列写成物体的 `~元数据`，可以在 `where` 里读（`all() where collision_profile == "NoCollision"`）。
+
 源模型不是按米建的，加 `--unit`（每个场景单位多少米，如厘米 0.01、stud 0.28）。不给时按部件尺寸猜：明显偏大才猜成厘米或毫米，结果里的 `unitNote` 提示确认；已有的工程用 `reverse --unit=… --fresh` 改。
 
 ```bash
