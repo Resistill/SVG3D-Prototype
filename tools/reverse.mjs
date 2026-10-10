@@ -58,12 +58,14 @@ export async function readParts(path, opts = {}) {
 }
 export function partsOfDocument(doc, { split = 'auto' } = {}) {
   const parts = [];
+  // 享元线索：记下每个部件用的是哪个网格（及其中第几个图元）、节点的世界矩阵
+  const meshIds = new Map(doc.getRoot().listMeshes().map((m, i) => [m, i]));
   for (const scene of doc.getRoot().listScenes()) scene.traverse((node) => {
     const mesh = node.getMesh();
     if (!mesh) return;
     const M = node.getWorldMatrix(); // 列主序
     const tf = (p) => [M[0] * p[0] + M[4] * p[1] + M[8] * p[2] + M[12], M[1] * p[0] + M[5] * p[1] + M[9] * p[2] + M[13], M[2] * p[0] + M[6] * p[1] + M[10] * p[2] + M[14]];
-    for (const prim of mesh.listPrimitives()) {
+    mesh.listPrimitives().forEach((prim, pk) => {
       const pos = prim.getAttribute('POSITION').getArray(), idx = prim.getIndices()?.getArray();
       const tris = [];
       const vert = (i) => tf([pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]]);
@@ -71,8 +73,8 @@ export function partsOfDocument(doc, { split = 'auto' } = {}) {
       for (let i = 0; i < n; i += 3) tris.push([vert(idx ? idx[i] : i), vert(idx ? idx[i + 1] : i + 1), vert(idx ? idx[i + 2] : i + 2)]);
       const mat = prim.getMaterial();
       const material = mat ? { name: mat.getName() || null, color: hex(mat.getBaseColorFactor().slice(0, 3)), metal: mat.getMetallicFactor(), rough: mat.getRoughnessFactor() } : { name: null, color: '#c9c9c9' };
-      parts.push({ name: node.getName() || null, tris, material });
-    }
+      parts.push({ name: node.getName() || null, tris, material, mesh: `${meshIds.get(mesh)}:${pk}`, matrix: Array.from(M) });
+    });
   });
   const doSplit = split === 'components' || (split === 'auto' && parts.some((p) => /^merged_/.test(p.name ?? '')));
   return doSplit ? parts.flatMap(splitComponents) : parts;
@@ -360,11 +362,19 @@ export function fitPart(part, i) {
   // 基本体拟合得不好时，试试管道（弯管、输料管）
   if (fits[0].e > 0.02) { const t = fitTube(part, i, vol, fits[0].e); if (t && t.e < fits[0].e) fits.unshift({ ...t, frame: fits[0].frame }); }
   const best = fits[0];
+  // 覆盖率：网格表面积 / 基本体表面积。实心的楼块、墙接近 1；一块起伏的地形、一道弯曲的长墙、地面贴花只占包络盒很小一部分表面，
+  // 硬套一个基本体比保留网格糟得多（网格常常不闭合，所以不用体积判断）
+  const areaMesh = part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0);
+  const h = best.frame.h, R = Math.max(best.r0 ?? 0, best.r1 ?? 0);
+  const areaPrim = best.shape === 'sphere' ? 4 * Math.PI * best.r * best.r
+    : best.shape === 'cyl' || best.shape === 'cone' ? 2 * Math.PI * R * R + 2 * Math.PI * R * 2 * h[best.axis]
+      : best.shape === 'tube' ? areaMesh : 8 * (h[0] * h[1] + h[0] * h[2] + h[1] * h[2]);
+  const cover = areaPrim > 0 ? areaMesh / areaPrim : 1;
   const lo = [0, 1, 2].map((k) => Math.min(...pts.map((p) => p[k]))), hi = [0, 1, 2].map((k) => Math.max(...pts.map((p) => p[k])));
   const uniq = new Map();
   for (const t of part.tris) for (const v of t) uniq.set(vkey(v), v);
   const vc = scl([...uniq.values()].reduce((s, v) => add(s, v), [0, 0, 0]), 1 / Math.max(1, uniq.size));
-  return { ...best, aabb: { min: lo, max: hi }, vc };
+  return { ...best, aabb: { min: lo, max: hi }, vc, cover };
 }
 
 // ───────── 发射：每个物体的原语、自身包围盒与世界朝向 ─────────
@@ -380,6 +390,14 @@ function minRot(u) {
   return [rot([1, 0, 0]), rot([0, 1, 0]), rot([0, 0, 1])];
 }
 
+// 覆盖率低于它（基本体的表面大部分不贴着网格）就退回网格引用，各档位都一样
+const COVER_MIN = 0.3;
+
+// 节点名里的路径前缀（类别/子关卡/…）与 SM_ 一类的资产前缀不进名字
+const cleanName = (n) => String(n).split('/').pop().replace(/^SM_/, '');
+// 类型名不能和语言里的形状、容器同名
+const KINDS_RESERVED = new Set(['box', 'cyl', 'cone', 'sphere', 'wedge', 'mesh', 'revolve', 'span', 'sweep', 'pipe', 'group', 'union', 'subtract', 'intersect', 'repeat', 'mirror', 'rotate', 'copy', 'line', 'bezier', 'spline', 'arc', 'helix', 'def', 'over', 'drop', 'let', 'material', 'concept', 'pattern', 'check', 'style', 'variant', 'import']);
+
 // 顶点去重的键：四舍五入到 1e-5，并把 −0 归零（toFixed 会把 ±0.000001 写成 "-0.00000" / "0.00000" 两个键，
 // 同一个顶点被算两次，圆柱的横向中心就偏了）
 function vkey(v) { return v.map((x) => Math.round(x * 1e5) || 0).join(); }
@@ -387,7 +405,7 @@ function vkey(v) { return v.map((x) => Math.round(x * 1e5) || 0).join(); }
 function primitiveOf(fit, part, srcFile) {
   const fitScore = Math.max(0, Math.min(1, 1 - fit.e / TOL));
   const F = fit.frame, h = F.h, [ex, ey, ez] = F.cols;
-  if (fit.e > FID.fitTol && part.name) {
+  if ((fit.e > FID.fitTol || fit.cover < COVER_MIN) && part.name) {
     // 拟合不了：引用源网格。外包络是世界包围盒，原点在其底面中心
     // （从合并网格里拆出来的部件在源文件里没有节点可引用，只能用最接近的基本体，并如实给出低拟合度）
     const { min, max } = fit.aabb;
@@ -541,22 +559,71 @@ function unifyBoxLabels(objs) {
 }
 
 // ───────── 3 & 4. 关系与校验 ─────────
-export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail' } = {}) {
+export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', types: useTypes = true } = {}) {
   setFidelity(fidelity);
   // 计时：S3D_TIMING=1 时把各阶段耗时打到 stderr（实战里定位瓶颈用）
   const T0 = performance.now(), lap = (what) => process.env.S3D_TIMING && console.error(`[reverse] ${what} ${Math.round(performance.now() - T0)}ms`);
-  const fits = parts.map((p, i) => fitPart(p, i));
-  lap(`拟合 ${parts.length} 个部件`);
+  // ── 享元：同一个网格（加同样的缩放、同样的镜像）被多个节点用到 → 一个类型（def），只拟合一次 ──
+  const typeOf = new Map(), types = [];
+  if (useTypes) {
+    const groups = new Map();
+    parts.forEach((p, i) => {
+      if (!p.matrix || p.mesh == null) return;
+      const M = p.matrix, cs = [[M[0], M[1], M[2]], [M[4], M[5], M[6]], [M[8], M[9], M[10]]], sc = cs.map(len);
+      if (sc.some((x) => x < 1e-9)) return;
+      let R = cs.map((c, k) => scl(c, 1 / sc[k]));
+      if (Math.abs(dot(R[0], R[1])) > 1e-4 || Math.abs(dot(R[0], R[2])) > 1e-4 || Math.abs(dot(R[1], R[2])) > 1e-4) return; // 有切变：不是刚体 + 缩放
+      const sign = det3c(R) < 0 ? -1 : 1;
+      if (sign < 0) R = [scl(R[0], -1), R[1], R[2]]; // 镜像实例：反射吸收进类型自己的坐标系
+      const key = `${p.mesh}|${sc.map((x) => x.toFixed(3)).join(',')}|${sign}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push({ i, R, t: [M[12], M[13], M[14]] });
+    });
+    const typeNames = new Set();
+    for (const [key, ms] of groups) {
+      if (ms.length < 2) continue;
+      const rep = parts[ms[0].i], { R, t } = ms[0];
+      // 类型坐标系 = 网格自己的坐标系（含缩放）：world = R·local + t
+      const local = rep.tris.map((tri) => tri.map((v) => mvT(R, sub(v, t))));
+      const fit = fitPart({ ...rep, tris: local }, ms[0].i);
+      if (fit.e > FID.fitTol || fit.cover < COVER_MIN || fit.shape === 'tube') continue; // 拟合不了的（会退回网格引用）不做类型
+      const prim = primitiveOf(fit, { ...rep, name: null }, srcFile);
+      // 类型体的原点放在包络的底面中心：实例的定位规则就和普通基本体一样
+      const corners = [0, 1, 2, 3, 4, 5, 6, 7].map((b) => add(prim.at, mvC(prim.cols, [0, 1, 2].map((k) => ((b >> k) & 1 ? prim.box.max[k] : prim.box.min[k])))));
+      const lo = [0, 1, 2].map((k) => Math.min(...corners.map((c) => c[k]))), hi = [0, 1, 2].map((k) => Math.max(...corners.map((c) => c[k])));
+      const c0 = [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2];
+      let name = sanitize(cleanName(rep.name ?? `type_${types.length + 1}`)), k2 = 2;
+      while (typeNames.has(name) || KINDS_RESERVED.has(name)) name = `${sanitize(cleanName(rep.name ?? 'type'))}_v${k2++}`;
+      typeNames.add(name);
+      const T = { name, prim, c0, box: { min: sub(lo, c0), max: sub(hi, c0) }, fit, count: ms.length };
+      types.push(T);
+      for (const m of ms) typeOf.set(m.i, { T, R: m.R, t: m.t });
+    }
+  }
+  const fits = parts.map((p, i) => (typeOf.has(i) ? null : fitPart(p, i)));
+  lap(`拟合 ${parts.length} 个部件（${types.length} 种类型覆盖 ${typeOf.size} 个实例）`);
   // 名字：L0 用源节点名；没有名字时按形状编号
   const used = new Map(), counters = {};
+  const uniqueId = (id) => { if (used.has(id)) { const n = used.get(id) + 1; used.set(id, n); return `${id}_${n}`; } used.set(id, 1); return id; };
   const objs = parts.map((p, i) => {
+    const ty = typeOf.get(i);
+    if (ty) {
+      // 类型的实例：位姿就是节点的刚体变换
+      const { T, R, t } = ty, b = T.box;
+      return { id: uniqueId(sanitize(cleanName(p.name ?? T.name))), src: p.name ?? null, material: p.material, kind: T.name, props: {}, cols: R, at: add(t, mvC(R, T.c0)), box: b,
+        fit: Math.max(0, Math.min(1, 1 - T.fit.e / TOL)), err: T.fit.e, vol: (b.max[0] - b.min[0]) * (b.max[1] - b.min[1]) * (b.max[2] - b.min[2]), symY: false, instance: true };
+    }
     const prim = primitiveOf(fits[i], p, srcFile);
-    let id = p.name && !/^part_\d+$|^merged_/.test(p.name) ? sanitize(p.name) : `${prim.kind}${(counters[prim.kind] = (counters[prim.kind] ?? 0) + 1)}`;
-    if (used.has(id)) { const n = used.get(id) + 1; used.set(id, n); id = `${id}_${n}`; } else used.set(id, 1);
+    const id = uniqueId(p.name && !/^part_\d+$|^merged_/.test(p.name) ? sanitize(cleanName(p.name)) : `${prim.kind}${(counters[prim.kind] = (counters[prim.kind] ?? 0) + 1)}`);
     const vol = (prim.box.max[0] - prim.box.min[0]) * (prim.box.max[1] - prim.box.min[1]) * (prim.box.max[2] - prim.box.min[2]);
     const symY = prim.kind === 'sphere' || (['cyl', 'cone'].includes(prim.kind) && !prim.props.axis);
     if (symY && Math.abs(prim.cols[1][1] - 1) < 1e-6) prim.cols = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
     return { id, src: p.name ?? p.from ?? null, material: p.material, ...prim, vol, symY };
+  });
+  const typeLines = types.flatMap((T) => {
+    const props = Object.entries(T.prim.props).map(([k, v]) => `${k}=${v}`).join(' ');
+    const at0 = sub(T.prim.at, T.c0);
+    return [`def ${T.name} {`, '  ' + [T.prim.kind, 'body', props, at0.some((v) => Math.abs(v) > 1e-6) ? `at=${vec(at0)}` : '', orientText(T.prim.cols)].filter(Boolean).join(' ') + `  // ${T.count} 个实例`, '}'];
   });
   unifyBoxLabels(objs);
   // 材质
@@ -566,13 +633,14 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     if (!mats.has(k)) {
       let name = sanitize(o.material.name ?? `m_${o.material.color.slice(1)}`);
       while ([...mats.values()].some((m) => m.name === name)) name += '_';
-      mats.set(k, { name, ...o.material });
+      mats.set(k, { ...o.material, name });
     }
     o.mat = mats.get(k).name;
   }
   const header = [`// 由逆向管线从 ${srcFile} 生成（${level}）。~fit 是拟合度，~err 是相对误差；mesh 是拟合不了、直接引用源网格的部件`, ''];
   for (const m of mats.values()) header.push(`material ${m.name} color=${m.color}${m.metal != null ? ` metal=${fmt(m.metal)}` : ''}${m.rough != null ? ` rough=${fmt(m.rough)}` : ''}`);
   header.push('');
+  if (typeLines.length) header.push('// 类型：源模型里同一个网格被多处使用（引擎的享元）', ...typeLines, '');
   const line = (o, place, orient) => {
     if (o.absolute) { place = ''; orient = ''; } // 管道的点列本身就是位置
     const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
@@ -588,7 +656,12 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   const onOf = new Map(), againstOf = new Map(), nearOf = new Map();
   const related = new Map();
   const link = (m, x, y) => { if (!m.has(x)) m.set(x, []); m.get(x).push(y); };
-  for (const f of r0.facts) {
+  // 事实记在叶子物体上（类型实例里是 实例名.body）：归到它所属的顶层物体
+  const objOf = (p) => (byId.has(p) ? p : byId.has(p.split('.')[0]) ? p.split('.')[0] : null);
+  for (const f0 of r0.facts) {
+    const a = objOf(f0.a), b = objOf(f0.b);
+    if (!a || !b || a === b) continue;
+    const f = { ...f0, a, b };
     link(related, f.a, f.b); link(related, f.b, f.a);
     if (['intersects', 'touching', 'inside'].includes(f.rel)) { link(nearOf, f.a, f.b); link(nearOf, f.b, f.a); }
     if (f.rel === 'on') link(onOf, f.a, f.b);

@@ -587,8 +587,10 @@ function joinPath(base, rel) {
 function loadProgram(src, opts, errors, stack = []) {
   const stmts = parseProgram(src, errors);
   const out = [];
+  // 每条语句（包括 def 体、块里的子语句）都记下来自哪个文件：报错定位、分数按行归因都要用
+  const mark = (st) => { st.file = opts.file ?? null; for (const c of st.children ?? []) mark(c); for (const c of st.body ?? []) mark(c); };
   for (const s of stmts) {
-    s.file = opts.file ?? null;
+    mark(s);
     if (s.kind !== 'import') { out.push(s); continue; }
     const path = joinPath(opts.file, s.path);
     if (stack.includes(path)) { errors.push(new S3DError(`import 形成了循环：${[...stack, path].join(' → ')}`, s.line)); continue; }

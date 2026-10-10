@@ -232,3 +232,36 @@ test('管道拟合：弯管写成 pipe 并恢复半径；笔直的（储罐、�
   assert.doesNotMatch(out.src, /^pipe \S+ path=[^\n]* r=([3-9]|\d\d)/m, '储罐不是管道');
   assert.equal(evaluate(src, out.src).errors.recon, 0);
 });
+
+test('享元类型：同一个网格被多个节点使用 → 一个 def + 若干实例（缩放不同的另成一个类型）；名字去掉路径前缀', async () => {
+  const { Document } = await import('@gltf-transform/core');
+  const doc = new Document(), buf = doc.createBuffer();
+  const boxMesh = (w, h, d) => {
+    // 一个底面在 y=0 的盒子（12 个三角形）
+    const v = [], c = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]].map(([x, y, z]) => [(x - 0.5) * w, y * h, (z - 0.5) * d]);
+    for (const [a, b, cc, dd] of [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [3, 7, 6, 2], [0, 4, 7, 3], [1, 2, 6, 5]]) v.push(...c[a], ...c[b], ...c[cc], ...c[a], ...c[cc], ...c[dd]);
+    const prim = doc.createPrimitive().setAttribute('POSITION', doc.createAccessor().setType('VEC3').setArray(new Float32Array(v)).setBuffer(buf));
+    return doc.createMesh().addPrimitive(prim);
+  };
+  const scene = doc.createScene();
+  const ground = boxMesh(60, 1, 60), house = boxMesh(4, 3, 6);
+  scene.addChild(doc.createNode('Big/cell_1/SM_Ground').setMesh(ground).setTranslation([0, -1, 0]));
+  const q = (deg) => [0, Math.sin((deg * Math.PI) / 360), 0, Math.cos((deg * Math.PI) / 360)];
+  [[-10, 0], [0, 90], [12, 180]].forEach(([x, deg], k) => scene.addChild(doc.createNode(`Big/cell_${k}/SM_House_01`).setMesh(house).setTranslation([x, 0, 5]).setRotation(q(deg))));
+  scene.addChild(doc.createNode('Big/cell_9/SM_House_01').setMesh(house).setTranslation([0, 0, -15]).setScale([2, 1, 1]));
+  scene.addChild(doc.createNode('Big/cell_8/SM_House_01').setMesh(house).setTranslation([15, 0, -15]).setScale([2, 1, 1]));
+  const out = reverse(partsOfDocument(doc), { srcFile: 'x.glb', fidelity: 'structure' });
+  assert.match(out.src, /^def House_01 \{\n  box body size=(4,3,6|6,3,4)/m, out.src);
+  assert.match(out.src, /^def House_01_v2 \{\n  box body size=(8,3,6|6,3,8)/m, '缩放不同的另成一个类型');
+  assert.doesNotMatch(out.src, /material null/);
+  assert.equal((out.src.match(/^House_01 /gm) ?? []).length, 3);
+  assert.doesNotMatch(out.src.replace(/ ~src="[^"]*"/g, ''), /Big_cell|SM_/, '名字去掉了路径与 SM_ 前缀（~src 里保留来源）');
+  assert.equal((out.src.match(/^House_01 \S+ on=Ground/gm) ?? []).length, 3, '实例立在地面上');
+  const r = compile(out.src);
+  assert.deepEqual(r.errors, []);
+  // 三个实例的位置与朝向都对
+  const ctr = (p) => { const b = r.nodes.find((n) => n.path === p).box; return [0, 2].map((k) => +((b.min[k] + b.max[k]) / 2).toFixed(3)); };
+  const ids = [...out.src.matchAll(/^House_01 (\S+)/gm)].map((m) => m[1]);
+  // 结构档的容差是 5 cm（数字按档位取位数）
+  ids.map(ctr).sort((a, b) => a[0] - b[0]).forEach((c, k) => [[-10, 5], [0, 5], [12, 5]][k].forEach((v, j) => assert.ok(Math.abs(c[j] - v) < 0.05, `${ids[k]}: ${c}`)));
+});
