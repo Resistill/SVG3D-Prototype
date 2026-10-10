@@ -559,3 +559,10 @@ M0（最小闭环）、M0c（E1 之后的修正）、逆向档位完成；实战
 - **编译放进 Worker**：`src/compile-worker.js` 是普通的模块 Worker（s3d.js 不 import 任何东西），文件表 `{路径: 文本}` 代替 resolve 传过去，结果结构化克隆回主线程（宿舍区克隆约 30 ms）。`src/compile-client.js` 只保留最新的请求（正在编译时来的请求合并成一个，被取代的得到 null，`run()` 直接返回），建不了 Worker 时退回主线程同步编译。宿舍区（4552 个物体）：编译约 250 ms 在 Worker 里，主线程最长的任务约 120 ms（setScene 与对象树）。打字时的等待按主线程上的耗时放宽。
 - **相机预设一致**：`VIEWS` 与 `camera()` 移到 `src/views.js`，`tools/raster.mjs` 原样重新导出（行为不变）。`Viewer.setView(preset)` 把交互相机切到预设，`Viewer.snapshot(preset, { size, box, focus })` 按 raster 的相机渲染正方形 PNG。视图右上角是预设按钮、「快照」，工程模式下「离屏渲染」调 `/api/run render`（把界面的取景范围作为 `box` 传过去，隔离视图里加 `focus`），两张图并排、下面是编号图例（点击选中）。宿舍区 iso / top / left 两张图前景轮廓的 IoU 0.92–0.95（差别是雾、描边与编号标签）。没有单独的 `/api/render` 接口。
 - **没做 / 已知问题**：`reach`、`sees` 提供者；工具侧（`inspect`、`outline`、`eval`）还假设事实都是二元的，打开一元提供者之后 `tools/agent.mjs` 的 inspect 会在 `f.b` 为 null 时出错（工具默认不打开，没改那些文件）；score / raster 放进浏览器 Worker（4.8 第二条）；浏览器逆向不读工程的 `decisions.s3d`、没有 previous（稳定命名）；界面快照里有雾，与 raster 的平涂着色观感不同，取景相同。
+
+### L2 的网格兜底（4.9.2，2026-10-10）
+
+- 合并网格拆出来的分量在源文件里没有节点，以前拟合不了也只能硬套一个基本体（`~fit=0`）。现在逆向可以引用部件文件：`reverse(…, { partsFile })` 时，没有节点名的分量写成 `mesh … src="parts.glb#merged_4~147"`（节点名把 # 换成 ~），调用方把用到的分量写成 GLB（`partsGlb`，三角形是世界坐标、节点不带变换）：工程里是 `parts.glb`，命令行 `bin/reverse.mjs` 写同目录的 `<输出>.parts.glb`。评分、渲染按节点名找回分量（`sourceIndex` 多认一种名字）。
+- spaceport L2：精细档 5772 → 1667（−71%，解释率 0.51 → 0.86，7 个分量保留为网格）；结构档 2177 → 2066（结构档允许 25% 的拟合误差，大多数分量仍是基本体）。
+- 浏览器内逆向不写部件文件（没有文件可写），L2 的结果与命令行会有这个差别。
+

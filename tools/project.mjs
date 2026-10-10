@@ -9,10 +9,12 @@ import { createHash } from 'node:crypto';
 import { join, relative, resolve, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compile, FACT_EPS } from '../src/s3d.js';
-import { readParts, reverse, FIDELITY } from './reverse.mjs';
+import { readParts, reverse, FIDELITY, partsNode } from './reverse.mjs';
+import { Document, NodeIO } from '@gltf-transform/core';
 import { SCORE_DEFAULTS, scoreCache } from './score.mjs';
 import { splitSource, joinSource, importedFiles } from './split.mjs';
 import { loadSidecar, attachSidecar } from './sidecar.mjs';
+import { prefit } from './fitpool.mjs';
 
 // 写进文件的相对路径一律用 /（Windows 上 path.relative 给的是反斜杠，浏览器与 import 都认不了）
 const rel = (from, to) => relative(from, to).split(sep).join('/');
@@ -130,6 +132,31 @@ export async function initProject(dir, source, { split = 'auto', copy = false, f
   return { dir, ...rep, ...(note ? { unitNote: note } : {}), ...(side ? { sidecar: side } : {}) };
 }
 
+// L2 的网格兜底：逆向引用了 parts.glb 里的分量（合并网格拆出来、源文件里没有节点的部件）时，把这些分量写成一个 GLB。
+// 三角形就是世界坐标，节点不带变换；节点名是分量的标识（# 换成 ~）
+export async function partsGlb(parts, objs, file = 'parts.glb') {
+  const used = new Set(objs.filter((o) => o.kind === 'mesh').map((o) => JSON.parse(o.props.src)).filter((s) => s.startsWith(file + '#')).map((s) => s.slice(file.length + 1)));
+  if (!used.size) return null;
+  const doc = new Document(), buf = doc.createBuffer(), scene = doc.createScene();
+  for (const p of parts) {
+    if (!p.from || !used.has(partsNode(p.from))) continue;
+    const pos = new Float32Array(p.tris.length * 9);
+    p.tris.forEach((t, i) => t.forEach((v, j) => pos.set(v, i * 9 + j * 3)));
+    const prim = doc.createPrimitive().setAttribute('POSITION', doc.createAccessor().setType('VEC3').setArray(pos).setBuffer(buf));
+    if (p.material?.color) {
+      const c = p.material.color.match(/[0-9a-f]{2}/gi)?.map((h) => (parseInt(h, 16) / 255) ** 2.2) ?? [0.8, 0.8, 0.8];
+      prim.setMaterial(doc.createMaterial(p.material.name ?? 'm').setBaseColorFactor([...c.slice(0, 3), 1]));
+    }
+    scene.addChild(doc.createNode(partsNode(p.from)).setMesh(doc.createMesh().addPrimitive(prim)));
+  }
+  return new NodeIO().writeBinary(doc);
+}
+async function writePartsFile(P, parts, objs) {
+  const bin = await partsGlb(parts, objs);
+  if (bin) writeFileSync(P.path('parts.glb'), bin);
+  else if (P.exists('parts.glb')) rmSync(P.path('parts.glb'));
+}
+
 // 重跑逆向：上一次的 base.s3d 作为名字记忆（稳定命名），除非 fresh。fidelity / unit 给了就先改工程设置
 export async function runReverse(P, { fresh = false, fidelity = null, unit = null } = {}) {
   if (fidelity && !FIDELITY[fidelity]) throw new Error(`没有档位 ${fidelity}（可用：${Object.keys(FIDELITY).join(' / ')}）`);
@@ -141,7 +168,10 @@ export async function runReverse(P, { fresh = false, fidelity = null, unit = nul
   const previous = !fresh && P.exists('base.s3d') ? joinSource(P.read) : null;
   // 决定层（decisions.s3d）：逆向必须满足的约束；满足不了的、找不到源部件的写进报告
   const decisions = P.exists('decisions.s3d') ? P.read('decisions.s3d') : null;
-  const out = reverse(parts, { srcFile: P.cfg.source, level: 'project', previous, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, decisions });
+  // 部件很多时先在 worker 线程里并行拟合
+  const pre = await prefit(parts, { fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit });
+  const out = reverse(parts, { srcFile: P.cfg.source, level: 'project', previous, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, decisions, prefit: pre, partsFile: 'parts.glb' });
+  await writePartsFile(P, parts, out.objs);
   writeBase(P, out.src);
   P.write('base.report.json', JSON.stringify(out.report, null, 2) + '\n');
   const hash = sha1(P.sourcePath());

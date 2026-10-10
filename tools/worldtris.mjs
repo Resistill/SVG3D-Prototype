@@ -15,7 +15,8 @@ const BOX = [
 export function sourceIndex(sourceParts) {
   const m = new Map();
   // 唯一标识（名字@k）优先；只给名字时取第一个同名的
-  for (const p of sourceParts) { if (p.uid) m.set(p.uid, p); if (p.name && !m.has(p.name)) m.set(p.name, p); if (p.from) m.set(p.from, p); }
+  // 合并网格的分量另有一个名字：部件文件（parts.glb）里的节点名，# 换成 ~
+  for (const p of sourceParts) { if (p.uid) m.set(p.uid, p); if (p.name && !m.has(p.name)) m.set(p.name, p); if (p.from) { m.set(p.from, p); m.set(p.from.replace(/#/g, '~'), p); } }
   return m;
 }
 

@@ -4,6 +4,8 @@
 import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
 import { dirname, relative, sep } from 'node:path';
 import { readParts, reverse } from '../tools/reverse.mjs';
+import { prefit } from '../tools/fitpool.mjs';
+import { partsGlb } from '../tools/project.mjs';
 
 const [input, out] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const split = (process.argv.find((a) => a.startsWith('--split=')) ?? '--split=auto').split('=')[1];
@@ -16,7 +18,12 @@ const t0 = performance.now();
 const parts = await readParts(input, { split });
 // mesh 的 src 写成相对输出文件的路径
 const previous = !process.argv.includes('--fresh') && existsSync(out) ? readFileSync(out, 'utf8') : null;
-const { src, report } = reverse(parts, { srcFile: relative(dirname(out), input).split(sep).join('/'), level, previous, fidelity, unit });
+const pre = await prefit(parts, { fidelity, unit });
+// 合并网格拆出来、拟合不了的分量写进同目录的 <输出>.parts.glb，网格引用指向它
+const partsFile = out.replace(/^.*[\\/]/, '').replace(/\.s3d$/, '') + '.parts.glb';
+const { src, report, objs } = reverse(parts, { srcFile: relative(dirname(out), input).split(sep).join('/'), level, previous, fidelity, unit, prefit: pre, partsFile });
+const bin = await partsGlb(parts, objs, partsFile);
+if (bin) writeFileSync(out.replace(/\.s3d$/, '.parts.glb'), bin);
 mkdirSync(dirname(out), { recursive: true });
 writeFileSync(out, src);
 writeFileSync(out.replace(/\.s3d$/, '.report.json'), JSON.stringify(report, null, 2));

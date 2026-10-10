@@ -1,0 +1,682 @@
+[
+  {
+    "name": "BigMeshGroup/BigMeshGroup_50_-37/SM_I_RoadFacility_Ground_D_05_Decal",
+    "tris": 256,
+    "material": {
+      "name": "whitebox",
+      "color": "#e1e1e5",
+      "metal": 0,
+      "rough": 0.9
+    },
+    "area": 509.67,
+    "box": {
+      "min": [
+        -998.9958,
+        -119.1389,
+        -570.9588
+      ],
+      "max": [
+        -761.2814,
+        -115.2848,
+        -461.2445
+      ],
+      "size": [
+        237.7143,
+        3.8541,
+        109.7143
+      ],
+      "center": [
+        -880.1386,
+        -117.2118,
+        -516.1017
+      ]
+    },
+    "axes": [
+      {
+        "dir": [
+          -0.388,
+          0.0096,
+          -0.9216
+        ],
+        "extent": 142.0657
+      },
+      {
+        "dir": [
+          0.0011,
+          1,
+          0.0099
+        ],
+        "extent": 3.903
+      },
+      {
+        "dir": [
+          0.9217,
+          0.0029,
+          -0.388
+        ],
+        "extent": 247.2913
+      }
+    ],
+    "score": {
+      "name": "BigMeshGroup/BigMeshGroup_50_-37/SM_I_RoadFacility_Ground_D_05_Decal",
+      "tris": 256,
+      "cost": 0,
+      "meanErr": 0.00422,
+      "maxErr": 0.01479,
+      "explainedBy": "RoadFacility_Ground_D_05"
+    },
+    "suggestion": "mesh RoadFacility_Ground_D_05_Decal src=\"../dorm/dorm.glb#BigMeshGroup/BigMeshGroup_50_-37/SM_I_RoadFacility_Ground_D_05_Decal\" size=237.71,3.85,109.71 pivot=-880.14,-119.14,-516.1 at=-880.14,-119.14,-516.1 mat=whitebox ~fit=0"
+  },
+  {
+    "name": "BigMeshGroup/BigMeshGroup_50_-37/SM_I_Terrain_Road_Desert_Decal_Sand_02@2",
+    "tris": 229,
+    "material": {
+      "name": "whitebox",
+      "color": "#e1e1e5",
+      "metal": 0,
+      "rough": 0.9
+    },
+    "area": 146.431,
+    "box": {
+      "min": [
+        -940.6889,
+        -114.7773,
+        -650.7008
+      ],
+      "max": [
+        -908.9361,
+        -111.8786,
+        -643.9379
+      ],
+      "size": [
+        31.7528,
+        2.8987,
+        6.7628
+      ],
+      "center": [
+        -924.8125,
+        -113.328,
+        -647.3193
+      ]
+    },
+    "axes": [
+      {
+        "dir": [
+          0.0482,
+          0.3602,
+          0.9316
+        ],
+        "extent": 7.3805
+      },
+      {
+        "dir": [
+          -0.0289,
+          0.9328,
+          -0.3592
+        ],
+        "extent": 2.8669
+      },
+      {
+        "dir": [
+          -0.9984,
+          -0.0096,
+          0.0554
+        ],
+        "extent": 31.7153
+      }
+    ],
+    "score": {
+      "name": "BigMeshGroup/BigMeshGroup_50_-37/SM_I_Terrain_Road_Desert_Decal_Sand_02@2",
+      "tris": 229,
+      "cost": 0,
+      "meanErr": 0,
+      "maxErr": 0.00001,
+      "explainedBy": "Terrain_Road_Desert_Decal_Sand_02_3"
+    },
+    "suggestion": "mesh Terrain_Road_Desert_Decal_Sand_02 src=\"../dorm/dorm.glb#BigMeshGroup/BigMeshGroup_50_-37/SM_I_Terrain_Road_Desert_Decal_Sand_02@2\" size=31.75,2.9,6.76 pivot=-924.81,-114.78,-647.32 at=-924.81,-114.78,-647.32 mat=whitebox ~fit=0"
+  },
+  {
+    "name": "MidMeshGroup/MidMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_InterWall_02@1",
+    "tris": 132,
+    "material": {
+      "name": "whitebox",
+      "color": "#e1e1e5",
+      "metal": 0,
+      "rough": 0.9
+    },
+    "area": 1466.456,
+    "box": {
+      "min": [
+        -915.3061,
+        -114.6874,
+        -643.4759
+      ],
+      "max": [
+        -875.2967,
+        -99.2572,
+        -591.4763
+      ],
+      "size": [
+        40.0094,
+        15.4302,
+        51.9996
+      ],
+      "center": [
+        -895.3014,
+        -106.9723,
+        -617.4761
+      ]
+    },
+    "axes": [
+      {
+        "dir": [
+          -0.9091,
+          0.0588,
+          0.4123
+        ],
+        "extent": 54.0248
+      },
+      {
+        "dir": [
+          0.0524,
+          0.9983,
+          -0.0268
+        ],
+        "extent": 16.2225
+      },
+      {
+        "dir": [
+          -0.4132,
+          -0.0028,
+          -0.9106
+        ],
+        "extent": 63.5928
+      }
+    ],
+    "score": {
+      "name": "MidMeshGroup/MidMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_InterWall_02@1",
+      "tris": 132,
+      "cost": 0,
+      "meanErr": 0,
+      "maxErr": 0.00001,
+      "explainedBy": "Building_Dormitory_02_InterWall_02"
+    },
+    "suggestion": "mesh Building_FutureTech_Dormitory_02_InterWall_02 src=\"../dorm/dorm.glb#MidMeshGroup/MidMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_InterWall_02@1\" size=40.01,15.43,52 pivot=-895.3,-114.69,-617.48 at=-895.3,-114.69,-617.48 mat=whitebox ~fit=0"
+  },
+  {
+    "name": "BigMeshGroup/BigMeshGroup_50_-37/SM_I_Terrain_Road_Desert_Decal_Sand_06@3",
+    "tris": 127,
+    "material": {
+      "name": "whitebox",
+      "color": "#e1e1e5",
+      "metal": 0,
+      "rough": 0.9
+    },
+    "area": 436.026,
+    "box": {
+      "min": [
+        -959.4595,
+        -114.6682,
+        -667.4216
+      ],
+      "max": [
+        -923.9582,
+        -107.3636,
+        -643.8312
+      ],
+      "size": [
+        35.5012,
+        7.3046,
+        23.5904
+      ],
+      "center": [
+        -941.7089,
+        -111.0159,
+        -655.6264
+      ]
+    },
+    "axes": [
+      {
+        "dir": [
+          -0.3519,
+          0.3251,
+          0.8778
+        ],
+        "extent": 23.0817
+      },
+      {
+        "dir": [
+          0.1604,
+          0.9448,
+          -0.2857
+        ],
+        "extent": 1.6989
+      },
+      {
+        "dir": [
+          -0.9222,
+          0.0403,
+          -0.3846
+        ],
+        "extent": 41.8001
+      }
+    ],
+    "score": {
+      "name": "BigMeshGroup/BigMeshGroup_50_-37/SM_I_Terrain_Road_Desert_Decal_Sand_06@3",
+      "tris": 127,
+      "cost": 0,
+      "meanErr": 0,
+      "maxErr": 0.00001,
+      "explainedBy": "Terrain_Road_Desert_Decal_Sand_06_3"
+    },
+    "suggestion": "mesh Terrain_Road_Desert_Decal_Sand_06 src=\"../dorm/dorm.glb#BigMeshGroup/BigMeshGroup_50_-37/SM_I_Terrain_Road_Desert_Decal_Sand_06@3\" size=35.5,7.3,23.59 pivot=-941.71,-114.67,-655.63 at=-941.71,-114.67,-655.63 mat=whitebox ~fit=0"
+  },
+  {
+    "name": "BigMeshGroup/BigMeshGroup_50_-37/SM_H_FutureTech_Furniture_Ladder_01_B@2",
+    "tris": 82,
+    "material": {
+      "name": "whitebox",
+      "color": "#e1e1e5",
+      "metal": 0,
+      "rough": 0.9
+    },
+    "area": 37.284,
+    "box": {
+      "min": [
+        -877.4193,
+        -114.5894,
+        -590.0962
+      ],
+      "max": [
+        -875.6802,
+        -111.8011,
+        -581.5542
+      ],
+      "size": [
+        1.7391,
+        2.7883,
+        8.542
+      ],
+      "center": [
+        -876.5497,
+        -113.1952,
+        -585.8252
+      ]
+    },
+    "axes": [
+      {
+        "dir": [
+          0.0252,
+          -0.0737,
+          0.997
+        ],
+        "extent": 8.4239
+      },
+      {
+        "dir": [
+          0.3662,
+          0.9286,
+          0.0594
+        ],
+        "extent": 2.584
+      },
+      {
+        "dir": [
+          -0.9302,
+          0.3636,
+          0.0504
+        ],
+        "extent": 0.889
+      }
+    ],
+    "score": {
+      "name": "BigMeshGroup/BigMeshGroup_50_-37/SM_H_FutureTech_Furniture_Ladder_01_B@2",
+      "tris": 82,
+      "cost": 0,
+      "meanErr": 0,
+      "maxErr": 0.00001,
+      "explainedBy": "Furniture_Ladder_01_B_2"
+    },
+    "suggestion": "mesh FutureTech_Furniture_Ladder_01_B src=\"../dorm/dorm.glb#BigMeshGroup/BigMeshGroup_50_-37/SM_H_FutureTech_Furniture_Ladder_01_B@2\" size=1.74,2.79,8.54 pivot=-876.55,-114.59,-585.83 at=-876.55,-114.59,-585.83 mat=whitebox ~fit=0"
+  },
+  {
+    "name": "MidMeshGroup/MidMeshGroup_50_-37/SM_H_Government_Office_Footcloth_10b@1",
+    "tris": 88,
+    "material": {
+      "name": "whitebox",
+      "color": "#e1e1e5",
+      "metal": 0,
+      "rough": 0.9
+    },
+    "area": 432.284,
+    "box": {
+      "min": [
+        -910.1229,
+        -114.4975,
+        -635.3226
+      ],
+      "max": [
+        -890.4906,
+        -114.3211,
+        -623.9169
+      ],
+      "size": [
+        19.6323,
+        0.1763,
+        11.4057
+      ],
+      "center": [
+        -900.3068,
+        -114.4093,
+        -629.6198
+      ]
+    },
+    "axes": [
+      {
+        "dir": [
+          -0.0212,
+          0.0002,
+          -0.9998
+        ],
+        "extent": 11.0805
+      },
+      {
+        "dir": [
+          -0.0003,
+          1,
+          0.0002
+        ],
+        "extent": 0.1768
+      },
+      {
+        "dir": [
+          0.9998,
+          0.0003,
+          -0.0212
+        ],
+        "extent": 19.5799
+      }
+    ],
+    "score": {
+      "name": "MidMeshGroup/MidMeshGroup_50_-37/SM_H_Government_Office_Footcloth_10b@1",
+      "tris": 88,
+      "cost": 0,
+      "meanErr": 0,
+      "maxErr": 0.00001,
+      "explainedBy": "Government_Office_Footcloth_10b"
+    },
+    "suggestion": "mesh Government_Office_Footcloth_10b src=\"../dorm/dorm.glb#MidMeshGroup/MidMeshGroup_50_-37/SM_H_Government_Office_Footcloth_10b@1\" size=19.63,0.18,11.41 pivot=-900.31,-114.5,-629.62 at=-900.31,-114.5,-629.62 mat=whitebox ~fit=0"
+  },
+  {
+    "name": "MidMeshGroup/MidMeshGroup_50_-37/SM_M_Government_Office_BoxLid_01@2",
+    "tris": 28,
+    "material": {
+      "name": "whitebox",
+      "color": "#e1e1e5",
+      "metal": 0,
+      "rough": 0.9
+    },
+    "area": 11.077,
+    "box": {
+      "min": [
+        -882.0944,
+        -114.4938,
+        -576.7255
+      ],
+      "max": [
+        -880.012,
+        -112.5843,
+        -575.045
+      ],
+      "size": [
+        2.0824,
+        1.9095,
+        1.6805
+      ],
+      "center": [
+        -881.0532,
+        -113.539,
+        -575.8852
+      ]
+    },
+    "axes": [
+      {
+        "dir": [
+          -0.0549,
+          -0.0264,
+          -0.9981
+        ],
+        "extent": 1.6188
+      },
+      {
+        "dir": [
+          0.6848,
+          0.7265,
+          -0.0569
+        ],
+        "extent": 0.2018
+      },
+      {
+        "dir": [
+          0.7267,
+          -0.6867,
+          -0.0218
+        ],
+        "extent": 2.5717
+      }
+    ],
+    "score": {
+      "name": "MidMeshGroup/MidMeshGroup_50_-37/SM_M_Government_Office_BoxLid_01@2",
+      "tris": 28,
+      "cost": 0,
+      "meanErr": 0,
+      "maxErr": 0.00001,
+      "explainedBy": "Government_Office_BoxLid_01_2"
+    },
+    "suggestion": "mesh Government_Office_BoxLid_01 src=\"../dorm/dorm.glb#MidMeshGroup/MidMeshGroup_50_-37/SM_M_Government_Office_BoxLid_01@2\" size=2.08,1.91,1.68 pivot=-881.05,-114.49,-575.89 at=-881.05,-114.49,-575.89 mat=whitebox ~fit=0"
+  },
+  {
+    "name": "MidMeshGroup/MidMeshGroup_50_-37/SM_H_Government_Office_Footcloth_10b@2",
+    "tris": 88,
+    "material": {
+      "name": "whitebox",
+      "color": "#e1e1e5",
+      "metal": 0,
+      "rough": 0.9
+    },
+    "area": 115.732,
+    "box": {
+      "min": [
+        -881.7504,
+        -114.4929,
+        -641.5629
+      ],
+      "max": [
+        -875.8499,
+        -114.2923,
+        -631.7888
+      ],
+      "size": [
+        5.9004,
+        0.2007,
+        9.774
+      ],
+      "center": [
+        -878.8002,
+        -114.3926,
+        -636.6759
+      ]
+    },
+    "axes": [
+      {
+        "dir": [
+          1,
+          0.0008,
+          0.0064
+        ],
+        "extent": 5.9523
+      },
+      {
+        "dir": [
+          -0.0007,
+          1,
+          -0.0038
+        ],
+        "extent": 0.2041
+      },
+      {
+        "dir": [
+          -0.0064,
+          0.0038,
+          1
+        ],
+        "extent": 9.7586
+      }
+    ],
+    "score": {
+      "name": "MidMeshGroup/MidMeshGroup_50_-37/SM_H_Government_Office_Footcloth_10b@2",
+      "tris": 88,
+      "cost": 0,
+      "meanErr": 0,
+      "maxErr": 0.00001,
+      "explainedBy": "Government_Office_Footcloth_10b_2"
+    },
+    "suggestion": "mesh Government_Office_Footcloth_10b src=\"../dorm/dorm.glb#MidMeshGroup/MidMeshGroup_50_-37/SM_H_Government_Office_Footcloth_10b@2\" size=5.9,0.2,9.77 pivot=-878.8,-114.49,-636.68 at=-878.8,-114.49,-636.68 mat=whitebox ~fit=0"
+  },
+  {
+    "name": "MidMeshGroup/MidMeshGroup_50_-37/SM_M_Government_Office_Box_01@17",
+    "tris": 28,
+    "material": {
+      "name": "whitebox",
+      "color": "#e1e1e5",
+      "metal": 0,
+      "rough": 0.9
+    },
+    "area": 38.26,
+    "box": {
+      "min": [
+        -928.41,
+        -114.491,
+        -638.4162
+      ],
+      "max": [
+        -926.4252,
+        -112.9889,
+        -635.9438
+      ],
+      "size": [
+        1.9848,
+        1.5021,
+        2.4723
+      ],
+      "center": [
+        -927.4176,
+        -113.7399,
+        -637.18
+      ]
+    },
+    "axes": [
+      {
+        "dir": [
+          -0.9676,
+          0.2524,
+          0.0057
+        ],
+        "extent": 2.3138
+      },
+      {
+        "dir": [
+          0.2521,
+          0.9673,
+          -0.0289
+        ],
+        "extent": 2.0249
+      },
+      {
+        "dir": [
+          -0.0128,
+          -0.0266,
+          -0.9996
+        ],
+        "extent": 2.5366
+      }
+    ],
+    "score": {
+      "name": "MidMeshGroup/MidMeshGroup_50_-37/SM_M_Government_Office_Box_01@17",
+      "tris": 28,
+      "cost": 0,
+      "meanErr": 0,
+      "maxErr": 0.00001,
+      "explainedBy": "Government_Office_Box_01_17"
+    },
+    "suggestion": "mesh Government_Office_Box_01 src=\"../dorm/dorm.glb#MidMeshGroup/MidMeshGroup_50_-37/SM_M_Government_Office_Box_01@17\" size=1.98,1.5,2.47 pivot=-927.42,-114.49,-637.18 at=-927.42,-114.49,-637.18 mat=whitebox ~fit=0"
+  },
+  {
+    "name": "MidMeshGroup/MidMeshGroup_50_-37/SM_M_Government_Office_Box_01@26",
+    "tris": 28,
+    "material": {
+      "name": "whitebox",
+      "color": "#e1e1e5",
+      "metal": 0,
+      "rough": 0.9
+    },
+    "area": 55.095,
+    "box": {
+      "min": [
+        -883.8712,
+        -114.49,
+        -576.3734
+      ],
+      "max": [
+        -882.0687,
+        -112.1082,
+        -573.4066
+      ],
+      "size": [
+        1.8025,
+        2.3818,
+        2.9668
+      ],
+      "center": [
+        -882.9699,
+        -113.2991,
+        -574.89
+      ]
+    },
+    "axes": [
+      {
+        "dir": [
+          -0.0467,
+          0.0473,
+          0.9978
+        ],
+        "extent": 3.1568
+      },
+      {
+        "dir": [
+          0.1225,
+          0.9916,
+          -0.0413
+        ],
+        "extent": 2.705
+      },
+      {
+        "dir": [
+          -0.9914,
+          0.1203,
+          -0.0521
+        ],
+        "extent": 2.2279
+      }
+    ],
+    "score": {
+      "name": "MidMeshGroup/MidMeshGroup_50_-37/SM_M_Government_Office_Box_01@26",
+      "tris": 28,
+      "cost": 0,
+      "meanErr": 0,
+      "maxErr": 0.00001,
+      "explainedBy": "Government_Office_Box_01_26"
+    },
+    "suggestion": "mesh Government_Office_Box_01 src=\"../dorm/dorm.glb#MidMeshGroup/MidMeshGroup_50_-37/SM_M_Government_Office_Box_01@26\" size=1.8,2.38,2.97 pivot=-882.97,-114.49,-574.89 at=-882.97,-114.49,-574.89 mat=whitebox ~fit=0"
+  }
+]

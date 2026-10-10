@@ -1,0 +1,10 @@
+over volume_1 : group envelope=-29,0,-13,29,22,13 {
+  subtract hall {
+    box shell size=34,22,26
+    box cavity size=32.4,22.2,24.4 at=0,-1,0
+    box door size=12,16.2,2 at=0,-1,12.6
+    cyl arch r=6 h=2 axis=z at=0,9.2,12.6
+  }
+  box wing size=12,8,14 at=-23,0,-6
+  mirror wing_2 of=wing across=hall axis=x
+}

@@ -358,3 +358,32 @@ test('旋转体：整流罩写成 revolve（底部半径、高度、尖顶与原
   const cv = reverse(partsOfDocument(sceneToGLB(readFileSync(new URL('../examples/curves.s3d', import.meta.url), 'utf8'), { level: 'L0' }).doc), { srcFile: 'x.glb', level: 'L0', fidelity: 'structure' });
   assert.doesNotMatch(cv.src, /^revolve garage_rail /m, '螺旋扶手不是旋转体');
 });
+
+test('并行拟合：worker 线程预先算的拟合与单线程逐字一致', async () => {
+  const { prefit } = await import('../tools/fitpool.mjs');
+  const src = readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8');
+  const parts = partsOfDocument(sceneToGLB(src, { level: 'L1' }).doc);
+  const pre = await prefit(parts, { fidelity: 'structure', unit: 1, threads: 3, min: 0 });
+  assert.ok(pre && pre.count > 50, JSON.stringify(pre && pre.count));
+  const a = reverse(parts, { srcFile: 'x.glb', level: 'L1', fidelity: 'structure' });
+  const b = reverse(parts, { srcFile: 'x.glb', level: 'L1', fidelity: 'structure', prefit: pre });
+  assert.equal(b.src, a.src);
+});
+
+test('L2 的网格兜底：合并网格拆出来、拟合不了的分量写进部件文件，网格引用指向它；精细档的分数大幅下降', async () => {
+  const { partsGlb } = await import('../tools/project.mjs');
+  const { score } = await import('../tools/score.mjs');
+  const { sceneObjects } = await import('../tools/worldtris.mjs');
+  const src = readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8');
+  const parts = partsOfDocument(sceneToGLB(src, { level: 'L2' }).doc);
+  const plain = reverse(parts, { srcFile: 'x.glb', level: 'L2', fidelity: 'detail' });
+  const fb = reverse(parts, { srcFile: 'x.glb', level: 'L2', fidelity: 'detail', partsFile: 'p.parts.glb' });
+  assert.match(fb.src, /src="p\.parts\.glb#merged_\d+~\d+"/);
+  const r = compile(fb.src);
+  assert.deepEqual(r.errors, []);
+  assert.ok(sceneObjects(r, { sourceParts: parts }).every((o) => !o.mesh?.placeholder), '网格引用都对得上源部件');
+  const S = (text) => score({ result: compile(text), files: [{ file: null, text }], sourceParts: parts, consts: { delta: 0.005 } }).S;
+  assert.ok(S(fb.src) < 0.5 * S(plain.src), `${S(fb.src)} 对 ${S(plain.src)}`);
+  const bin = await partsGlb(parts, fb.objs, 'p.parts.glb');
+  assert.ok(bin && bin.length > 1000);
+});

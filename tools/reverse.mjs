@@ -283,7 +283,8 @@ function fitInFrame(F, pts, vol = null, verts = [], only = null) {
     push({ shape: 'sphere', r, e: err((x) => len(sub(x, vc)) - r) }, (4 / 3) * Math.PI * r ** 3);
   }
   // 楔形：坡沿局部 x 或 z，高的一侧在正或负方向（只在竖直轴朝上时）
-  if (F.cols[1][1] > 0.999) for (const [s, sign] of [[0, 1], [0, -1], [2, 1], [2, -1]]) {
+  // 盒子已经几乎完美时楔形不可能更好，省掉（规模：楔形的距离函数是拟合里最贵的一项）
+  if (F.cols[1][1] > 0.999 && (only === 'wedge' || cands[0].e >= 0.01)) for (const [s, sign] of [[0, 1], [0, -1], [2, 1], [2, -1]]) {
     const hs = h[s], hy = h[1], o = s === 0 ? 2 : 0;
     const A = [-hs * sign, -hy], B = [hs * sign, -hy], C = [hs * sign, hy];
     push({ shape: 'wedge', slope: s, sign, e: err((x) => sd2(sdTri2(x[s], x[1], A, B, C), Math.abs(x[o]) - h[o])) }, 4 * hs * hy * h[o]);
@@ -492,6 +493,10 @@ function minRot(u) {
 
 // 覆盖率低于它（基本体的表面大部分不贴着网格）就退回网格引用，各档位都一样
 const COVER_MIN = 0.3;
+// L2 的网格兜底：合并网格拆出来的分量在源文件里没有节点，拟合不了时引用工程里的部件文件（parts.glb，由调用方写出）；
+// 节点名把 # 换成 ~（# 是“文件#节点”的分隔符）
+let PARTS_FILE = null;
+export const partsNode = (from) => String(from).replace(/#/g, '~');
 
 // 名字清理（不认具体的资产库，只用统计与通用的写法）：
 //   节点名里的路径前缀（类别/子关卡/…）、SM_ 一类的资产前缀、开头的单字母类别（H_、I_）、贴图尺寸（1024x768）不进名字；
@@ -526,14 +531,15 @@ function vkey(v) { return v.map((x) => Math.round(x * 1e5) || 0).join(); }
 function primitiveOf(fit, part, srcFile) {
   const fitScore = Math.max(0, Math.min(1, 1 - fit.e / TOL));
   const F = fit.frame, h = F.h, [ex, ey, ez] = F.cols;
-  const toMesh = part.force === 'mesh' ? !!part.name : !part.force && (fit.e > FID.fitTol || fit.cover < COVER_MIN) && part.name;
+  const ref = part.name ? `${srcFile}#${part.uid ?? part.name ?? part.from}` : PARTS_FILE && part.from ? `${PARTS_FILE}#${partsNode(part.from)}` : null;
+  const toMesh = part.force === 'mesh' ? !!ref : !part.force && (fit.e > FID.fitTol || fit.cover < COVER_MIN) && !!ref;
   if (toMesh) {
     // 拟合不了：引用源网格。外包络是世界包围盒，原点在其底面中心
     // （从合并网格里拆出来的部件在源文件里没有节点可引用，只能用最接近的基本体，并如实给出低拟合度）
     const { min, max } = fit.aabb;
     const pivot = [(min[0] + max[0]) / 2, min[1], (min[2] + max[2]) / 2];
     const size = sub(max, min);
-    return { kind: 'mesh', props: { src: JSON.stringify(`${srcFile}#${part.uid ?? part.name ?? part.from}`), size: vec(size), pivot: vec(pivot) }, cols: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], at: pivot,
+    return { kind: 'mesh', props: { src: JSON.stringify(ref), size: vec(size), pivot: vec(pivot) }, cols: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], at: pivot,
       box: { min: [-size[0] / 2, 0, -size[2] / 2], max: [size[0] / 2, size[1], size[2] / 2] }, fit: fitScore, err: fit.e };
   }
   const base = { fit: fitScore, err: fit.e };
@@ -701,11 +707,13 @@ function unifyBoxLabels(objs) {
 }
 
 // ───────── 3 & 4. 关系与校验 ─────────
-export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null } = {}) {
+export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null, prefit = null, partsFile = null } = {}) {
   setFidelity(fidelity, sceneUnit);
+  PARTS_FILE = partsFile;
   // 决定层：先作用到源部件上（忽略、合并、指定形状 / 名字 / 类型名），锁定在最后按上一次的结果替换
   let decided = null;
-  if (decisions) { decided = applyDecisions(parts, parseDecisions(decisions)); parts = decided.parts; }
+  const decs = decisions ? parseDecisions(decisions) : [];
+  if (decs.length) { decided = applyDecisions(parts, decs); parts = decided.parts; }
   cleanName = nameCleaner(parts.map((p) => p.name));
   // 计时：S3D_TIMING=1 时把各阶段耗时打到 stderr（实战里定位瓶颈用）
   const T0 = performance.now(), lap = (what) => process.env.S3D_TIMING && console.error(`[reverse] ${what} ${Math.round(performance.now() - T0)}ms`);
@@ -747,7 +755,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       for (const m of ms) typeOf.set(m.i, { T, R: m.R, t: m.t });
     }
   }
-  const fits = parts.map((p, i) => (typeOf.has(i) ? null : fitPart(p, i, PRIMS.has(p.force) ? p.force : null)));
+  // prefit：worker 线程里预先算好的拟合（fitpool.mjs，部件很多时），结果与这里现算的一样
+  const fits = parts.map((p, i) => (typeOf.has(i) ? null : (!p.force && prefit?.fitOf(p, i)) || fitPart(p, i, PRIMS.has(p.force) ? p.force : null)));
   lap(`拟合 ${parts.length} 个部件（${types.length} 种类型覆盖 ${typeOf.size} 个实例）`);
   // 名字：L0 用源节点名；没有名字时按形状编号
   const used = new Map(), counters = {};
@@ -1204,7 +1213,15 @@ const dumpText = (p, t) => import('node:fs').then((fs) => fs.writeFileSync(p, t)
 const instOf = (u, i) => (u.ks ? u.ks[i] : i);
 
 // 几何中心：与表示方式无关的物理点（“原点”是包围盒底面中心，取决于局部 y 轴选了哪一头）
-const centerOf = (o) => add(o.at, mvC(o.cols, scl(add(o.box.min, o.box.max), 0.5)));
+// 阵列、镜像检测里同一个物体的中心要算很多次：按物体缓存（at / cols / box 换了对象就重算）
+const CENTERS = new WeakMap();
+const centerOf = (o) => {
+  const m = CENTERS.get(o);
+  if (m && m.at === o.at && m.cols === o.cols && m.box === o.box) return m.c;
+  const c = add(o.at, mvC(o.cols, scl(add(o.box.min, o.box.max), 0.5)));
+  CENTERS.set(o, { at: o.at, cols: o.cols, box: o.box, c });
+  return c;
+};
 
 // 朝向是否一致（考虑形状自身的对称）：球与竖直圆柱只看竖直轴；横放的圆柱只看轴线；盒子转 180° 一样
 function sameOrientation(o, Rw, mirrored = false) {
@@ -1246,19 +1263,37 @@ function detectMirrors(objs, units, unitOf) {
     const rc = a.cols.map((c) => reflectDir(c, n));
     return sameOrientation(b, toRows(rc), true);
   };
-  // 候选平面
-  const planes = [];
-  for (let i = 0; i < ents.length; i++) for (let j = i + 1; j < ents.length; j++) {
+  // 候选平面。规模：只在同一签名的实体之间配对（顺序与两两配对相同）；平面按量化的（法线，偏移）放进格网，
+  // 只在相邻的格子里找“第一个对得上的”（创建得最早的），结果与线性查找一样
+  const planes = [], grid = new Map(), QN = 1e-3, QD = 5e-3 * M;
+  const cell = (n, d) => [Math.floor(n[0] / QN), Math.floor(n[2] / QN), Math.floor(d / QD)];
+  const findPlane = (nrm, d) => {
+    const [a, b, c] = cell(nrm, d);
+    let best = null;
+    for (let x = -1; x <= 1; x++) for (let z = -1; z <= 1; z++) for (let w = -1; w <= 1; w++) {
+      for (const p of grid.get(`${a + x},${b + z},${c + w}`) ?? []) if (len(sub(p.n, nrm)) < 1e-3 && Math.abs(p.d - d) < QD && (!best || p.k < best.k)) best = p;
+    }
+    return best;
+  };
+  const sameKey = new Map();
+  ents.forEach((e, i) => { if (!sameKey.has(e.key)) sameKey.set(e.key, []); sameKey.get(e.key).push(i); });
+  for (let i = 0; i < ents.length; i++) for (const j of sameKey.get(ents[i].key)) {
+    if (j <= i) continue;
     const A = ents[i], B = ents[j];
-    if (A.key !== B.key || Math.abs(A.ref[1] - B.ref[1]) > 1e-3 * M) continue;
+    if (Math.abs(A.ref[1] - B.ref[1]) > 1e-3 * M) continue;
     let nrm = sub(B.ref, A.ref); nrm[1] = 0;
     if (len(nrm) < 1e-6) continue;
     nrm = unit(nrm);
     const f = nrm.find((v) => Math.abs(v) > 1e-9);
     if (f < 0) nrm = scl(nrm, -1);
     const d = dot(nrm, scl(add(A.ref, B.ref), 0.5));
-    let pl = planes.find((p) => len(sub(p.n, nrm)) < 1e-3 && Math.abs(p.d - d) < 5e-3 * M);
-    if (!pl) planes.push((pl = { n: nrm, d, pairs: [] }));
+    let pl = findPlane(nrm, d);
+    if (!pl) {
+      planes.push((pl = { n: nrm, d, pairs: [], k: planes.length }));
+      const key = cell(nrm, d).join(',');
+      if (!grid.has(key)) grid.set(key, []);
+      grid.get(key).push(pl);
+    }
     pl.pairs.push([A, B]);
   }
   // 逐个平面核对每一对的全部成员，算出副本里每个成员的路径
