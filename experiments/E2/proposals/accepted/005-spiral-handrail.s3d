@@ -1,0 +1,4 @@
+// layer=edits why=tank_2 是螺旋楼梯的扶手（源包络正好是一圈螺旋的外接圆柱）：写成 helix（r=2.1，一圈升 6.24 = 23 级 × 0.2713）+ 圆截面扫掠，替换实心圆柱
+drop tank_2
+helix rail_path r=2.1 pitch=6.24 turns=1 at=-17.99,1.12,50
+sweep handrail path=rail_path profile=circle r=0.05 mat=steel

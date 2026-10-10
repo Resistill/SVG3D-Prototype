@@ -1,0 +1,4 @@
+// layer=edits why=platform_2 是一条 9 m 宽的弯曲沥青路（俯视正交图量出中线），写成样条 + 矩形截面扫掠；原来的楔形把整个外接矩形都铺满了
+drop platform_2
+spline road_path path=[(-45,0.04,3.06); (-36.8,0.04,8.36); (-28.95,0.04,11.8); (-21.1,0.04,12.19); (-13.24,0.04,11.28); (-5.38,0.04,9.44); (0.8,0.04,5.6); (6.02,0.04,0.01)]
+sweep road path=road_path profile=rect section=9,0.08 mat=asphalt

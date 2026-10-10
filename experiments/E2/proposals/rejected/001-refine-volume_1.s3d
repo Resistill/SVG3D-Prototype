@@ -1,0 +1,41 @@
+// layer=edits why=细化到 detail（按 δ=0.005 衡量）：物体 volume_1 → 板件 0.01（36 块），36 个部件；局部分数 1029.89 → 626.46
+over volume_1 : group envelope=-29,0,-13,29,22,13 {
+  box wall size=58,7.975,0.8 at=0,0,-12.6 turn=180
+  box wall_2 size=34.075,14.1375,0.8 at=0,7.975,-12.6 turn=180
+  box floor size=34,0.8,26.1375 at=0,21.2,0.0687
+  box wall_3 size=26,22.1,0.8 at=16.6,0,0 turn=90
+  box wall_4 size=26,22.1,0.8 at=-16.6,0,0 turn=-90
+  subtract wall_5 at=0,0,12.6 {
+    box body size=34,22.1,0.8
+    box hole size=11.9,16.575,2.4
+    box hole_2 size=11.475,0.85,2.4 at=0,16.575,0
+    box hole_3 size=11.05,0.425,2.4 at=0,17.425,0
+    box hole_4 size=10.625,0.425,2.4 at=0,17.85,0
+    box hole_5 size=10.2,0.425,2.4 at=0,18.275,0
+    box hole_6 size=9.775,0.2125,2.4 at=0,18.7,0
+    box hole_7 size=9.35,0.425,2.4 at=0,18.9125,0
+    box hole_8 size=8.925,0.2125,2.4 at=0,19.3375,0
+    box hole_9 size=8.5,0.2125,2.4 at=0,19.55,0
+    box hole_10 size=8.075,0.2125,2.4 at=0,19.7625,0
+    box hole_11 size=7.65,0.2125,2.4 at=0,19.975,0
+    box hole_12 size=6.8,0.2125,2.4 at=0,20.1875,0
+    box hole_13 size=6.375,0.2125,2.4 at=0,20.4,0
+    box hole_14 size=5.525,0.2125,2.4 at=0,20.6125,0
+    box hole_15 size=4.25,0.2125,2.4 at=0,20.825,0
+    box hole_16 size=2.975,0.2125,2.4 at=0,21.0375,0
+  }
+  box ceiling size=58,0.1,0.725 at=0,0,-12.6375
+  box ceiling_2 size=13.05,0.1,13.4125 at=-22.475,0,-5.5688
+  box ceiling_3 size=13.05,0.1,13.4125 at=22.475,0,-5.5688
+  box ceiling_4 size=1.0875,0.1,11.9625 at=-16.4938,0,7.1187
+  box ceiling_5 size=1.0875,0.1,11.9625 at=16.4938,0,7.1187
+  box ceiling_6 size=31.9,0.1,1.0875 at=0,0,12.5562
+  box floor_2 size=11.9625,0.1,14.1375 at=-23.0187,7.9,-5.9312
+  box floor_3 size=11.9625,0.1,14.1375 at=23.0188,7.9,-5.9312
+  box wall_6 size=11.9625,7.975,0.1 at=-23.0187,0,0.95
+  box wall_7 size=11.9625,7.975,0.1 at=23.0188,0,0.95
+  box wall_8 size=14,8.05,0.1 at=-17.05,0,-6 turn=90
+  box wall_9 size=14,8.05,0.1 at=28.95,0,-6 turn=90
+  box wall_10 size=14,8.05,0.1 at=17.05,0,-6 turn=-90
+  box wall_11 size=14,8.05,0.1 at=-28.95,0,-6 turn=-90
+}

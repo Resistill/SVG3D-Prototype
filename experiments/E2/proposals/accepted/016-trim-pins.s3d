@@ -1,0 +1,47 @@
+// layer=edits why=螺旋楼梯、燃料罐阵列、塔腿阵列按包围盒底面中心定位就对得上，去掉多余的 pin=origin（罐阵列的 at 改成中间那个罐）
+// retract 28
+// retract 29
+// retract 30
+// retract 31
+// retract 32
+// retract 33
+// retract 34
+// retract 35
+// retract 47
+// retract 48
+// retract 49
+// retract 50
+// retract 51
+// retract 65
+// retract 66
+// retract 67
+// retract 68
+// retract 69
+// retract 70
+// retract 71
+// retract 72
+// retract 73
+// retract 74
+group spiral_stair at=-18,0,50 mat=steel {
+  cyl post r=0.35 h=6.5 at=0,0.12,0
+  repeat steps n=24 step=0,0.2713,0 turn=360/23 {
+    box step size=2,0.12,0.7 at=1.2,0,0
+  }
+  helix rail_path r=2.1 pitch=6.24 turns=1 at=0,1.12,0
+  sweep handrail path=rail_path profile=circle r=0.05
+}
+repeat tanks n=3 step=10,0,0 at=30,0,55 mat=white {
+  cyl body r=3.5 h=9
+  sphere dome r=3.5 at=0,5.5,0
+  cyl band r=3.6 h=0.6 at=0,6,0 mat=hazard
+}
+group tower at=34.1,2,-9.1 mat=steel {
+  repeat legs n=(2,1,2) step=6,0,6 at=0,0,0 {
+    box leg size=0.6,48,0.6
+  }
+  repeat decks n=8 step=0,6,0 at=0,5.6,0 pin=origin {
+    box deck size=7.2,0.4,7.2
+    span brace from=-3,0,3 to=3,-5.2,3 r=0.15
+  }
+}
+mirror tower_2 of=tower across=platform_1 axis=x

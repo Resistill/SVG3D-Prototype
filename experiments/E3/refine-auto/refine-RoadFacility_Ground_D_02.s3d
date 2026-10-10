@@ -1,0 +1,5 @@
+// 细化到 structure：RoadFacility_Ground_D_02（面积前 90%（2/4 块），2 个部件）
+over RoadFacility_Ground_D_02 : group envelope=-118.32,0,-93.245,118.32,4.57,93.245 {
+  box box2 size=234.13,4.57,74.81 at=1.26,0,-55.83 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-36/SM_I_RoadFacility_Ground_D_02#2"
+  box box1 size=236.64,1.22,177.17 at=0,2.77,-3.42 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-36/SM_I_RoadFacility_Ground_D_02#1"
+}

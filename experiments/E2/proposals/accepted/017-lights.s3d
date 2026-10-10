@@ -1,0 +1,6 @@
+// layer=edits why=columns_1 是四根灯杆（杆 + 灯箱），改名 lights / pole / lamp，并按阵列中心写世界坐标（比 on=terrain[…] pin=origin 短）
+drop columns_1
+repeat lights n=(2,1,2) step=40,0,40 at=25,0,0 {
+  cyl pole r=0.4 h=30 mat=steel
+  box lamp size=2.4,1.2,2.4 on=pole mat=white
+}

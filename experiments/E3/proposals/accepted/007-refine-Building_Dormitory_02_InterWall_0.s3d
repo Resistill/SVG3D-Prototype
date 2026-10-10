@@ -1,0 +1,26 @@
+// layer=edits why=细化到 structure（按 δ=0.05 衡量）：类型 Building_Dormitory_02_InterWall_04B → 板件 0.714（20 块），20 个部件；局部分数 2012.16 → 1636.82
+def Building_Dormitory_02_InterWall_04B : Building_Dormitory_02_InterWall_04B {
+  drop body
+  group body envelope=-30.08,0,-12.19,30.08,29.61,12.19 {
+    box wall size=22.86,1.43,0.36 at=-18.41,1.04,12.35 turn=180
+    box wall_2 size=20,12.14,0.36 at=-16.98,2.47,12.35 turn=180
+    box wall_3 size=1.43,12.14,0.36 at=-29.13,2.47,12.35 turn=180
+    box wall_4 size=57.14,13.57,0.36 at=1.59,16.04,12.35 turn=180
+    box wall_5 size=1.43,13.57,0.36 at=-29.13,16.04,12.35 turn=180
+    box wall_6 size=1.43,3.57,0.36 at=-27.7,26.04,12.35 turn=180
+    box floor size=15,1.14,24.29 at=22.5,14.76,0
+    box floor_2 size=45,1.14,13.57 at=-7.5,14.76,5.36
+    box ceiling size=15,0.36,24.29 at=22.5,29.61,0
+    box ceiling_2 size=45,0.36,13.57 at=-7.5,29.61,5.36
+    box wall_7 size=22.86,13.57,0.36 at=-18.57,1.04,-1.61
+    box wall_8 size=45,13.57,0.36 at=-7.5,16.04,-1.61
+    box wall_9 size=24.29,13.57,0.36 at=30.34,15.9,0 turn=-90
+    box floor_3 size=22.86,0.36,13.57 at=-18.57,0.69,5.36
+    box wall_10 size=15,13.57,0.36 at=22.54,15.9,-12.32
+    box wall_11 size=13.57,13.57,0.36 at=-6.84,1.04,5.36 turn=-90
+    box wall_12 size=10.71,13.57,0.36 at=14.86,15.9,-6.78 turn=90
+    box wall_13 size=13.57,8.57,0.36 at=-30.18,21.39,5.38 turn=90
+    box wall_14 size=13.57,1.43,0.36 at=-29.82,0,5.36 turn=-90
+    box wall_15 size=13.57,2.14,0.36 at=-29.82,14.29,5.36 turn=-90
+  }
+}

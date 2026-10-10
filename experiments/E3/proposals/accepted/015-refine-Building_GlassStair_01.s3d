@@ -1,0 +1,7 @@
+// layer=edits why=细化到 structure（按 δ=0.05 衡量）：物体 Building_GlassStair_01 → 面积前 90%（4/5 块），4 个部件；局部分数 308.11 → 164.72
+over Building_GlassStair_01 : group envelope=-23.21,0,-4.66,23.21,9.64,4.66 {
+  span span1 from=-21.62,-0.32,0 to=24.36,7.17,0 steps=3 section=9.32,1.46 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_GlassStair_01@1#4"
+  box box1 size=45.42,4.26,0 at=-0.26,3.6,-4.49 rot=(0,0,1,8.3) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_GlassStair_01@1#1"
+  box box2 size=45.41,4.2,0 at=-0.26,3.62,-4.42 rot=(0,0,1,8.5) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_GlassStair_01@1#0"
+  box box3 size=45.41,4.18,0 at=-0.26,3.63,4.49 rot=(0,0,1,8.6) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_GlassStair_01@1#3"
+}

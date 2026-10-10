@@ -1,0 +1,12 @@
+// layer=edits why=细化到 structure（按 δ=0.05 衡量）：类型 Building_Dormitory_02_ExterWall_01 → 面积前 97%（6/18 块），6 个部件；局部分数 6712.74 → 6246.03
+def Building_Dormitory_02_ExterWall_01 : Building_Dormitory_02_ExterWall_01 {
+  drop body
+  group body envelope=-36.06,0,-37.095,36.06,56.73,37.095 {
+    box box1 size=73.48,48.16,71.4 at=-0.37,0,0.32 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_ExterWall_01@1#1"
+    box box2 size=77.54,0,64.83 at=5.22,0.04,0.49 turn=-93.8 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_ExterWall_01@1#3"
+    box box4 size=54.68,13.71,1.14 at=-15.49,18.43,-8.15 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_ExterWall_01@1#9"
+    box box5 size=47.63,9.92,0 at=36.06,32.91,-13.44 rot=(0.008,1,0.008,90) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_ExterWall_01@1#6"
+    box box3 size=45.14,9.16,4.05 at=5.92,39.06,35.07 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_ExterWall_01@1#5"
+    wedge wedge1 size=40.47,8.6,19.86 on=box1 offset=14.7,0,0.5 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_ExterWall_01@1#4"
+  }
+}

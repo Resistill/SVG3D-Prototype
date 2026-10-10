@@ -1,0 +1,24 @@
+// layer=edits why=把厂房拆成四面墙 + 顶板 + 带拱门的前墙（门洞与墙底齐平），看清残差落在哪一块；也是更可编辑的写法
+// retract 37
+// retract 38
+// retract 39
+// retract 40
+// retract 41
+// retract 42
+// retract 43
+// retract 44
+// retract 45
+// retract 46
+over volume_1 : group {
+  box back size=34,22,0.8 at=0,0,-12.6
+  box left size=0.8,22,24.4 at=-16.6,0,0
+  box right size=0.8,22,24.4 at=16.6,0,0
+  box top size=32.4,0.8,24.4 at=0,21.2,0
+  subtract front at=0,0,12.6 {
+    box w size=34,22,0.8
+    box door size=12,15.2,2
+    cyl arch r=6 h=2 axis=z at=0,9.2,0
+  }
+  box wing size=12,8,14 at=-23,0,-6
+  mirror wing_2 of=wing across=back axis=x
+}

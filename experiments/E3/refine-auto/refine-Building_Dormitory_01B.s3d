@@ -1,0 +1,61 @@
+// 细化到 structure：Building_Dormitory_01B（面积前 90%（59/85 块），59 个部件）
+def Building_Dormitory_01B : Building_Dormitory_01B {
+  drop body
+  group body envelope=-29.175,0,-34.035,29.175,99.03,34.035 {
+    box box41 size=15.82,11.59,0 at=7.24,-0.59,31.31 rot=(0,0,-1,4.9) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#70"
+    box box50 size=15.15,10.72,0 at=-9.53,-0.17,-31.34 rot=(0,0,1,1.4) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#61"
+    box box51 size=15,10.49,0 at=-9.71,-0.06,31.31 rot=(0,0,-1,0.5) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#35"
+    box box40 size=15,10.36,0 at=7.73,0,-31.34 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#53"
+    box box52 size=13.58,10.69,0 at=18.6,0.88,0.06 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#84"
+    box box53 size=13.77,14.11,0 at=-20.1,18,1.4 rot=(-0.092,0.992,-0.092,90.5) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#80"
+    box box8 size=20.8,12.1,6.53 at=-21.48,18.73,-20.24 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#40"
+    mirror box9 of=box8 across=box1 axis=x
+    box box20 size=13.3,12,12.03 at=11.86,18.81,-21.87 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#64"
+    mirror box21 of=box20 across=box1 axis=x
+    box box59 size=13.67,9.72,0 at=25.59,19.94,0.05 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#78"
+    box box38 size=14.86,11.32,0 at=-8.84,21.03,-31.01 rot=(0,0,-1,1.6) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#36"
+    box box39 size=14.7,11.1,0 at=-8.61,21.13,31.2 rot=(0,0,1,0.8) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#65"
+    box box54 size=13.07,13.56,0 at=-20.1,33.95,-0.84 rot=(0.065,0.996,0.065,90.2) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#77"
+    box box18 size=13.3,12.12,12.03 at=11.86,34.61,-21.87 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#46"
+    box box14 size=13.3,12.37,12.03 at=11.86,49.17,-21.87 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#73"
+    box box16 size=13.3,12.37,12.03 at=11.86,63.97,-21.87 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#38"
+    box box12 size=13.3,12.43,12.03 at=11.86,78.72,-21.87 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#55"
+    box box43 size=21.47,3.57,0.36 at=26.46,34.73,20.11 turn=-90.9 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#32"
+    box box42 size=21.47,3.57,0.36 at=26.46,49.53,20.11 turn=-90.9 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#18"
+    box box45 size=21.47,3.57,0.36 at=26.46,64.33,20.11 turn=-90.9 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#22"
+    box box48 size=21.47,3.57,0.36 at=26.46,79.02,20.11 turn=-90.9 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#26"
+    box box28 size=26.05,3.57,0.36 at=13.08,34.73,31.19 turn=0.8 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#10"
+    box box24 size=26.05,3.57,0.36 at=13.08,49.53,31.19 turn=0.8 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#17"
+    box box23 size=26.05,3.57,0.36 at=13.08,64.33,31.19 turn=0.8 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#21"
+    box box22 size=26.05,3.57,0.36 at=13.08,79.02,31.19 turn=0.8 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#25"
+    repeat boxs_3 n=4 step=0,14.76,0 at=-21.48,34.74,20.24 pin=origin {
+      box box size=20.8,12,6.53 turn=-90 mat=whitebox
+    }
+    mirror boxs_4 of=boxs_3 across=box1 axis=x
+    box box30 size=15.19,11.92,0 at=-8.32,35.37,-31.01 rot=(0,0,1,3.4) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#52"
+    box box58 size=13.67,9.72,0 at=25.59,35.5,0.05 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#82"
+    box box32 size=14.89,11.51,0 at=-8.86,35.56,31.2 rot=(0,0,-1,1.8) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#47"
+    box box56 size=13.67,10.13,0 at=25.59,49.83,0.05 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#81"
+    box box55 size=13.67,10.13,0 at=25.59,64.6,0.05 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#79"
+    box box57 size=13.67,10.13,0 at=25.59,79.47,0.05 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#83"
+    box box33 size=15.65,12.55,0 at=-9.35,49.88,31.2 rot=(0,0,-1,6.1) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#74"
+    box box31 size=14.88,11.49,0 at=-8.85,50.37,-31.01 rot=(0,0,-1,1.7) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#62"
+    box box36 size=15.58,12.45,0 at=-8.07,64.45,31.2 rot=(0,0,1,5.7) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#39"
+    box box35 size=14.57,11.08,0 at=-8.67,65.1,-31.01 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#71"
+    box box37 size=14.84,11.45,0 at=-8.84,79.95,31.2 rot=(0,0,-1,1.5) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#56"
+    box box34 size=14.6,11.12,0 at=-8.66,80.12,-31.01 rot=(0,0,1,0.2) mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#44"
+    box box1 size=68.07,3.8,58.35 at=0,95.24,0 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#31"
+    box box19 size=13.3,12.12,12.03 at=11.86,34.61,21.88 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#51"
+    box box15 size=13.3,12.37,12.03 at=11.86,49.17,21.88 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#60"
+    box box17 size=13.3,12.37,12.03 at=11.86,63.97,21.88 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#69"
+    box box13 size=13.3,12.43,12.03 at=11.86,78.72,21.88 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#43"
+    box box29 size=26.05,3.57,0.36 at=13.08,34.73,-31.19 turn=-0.8 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#4"
+    box box26 size=26.05,3.57,0.36 at=13.08,49.53,-31.19 turn=-0.8 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#15"
+    box box27 size=26.05,3.57,0.36 at=13.08,64.33,-31.19 turn=-0.8 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#19"
+    box box25 size=26.05,3.57,0.36 at=13.08,79.02,-31.19 turn=-0.8 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#23"
+    box box49 size=21.46,3.57,0.36 at=26.46,34.73,-20.11 turn=-89.1 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#5"
+    box box44 size=21.47,3.57,0.36 at=26.46,49.53,-20.11 turn=-89.1 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#16"
+    box box47 size=21.47,3.57,0.36 at=26.46,64.33,-20.11 turn=-89.1 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#20"
+    box box46 size=21.47,3.57,0.36 at=26.46,79.02,-20.11 turn=-89.1 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#24"
+  }
+}

@@ -1,0 +1,10 @@
+// layer=edits why=三个燃料罐是同一个阵列：圆柱罐身 h=9 + 半径相同的球形罐顶（源网格里球的下半在罐身内部，revolve 外轮廓解释不了这些内表面）+ 危险色环带；替换三条各自的 revolve 和环带阵列
+drop volume_3
+drop volume_4
+drop volume_5
+drop slabs_3
+repeat tanks n=3 step=10,0,0 at=20,0,55 pin=origin {
+  cyl body r=3.5 h=9 mat=white
+  sphere dome r=3.5 at=0,5.5,0 mat=white
+  cyl band r=3.6 h=0.6 at=0,6,0 mat=hazard
+}

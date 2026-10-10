@@ -1,0 +1,10 @@
+// layer=edits why=细化到 structure（按 δ=0.05 衡量）：类型 Building_Dormitory_02_ExterWall_01C → 板件 0.714（4 块），4 个部件；局部分数 1810.44 → 1398.06
+def Building_Dormitory_02_ExterWall_01C : Building_Dormitory_02_ExterWall_01C {
+  drop body
+  group body envelope=-2.23,0,-25.675,2.23,24.84,25.675 {
+    box wall size=15.71,10,0.36 at=-1.91,14.91,-17.82 turn=-90
+    box wall_2 size=15.71,10,0.36 at=-1.91,14.91,17.89 turn=-90
+    box wall_3 size=17.14,11.43,0.08 at=2.19,0,9.24 turn=90
+    box wall_4 size=17.14,11.43,0.08 at=2.19,0,-9.33 turn=90
+  }
+}

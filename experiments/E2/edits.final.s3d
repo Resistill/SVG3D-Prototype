@@ -1,0 +1,81 @@
+// 修改层：over / drop / copy / 新物体 / def 扩展。重跑逆向后这里的路径仍然有效（稳定命名）
+// 提议 002：厂房是空心的：0.8 m 墙 + 顶板、正面 12 m 宽的拱门（矩形 + r=6 半圆），两侧 12×8×14 的翼楼互为镜像；替换实心盒子
+// 提议 003：三个燃料罐是同一个阵列：圆柱罐身 h=9 + 半径相同的球形罐顶（源网格里球的下半在罐身内部，revolve 外轮廓解释不了这些内表面）+ 危险色环带；替换三条各自的 revolve 和环带阵列
+drop volume_3
+drop volume_4
+drop volume_5
+drop slabs_3
+// 提议 004：column_2 其实是火箭：两级圆柱（r=2.4 h=28、r=2 h=14）+ 整流罩旋转体（轮廓按正交前视图量出）；一条外轮廓 revolve 把级间台阶画成了斜坡，也解释不了级间的端面
+drop column_2
+group rocket on=platform_1 mat=white {
+  cyl stage1 r=2.4 h=28
+  cyl stage2 r=2 h=14 on=stage1
+  revolve nose profile=[(2,0); (1.9,2.5); (1.45,5); (0.7,6.6); (0,7)] smooth=true on=stage2
+}
+// 提议 005：tank_2 是螺旋楼梯的扶手（源包络正好是一圈螺旋的外接圆柱）：写成 helix（r=2.1，一圈升 6.24 = 23 级 × 0.2713）+ 圆截面扫掠，替换实心圆柱
+drop tank_2
+// 提议 006：platform_2 是一条 9 m 宽的弯曲沥青路（俯视正交图量出中线），写成样条 + 矩形截面扫掠；原来的楔形把整个外接矩形都铺满了
+drop platform_2
+// 提议 007：slab_1 / beam 是从燃料罐顶到发射台的两根输送管；每根的控制点隔一个取一个、数字少一位（误差在 δ 以内），并改成有意义的名字
+drop slab_1
+drop beam
+// 提议 008：fuel_line_1 拐弯段隔点取样误差超过 δ（最大 23 cm）：只省掉直段上的一个点，弯段的控制点都保留
+// 提议 009：路的中线直接写进 sweep（smooth=true，省掉单独的样条），pin=bottom 让路面贴地、坐标少一位；按俯视图对比把右侧弯道的控制点往 +z 挪 0.35 m
+sweep road path=[(-45,0,3.1); (-36.8,0,8.4); (-28.9,0,11.8); (-21.1,0,12.2); (-13.2,0,11.3); (-5.4,0,9.4); (0.8,0,6); (6,0,0)] smooth=true section=9,0.08 pin=bottom mat=asphalt
+// 提议 010：螺旋楼梯的立柱、24 级踏步和扶手本来是一个东西：收进一个 group（相对坐标数字更短），转角写成 360/23，和扶手一圈 23 级对上
+drop steps
+drop column_1
+// 提议 011：厂房 group 的外包络与内容的包围盒完全相同，删掉；燃料罐的白色材质提到阵列上，只有环带单独写 hazard
+over volume_1 : group {
+  subtract hall {
+    box shell size=34,22,26
+    box cavity size=32.4,22.2,24.4 at=0,-1,0
+    box door size=12,16.2,2 at=0,-1,12.6
+    cyl arch r=6 h=2 axis=z at=0,9.2,12.6
+  }
+  box wing size=12,8,14 at=-23,0,-6
+  mirror wing_2 of=wing across=hall axis=x
+}
+// 提议 012：塔的斜撑写成两端点的 span（原来是绕斜轴转 180° 的圆柱，数字多）；摆臂 slab_3/slab_4 改名 arm，rot=(0.002,-1,-0.004,45) 写成 turn=-45
+drop slab_3
+drop slab_4
+box arm size=6.08,0.3,1.6 at=21.65,38,-3.35 turn=-45 mat=steel
+mirror arm_2 of=arm across=platform_1 axis=x
+// 提议 013：两根输送管的控制点坐标少一位小数（取整误差 ≤ 4 cm，小于 δ）
+pipe fuel_line_2 path=[(21,2.4,13); (20.8,2.2,22.6); (20.4,1.7,32.2); (20.1,1.4,41.8); (20,1.4,51.5)] r=0.35 smooth=true mat=steel
+pipe fuel_line_1 path=[(40,1.35,51.5); (39.3,1.4,42.5); (38.3,1.5,38.1); (36.8,1.7,33.9); (34.8,1.85,29.8); (32.7,2.05,25.9); (30.7,2.2,21.8); (29.4,2.4,17.5); (29,2.4,13)] r=0.35 smooth=true mat=steel
+// 提议 014：columns_2 / slabs_1（及其镜像）其实是一座塔：4 根腿 + 8 层平台和斜撑，收进 group tower，对侧整座塔写成一个 mirror，代替两组阵列各自的镜像
+drop columns_2
+drop columns_3
+drop slabs_1
+drop slabs_2
+// 提议 016：螺旋楼梯、燃料罐阵列、塔腿阵列按包围盒底面中心定位就对得上，去掉多余的 pin=origin（罐阵列的 at 改成中间那个罐）
+group spiral_stair at=-18,0,50 mat=steel {
+  cyl post r=0.35 h=6.5 at=0,0.12,0
+  repeat steps n=24 step=0,0.2713,0 turn=360/23 {
+    box step size=2,0.12,0.7 at=1.2,0,0
+  }
+  helix rail_path r=2.1 pitch=6.24 turns=1 at=0,1.12,0
+  sweep handrail path=rail_path profile=circle r=0.05
+}
+repeat tanks n=3 step=10,0,0 at=30,0,55 mat=white {
+  cyl body r=3.5 h=9
+  sphere dome r=3.5 at=0,5.5,0
+  cyl band r=3.6 h=0.6 at=0,6,0 mat=hazard
+}
+group tower at=34.1,2,-9.1 mat=steel {
+  repeat legs n=(2,1,2) step=6,0,6 at=0,0,0 {
+    box leg size=0.6,48,0.6
+  }
+  repeat decks n=8 step=0,6,0 at=0,5.6,0 pin=origin {
+    box deck size=7.2,0.4,7.2
+    span brace from=-3,0,3 to=3,-5.2,3 r=0.15
+  }
+}
+mirror tower_2 of=tower across=platform_1 axis=x
+// 提议 017：columns_1 是四根灯杆（杆 + 灯箱），改名 lights / pole / lamp，并按阵列中心写世界坐标（比 on=terrain[…] pin=origin 短）
+drop columns_1
+repeat lights n=(2,1,2) step=40,0,40 at=25,0,0 {
+  cyl pole r=0.4 h=30 mat=steel
+  box lamp size=2.4,1.2,2.4 on=pole mat=white
+}

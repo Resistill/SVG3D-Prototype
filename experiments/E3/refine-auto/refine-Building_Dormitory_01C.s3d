@@ -1,0 +1,20 @@
+// 细化到 structure：Building_Dormitory_01C（体素 3.657（14 块），14 个部件）
+def Building_Dormitory_01C : Building_Dormitory_01C {
+  drop body
+  group body envelope=-25.205,0,-31.36,25.205,91.2,31.36 {
+    box block size=32.91,10.97,3.66 at=-1.43,0,-29.53
+    box block_2 size=3.66,14.63,18.29 at=16.85,0,-0.27
+    box wall size=32.91,10.97,0.55 at=-1.43,0,31.09
+    box column size=25.6,72.92,3.66 at=-12.4,18.29,-29.53
+    box column_2 size=14.63,72.92,3.66 at=11.37,18.29,-29.53
+    box column_3 size=3.66,72.92,18.29 at=-23.37,18.29,-18.56
+    box column_4 size=3.66,72.92,18.29 at=16.85,18.29,-18.56
+    box column_5 size=2.87,72.92,18.29 at=23.77,18.29,-0.27
+    box wall_2 size=3.66,29.26,14.63 at=-19.72,18.29,1.56
+    box column_6 size=3.66,72.92,21.94 at=-23.37,18.29,19.84
+    box column_7 size=3.66,72.92,21.94 at=16.85,18.29,19.84
+    box column_8 size=3.66,72.92,3.66 at=-19.72,18.29,28.99
+    box column_9 size=10.97,72.92,3.66 at=9.54,18.29,28.99
+    box column_10 size=18.29,72.92,0.55 at=-8.75,18.29,31.09
+  }
+}

@@ -1,0 +1,19 @@
+// layer=edits why=columns_2 / slabs_1（及其镜像）其实是一座塔：4 根腿 + 8 层平台和斜撑，收进 group tower，对侧整座塔写成一个 mirror，代替两组阵列各自的镜像
+// retract 53
+// retract 54
+// retract 55
+// retract 56
+drop columns_2
+drop columns_3
+drop slabs_1
+drop slabs_2
+group tower at=34.1,2,-9.1 mat=steel {
+  repeat legs n=(2,1,2) step=6,0,6 at=-3,0,-3 pin=origin {
+    box leg size=0.6,48,0.6
+  }
+  repeat decks n=8 step=0,6,0 at=0,5.6,0 pin=origin {
+    box deck size=7.2,0.4,7.2
+    span brace from=-3,0,3 to=3,-5.2,3 r=0.15
+  }
+}
+mirror tower_2 of=tower across=platform_1 axis=x

@@ -1,0 +1,7 @@
+// layer=edits why=细化到 structure（按 δ=0.05 衡量）：类型 Small_Door_15_Frame_v2 → 去掉（由周围的物体解释），0 个部件；局部分数 349.42 → 300.3
+def Small_Door_15_Frame_v2 : Small_Door_15_Frame_v2 {
+  drop body
+  group body envelope=-2.915,0,-0.645,2.915,9.14,0.645 {
+
+  }
+}

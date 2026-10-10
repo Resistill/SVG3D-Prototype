@@ -1,0 +1,13 @@
+// layer=edits why=螺旋楼梯的立柱、24 级踏步和扶手本来是一个东西：收进一个 group（相对坐标数字更短），转角写成 360/23，和扶手一圈 23 级对上
+// retract 32
+// retract 33
+drop steps
+drop column_1
+group spiral_stair at=-18,0,50 pin=origin mat=steel {
+  cyl post r=0.35 h=6.5 at=0,0.12,0
+  repeat steps n=24 step=0,0.2713,0 turn=360/23 {
+    box step size=2,0.12,0.7 at=1.2,0,0
+  }
+  helix rail_path r=2.1 pitch=6.24 turns=1 at=0,1.12,0
+  sweep handrail path=rail_path profile=circle r=0.05
+}

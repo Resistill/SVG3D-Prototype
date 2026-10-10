@@ -1,0 +1,25 @@
+// layer=edits why=细化到 structure（按 δ=0.05 衡量）：类型 Commercial_Resort_Sofa_06_01 → 体素 0.357（19 块），19 个部件；局部分数 4219.12 → 3778.3
+def Commercial_Resort_Sofa_06_01 : Commercial_Resort_Sofa_06_01 {
+  drop body
+  group body envelope=-1.9,0,-1.905,1.9,3.3,1.905 {
+    box block size=3.8,1.79,3.81 at=-0.01,0,0
+    box block_2 size=3.8,1.07,0.71 at=-0.01,1.79,-1.55
+    box beam size=0.71,0.71,2.86 at=-1.55,1.79,0.24
+    box block_3 size=2.02,1.07,1.07 at=0.89,1.79,-0.66
+    box block_4 size=0.36,1.07,0.71 at=-0.3,1.79,-0.48
+    box block_5 size=0.59,1.43,1.79 at=1.6,1.79,0.77
+    box block_6 size=2.5,0.36,1.07 at=0.06,1.79,0.77
+    box block_7 size=1.07,0.71,0.36 at=-0.66,2.14,-1.01
+    box block_8 size=0.71,0.36,2.5 at=-1.55,2.5,0.06
+    box block_9 size=0.36,0.71,0.36 at=-1.73,2.5,1.49
+    box beam_2 size=3.57,0.36,0.71 at=-0.12,2.86,-1.55
+    box block_10 size=0.23,0.36,1.43 at=1.78,2.86,-0.83
+    box block_11 size=0.71,0.36,1.43 at=-1.55,2.86,-0.48
+    box block_12 size=2.14,0.36,0.71 at=0.59,2.86,-0.83
+    box block_13 size=0.71,0.36,0.36 at=0.24,2.86,-0.3
+    box block_14 size=0.36,0.36,0.36 at=1.49,2.86,-0.3
+    box block_15 size=0.36,0.36,1.07 at=-1.73,2.86,0.77
+    box slab size=0.71,0.08,0.36 at=-0.12,3.21,-1.01
+    box slab_2 size=0.71,0.08,0.36 at=0.95,3.21,-1.01
+  }
+}

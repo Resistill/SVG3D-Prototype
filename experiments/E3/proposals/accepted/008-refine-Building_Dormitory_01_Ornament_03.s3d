@@ -1,0 +1,13 @@
+// layer=edits why=细化到 structure（按 δ=0.05 衡量）：类型 Building_Dormitory_01_Ornament_03 → 全部 7 块，7 个部件；局部分数 1000.12 → 247.86
+def Building_Dormitory_01_Ornament_03 : Building_Dormitory_01_Ornament_03 {
+  drop body
+  group body envelope=-14.45,0,-19.03,14.45,13.41,19.03 {
+    box box2 size=27.35,12.15,0.8 at=-11.06,0,-3.04 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01_Ornament_03@1#2"
+    box box3 size=10.82,12.15,0.8 at=12.36,0,8.67 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01_Ornament_03@1#0"
+    mirror box4 of=box3 across=(-0.000001,0,-1.362187) axis=(0.000001,0,1)
+    box box6 size=7.18,12.15,0.8 at=9.09,0,14.48 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01_Ornament_03@1#1"
+    box box5 size=7.18,12.15,0.8 at=-7.91,0,-17.21 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01_Ornament_03@1#5"
+    box box1 size=38.06,1.23,28.9 on=box2[0.22,1,-27.7] mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01_Ornament_03@1#6"
+    box box7 size=7.18,12.15,0.8 at=9.09,0,-17.21 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01_Ornament_03@1#4"
+  }
+}

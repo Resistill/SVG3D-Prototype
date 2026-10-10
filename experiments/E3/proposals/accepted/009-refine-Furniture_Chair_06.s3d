@@ -1,0 +1,35 @@
+// layer=edits why=细化到 structure（按 δ=0.05 衡量）：类型 Furniture_Chair_06 → 体素 0.357（29 块），29 个部件；局部分数 4420.37 → 4010.66
+def Furniture_Chair_06 : Furniture_Chair_06 {
+  drop body
+  group body envelope=-1.0799,0.0103,-1.831,1.1399,5.0602,2.2304 {
+    box column size=0.36,1.07,0.36 at=-1,0.69,-0.44
+    box block size=0.57,0.36,0.36 at=0.9,0.69,-0.44
+    box column_2 size=0.36,1.79,0.23 at=-1,0.69,1.29
+    box column_3 size=0.57,1.79,0.23 at=0.9,0.69,1.29
+    box column_4 size=0.36,3.57,0.36 at=0.79,1.04,-0.44
+    box block_2 size=0.36,1.43,0.71 at=-0.64,1.4,-0.26
+    box column_5 size=0.36,2.14,0.36 at=-1,1.4,-0.08
+    box column_6 size=0.36,2.14,0.36 at=0.79,1.4,-0.08
+    box column_7 size=0.36,1.07,0.23 at=-0.64,1.4,1.29
+    box block_3 size=1.07,0.71,0.71 at=0.08,1.76,-0.26
+    box block_4 size=0.36,0.71,1.07 at=-1,1.76,0.63
+    box block_5 size=0.57,0.71,1.07 at=0.9,1.76,0.63
+    box block_6 size=1.07,0.71,0.23 at=0.08,1.76,1.29
+    box column_8 size=0.36,2.5,0.36 at=-1,2.12,-0.44
+    box column_9 size=0.21,1.43,0.36 at=1.08,2.12,-0.08
+    box block_7 size=1.43,0.36,1.07 at=-0.1,2.12,0.63
+    box block_8 size=1.07,1.07,0.36 at=0.08,2.47,-0.44
+    box block_9 size=0.36,0.36,0.36 at=-1,2.47,0.28
+    box block_10 size=0.21,0.36,0.36 at=1.08,2.47,0.28
+    box column_10 size=0.36,2.1,0.36 at=0.08,2.83,-0.79
+    box column_11 size=0.36,1.79,0.36 at=-0.64,2.83,-0.44
+    box column_12 size=0.21,1.43,0.36 at=1.08,2.83,-0.44
+    box column_13 size=0.36,1.74,0.36 at=-0.28,3.19,-0.79
+    box column_14 size=0.36,1.74,0.36 at=0.43,3.19,-0.79
+    box column_15 size=0.36,1.39,0.36 at=-0.64,3.54,-0.79
+    box block_11 size=0.36,0.71,0.36 at=-0.28,3.54,-0.44
+    box block_12 size=0.36,0.71,0.36 at=0.43,3.54,-0.44
+    box column_16 size=0.36,1.03,0.36 at=-1,3.9,-0.79
+    box column_17 size=0.36,1.03,0.36 at=0.79,3.9,-0.79
+  }
+}

@@ -1,0 +1,9 @@
+// layer=edits why=塔的斜撑写成两端点的 span（原来是绕斜轴转 180° 的圆柱，数字多）；摆臂 slab_3/slab_4 改名 arm，rot=(0.002,-1,-0.004,45) 写成 turn=-45
+over slabs_1 {
+  drop member
+  span brace from=-3,0,3 to=3,-5.2,3 r=0.15 mat=steel
+}
+drop slab_3
+drop slab_4
+box arm size=6.08,0.3,1.6 at=21.65,38,-3.35 turn=-45 mat=steel
+mirror arm_2 of=arm across=platform_1 axis=x

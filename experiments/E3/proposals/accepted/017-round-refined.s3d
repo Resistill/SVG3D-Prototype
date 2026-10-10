@@ -1,0 +1,551 @@
+// layer=edits why=细化结果的数字取到 0.1 stud（≈2.8 cm，小于 δ），并去掉逐行的 mat=whitebox（全场已有 over all() mat=whitebox）；细化文件内联进修改层
+// retract 832
+// retract 833
+// retract 834
+// retract 835
+// retract 836
+// retract 837
+// retract 838
+// retract 839
+// retract 840
+// retract 841
+// retract 842
+// retract 843
+// retract 844
+// retract 845
+// retract 846
+// retract 847
+// retract 848
+// retract 849
+// retract 850
+// retract 851
+// retract 852
+// retract 853
+// retract 854
+// retract 855
+// retract 856
+// retract 857
+// retract 858
+// retract 859
+// retract 860
+// retract 861
+// retract 862
+// retract 863
+// retract 864
+// retract 865
+// retract 866
+// retract 867
+// retract 868
+// retract 869
+// retract 870
+// retract 871
+// retract 872
+// retract 873
+// retract 874
+// retract 875
+// retract 876
+// retract 877
+// retract 878
+// retract 879
+// retract 880
+// retract 881
+// retract 882
+// retract 883
+// retract 884
+// retract 885
+// retract 886
+// retract 887
+// retract 888
+// retract 889
+// retract 890
+// retract 891
+// retract 892
+// retract 893
+// retract 894
+// retract 895
+// retract 896
+// retract 897
+// retract 898
+// retract 899
+// retract 900
+// retract 901
+// retract 902
+// retract 903
+// retract 904
+// retract 905
+// retract 906
+// retract 907
+// retract 908
+// retract 909
+// retract 910
+// retract 911
+// retract 912
+// retract 913
+// retract 914
+// retract 915
+// retract 916
+// retract 917
+// retract 918
+// retract 919
+// retract 920
+// retract 921
+// retract 922
+// retract 923
+// retract 924
+// retract 925
+// retract 926
+// retract 927
+// retract 928
+// retract 929
+// retract 930
+// retract 931
+// retract 932
+// retract 933
+// retract 934
+// retract 935
+// retract 936
+// retract 937
+// retract 938
+// retract 939
+// retract 940
+// retract 941
+// retract 942
+// retract 943
+// retract 944
+// retract 945
+// retract 946
+// retract 947
+// retract 948
+// retract 949
+// retract 950
+// retract 951
+// retract 952
+// retract 953
+// retract 954
+// retract 955
+// retract 956
+// retract 957
+// retract 958
+// retract 959
+// retract 960
+// retract 961
+// retract 962
+// retract 963
+// retract 964
+// retract 965
+// retract 966
+// retract 967
+// retract 968
+// retract 969
+// retract 970
+// retract 971
+// retract 972
+// retract 973
+// retract 974
+// retract 975
+// retract 976
+// retract 977
+// retract 978
+// retract 979
+// retract 980
+// retract 981
+// retract 982
+// retract 983
+// retract 984
+// retract 985
+// retract 986
+// retract 987
+// retract 988
+// retract 989
+// retract 990
+// retract 991
+// retract 992
+// retract 993
+// retract 994
+// retract 995
+// retract 996
+// retract 997
+// retract 998
+// retract 999
+// retract 1000
+// retract 1001
+// retract 1002
+// retract 1003
+// retract 1004
+// retract 1005
+// retract 1006
+// retract 1007
+// retract 1008
+// retract 1009
+// retract 1010
+// retract 1011
+// retract 1012
+// retract 1013
+// retract 1014
+// retract 1015
+// retract 1016
+// retract 1017
+// retract 1018
+// retract 1019
+// retract 1020
+// retract 1021
+// retract 1022
+// retract 1023
+// retract 1024
+// retract 1025
+// retract 1026
+// retract 1027
+// retract 1028
+// retract 1029
+// retract 1030
+// retract 1031
+// retract 1032
+// retract 1033
+// retract 1034
+// retract 1035
+// retract 1036
+// retract 1037
+// retract 1038
+// retract 1039
+// retract 1040
+// retract 1041
+// retract 1042
+// retract 1043
+// retract 1044
+// retract 1045
+// retract 1046
+// retract 1047
+// retract 1048
+// retract 1049
+// retract 1050
+// retract 1051
+// retract 1052
+// retract 1053
+// retract 1054
+// retract 1055
+// retract 1056
+// retract 1057
+// retract 1058
+// retract 1059
+def Building_Dormitory_01C : Building_Dormitory_01C {
+  drop body
+  group body envelope=-25.2,0,-31.4,25.2,91.2,31.4 {
+    box block size=32.9,11,3.7 at=-1.4,0,-29.5
+    box block_2 size=3.7,14.6,18.3 at=16.9,0,-0.3
+    box wall size=32.9,11,0.6 at=-1.4,0,31.1
+    box column size=25.6,72.9,3.7 at=-12.4,18.3,-29.5
+    box column_2 size=14.6,72.9,3.7 at=11.4,18.3,-29.5
+    box column_3 size=3.7,72.9,18.3 at=-23.4,18.3,-18.6
+    box column_4 size=3.7,72.9,18.3 at=16.9,18.3,-18.6
+    box column_5 size=2.9,72.9,18.3 at=23.8,18.3,-0.3
+    box wall_2 size=3.7,29.3,14.6 at=-19.7,18.3,1.6
+    box column_6 size=3.7,72.9,21.9 at=-23.4,18.3,19.8
+    box column_7 size=3.7,72.9,21.9 at=16.9,18.3,19.8
+    box column_8 size=3.7,72.9,3.7 at=-19.7,18.3,29
+    box column_9 size=11,72.9,3.7 at=9.5,18.3,29
+    box column_10 size=18.3,72.9,0.6 at=-8.7,18.3,31.1
+  }
+}
+def Building_Dormitory_01 : Building_Dormitory_01 {
+  drop body
+  group body envelope=-29.9,0,-34.4,29.9,100.7,34.4 {
+    box box10 size=11.4,97.3,2.3 at=21.4,0.7,-8.1 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#24"
+    box box9 size=11.4,97.3,2.3 at=21.4,0.7,8.1 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#23"
+    box box7 size=65,20.8,51.6 at=-1,0.7,-0.2 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#0"
+    box box6 size=65,2.5,51.6 on=box7[0,1,0] ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#30"
+    box box17 size=5.6,74.4,0 at=2,23.5,27.8 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#32"
+    box box16 size=5.6,74.4,0 at=2,23.5,-27.8 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#33"
+    box box12 size=4.6,74.7,2.5 at=-1.4,23.6,-30.1 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#26"
+    box box8 size=18.6,74.3,9.2 at=-21.9,23.6,0 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#27"
+    box box15 size=2.5,74.6,1.8 at=-16.3,23.6,-31.4 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#25"
+    box box11 size=4.6,74.6,2.5 on=box6[0.9,1,0] ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#28"
+    box box14 size=2.5,74.5,2.1 on=box6[1,1,0.6] turn=90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#29"
+    box box2 size=62.7,2.6,52.1 at=0.4,37.4,0 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#18"
+    box box13 size=14.1,45.5,0 at=-20.9,52.4,0 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#31"
+    box box3 size=63.3,1.4,52.7 at=0.5,53.4,0 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#19"
+    box box5 size=63.3,1.3,52.3 at=0.6,68.2,0 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#20"
+    box box4 size=63.3,1.4,52.3 at=0.6,83,0 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#21"
+    box box1 size=68.8,2.9,59.2 on=box8[0,1,-4.7] ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01@3#1"
+  }
+}
+def Building_Dormitory_01B : Building_Dormitory_01B {
+  drop body
+  group body envelope=-29.2,0,-34,29.2,99,34 {
+    box box41 size=15.8,11.6,0 at=7.2,-0.6,31.3 rot=(0,0,-1,4.9) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#70"
+    box box50 size=15.2,10.7,0 at=-9.5,-0.2,-31.3 rot=(0,0,1,1.4) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#61"
+    box box51 size=15,10.5,0 at=-9.7,-0.1,31.3 rot=(0,0,-1,0.5) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#35"
+    box box40 size=15,10.4,0 at=7.7,0,-31.3 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#53"
+    box box52 size=13.6,10.7,0 at=18.6,0.9,0.1 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#84"
+    box box53 size=13.8,14.1,0 at=-20.1,18,1.4 rot=(-0.1,1,-0.1,90.5) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#80"
+    box box8 size=20.8,12.1,6.5 at=-21.5,18.7,-20.2 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#40"
+    mirror box9 of=box8 across=box1 axis=x
+    box box20 size=13.3,12,12 at=11.9,18.8,-21.9 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#64"
+    mirror box21 of=box20 across=box1 axis=x
+    box box59 size=13.7,9.7,0 at=25.6,19.9,0.1 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#78"
+    box box38 size=14.9,11.3,0 at=-8.8,21,-31 rot=(0,0,-1,1.6) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#36"
+    box box39 size=14.7,11.1,0 at=-8.6,21.1,31.2 rot=(0,0,1,0.8) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#65"
+    box box54 size=13.1,13.6,0 at=-20.1,34,-0.8 rot=(0.1,1,0.1,90.2) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#77"
+    box box18 size=13.3,12.1,12 at=11.9,34.6,-21.9 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#46"
+    box box14 size=13.3,12.4,12 at=11.9,49.2,-21.9 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#73"
+    box box16 size=13.3,12.4,12 at=11.9,64,-21.9 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#38"
+    box box12 size=13.3,12.4,12 at=11.9,78.7,-21.9 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#55"
+    box box43 size=21.5,3.6,0.4 at=26.5,34.7,20.1 turn=-90.9 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#32"
+    box box42 size=21.5,3.6,0.4 at=26.5,49.5,20.1 turn=-90.9 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#18"
+    box box45 size=21.5,3.6,0.4 at=26.5,64.3,20.1 turn=-90.9 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#22"
+    box box48 size=21.5,3.6,0.4 at=26.5,79,20.1 turn=-90.9 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#26"
+    box box28 size=26.1,3.6,0.4 at=13.1,34.7,31.2 turn=0.8 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#10"
+    box box24 size=26.1,3.6,0.4 at=13.1,49.5,31.2 turn=0.8 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#17"
+    box box23 size=26.1,3.6,0.4 at=13.1,64.3,31.2 turn=0.8 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#21"
+    box box22 size=26.1,3.6,0.4 at=13.1,79,31.2 turn=0.8 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#25"
+    repeat boxs_3 n=4 step=0,14.8,0 at=-21.5,34.7,20.2 pin=origin {
+      box box size=20.8,12,6.5 turn=-90
+    }
+    mirror boxs_4 of=boxs_3 across=box1 axis=x
+    box box30 size=15.2,11.9,0 at=-8.3,35.4,-31 rot=(0,0,1,3.4) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#52"
+    box box58 size=13.7,9.7,0 at=25.6,35.5,0.1 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#82"
+    box box32 size=14.9,11.5,0 at=-8.9,35.6,31.2 rot=(0,0,-1,1.8) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#47"
+    box box56 size=13.7,10.1,0 at=25.6,49.8,0.1 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#81"
+    box box55 size=13.7,10.1,0 at=25.6,64.6,0.1 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#79"
+    box box57 size=13.7,10.1,0 at=25.6,79.5,0.1 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#83"
+    box box33 size=15.7,12.6,0 at=-9.3,49.9,31.2 rot=(0,0,-1,6.1) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#74"
+    box box31 size=14.9,11.5,0 at=-8.8,50.4,-31 rot=(0,0,-1,1.7) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#62"
+    box box36 size=15.6,12.5,0 at=-8.1,64.5,31.2 rot=(0,0,1,5.7) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#39"
+    box box35 size=14.6,11.1,0 at=-8.7,65.1,-31 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#71"
+    box box37 size=14.8,11.5,0 at=-8.8,80,31.2 rot=(0,0,-1,1.5) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#56"
+    box box34 size=14.6,11.1,0 at=-8.7,80.1,-31 rot=(0,0,1,0.2) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#44"
+    box box1 size=68.1,3.8,58.4 at=0,95.2,0 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#31"
+    box box19 size=13.3,12.1,12 at=11.9,34.6,21.9 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#51"
+    box box15 size=13.3,12.4,12 at=11.9,49.2,21.9 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#60"
+    box box17 size=13.3,12.4,12 at=11.9,64,21.9 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#69"
+    box box13 size=13.3,12.4,12 at=11.9,78.7,21.9 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#43"
+    box box29 size=26.1,3.6,0.4 at=13.1,34.7,-31.2 turn=-0.8 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#4"
+    box box26 size=26.1,3.6,0.4 at=13.1,49.5,-31.2 turn=-0.8 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#15"
+    box box27 size=26.1,3.6,0.4 at=13.1,64.3,-31.2 turn=-0.8 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#19"
+    box box25 size=26.1,3.6,0.4 at=13.1,79,-31.2 turn=-0.8 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#23"
+    box box49 size=21.5,3.6,0.4 at=26.5,34.7,-20.1 turn=-89.1 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#5"
+    box box44 size=21.5,3.6,0.4 at=26.5,49.5,-20.1 turn=-89.1 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#16"
+    box box47 size=21.5,3.6,0.4 at=26.5,64.3,-20.1 turn=-89.1 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#20"
+    box box46 size=21.5,3.6,0.4 at=26.5,79,-20.1 turn=-89.1 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01B@2#24"
+  }
+}
+over RoadFacility_Ground_D_02 : group envelope=-118.3,0,-93.2,118.3,4.6,93.2 {
+  box box2 size=234.1,4.6,74.8 at=1.3,0,-55.8 ~src="BigMeshGroup/BigMeshGroup_50_-36/SM_I_RoadFacility_Ground_D_02#2"
+  box box1 size=236.6,1.2,177.2 at=0,2.8,-3.4 ~src="BigMeshGroup/BigMeshGroup_50_-36/SM_I_RoadFacility_Ground_D_02#1"
+}
+over Building_Dormitory_02_ExterWall_01F : group envelope=-37.1,0,-36.1,37.1,56.7,36.1 {
+  box box1 size=73.5,48.2,71.4 at=-0.3,0,-0.4 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_ExterWall_01F@1#1"
+  box box2 size=77.5,0,64.8 at=-0.5,0,5.2 turn=-3.8 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_ExterWall_01F@1#3"
+  wedge wedge1 size=40.5,8.6,19.9 on=box1 offset=-0.5,0,14.7 turn=180 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_ExterWall_01F@1#4"
+}
+def Transport_Utility_ParkingShed_01 : Transport_Utility_ParkingShed_01 {
+  drop body
+  group body envelope=-19.3,0,-9.3,19.3,17.7,9.3 {
+    box ceiling size=22.9,0.4,18.3 at=-2,14.4,-0.1 rot=(0,0,1,15.2)
+    box floor size=11.4,0.4,18.3 at=13.1,17.1,-0.1
+    box floor_2 size=6.9,0.5,18.3 at=-15.9,11.6,-0.1
+    box wall size=6.9,4.6,1.4 at=-9,0,8.1
+    box wall_2 size=2.3,4.6,1.4 at=-4.4,2.3,8.1
+    box wall_3 size=4.6,2.3,1.4 at=-12.4,4.5,8.1
+    box wall_4 size=2.3,2.3,1.4 at=-13.6,6.8,8.1
+    box wall_5 size=2.3,2.3,1.4 at=-2.2,6.8,8.1
+    box wall_6 size=2.3,2.3,1.4 at=0.1,9.1,8.1
+    box wall_7 size=4.6,2.3,1.4 at=-17,11.4,8.1
+    box wall_8 size=6.9,4.6,1.4 at=-9.3,0,-8 turn=180
+    box wall_9 size=2.3,4.6,1.4 at=-4.8,2.3,-8 turn=180
+    box wall_10 size=4.6,2.3,1.4 at=-12.8,4.5,-8 turn=180
+    box wall_11 size=2.3,2.3,1.4 at=-2.5,6.8,-8 turn=180
+    box wall_12 size=2.3,2.3,1.4 at=-13.9,6.8,-8 turn=180
+    box wall_13 size=2.3,2.3,1.4 at=-0.2,9.1,-8 turn=180
+    box wall_14 size=2.3,2.3,1.4 at=-11.6,11.4,-8 turn=180
+    box wall_15 size=4.6,2.3,1.4 at=-17.3,11.4,-8 turn=180
+    box wall_16 size=2.3,2.3,1.4 at=2.1,13.7,-8 turn=180
+    box ramp size=18.3,0.4,2.3 at=-1.5,7.6,-7.6 rot=(0,0,1,56.1)
+    box ramp_2 size=18.3,0.4,2.3 at=-1.5,7.6,8.4 rot=(0,0,1,56.1)
+    box ramp_3 size=11.4,0.4,2.3 at=-13.9,5.5,-7.6 rot=(0,0,-1,65.4)
+    box ramp_4 size=11.4,0.4,2.3 at=-13.9,5.5,8.4 rot=(0,0,-1,65.4)
+    box ramp_5 size=16,0.4,2.3 at=-2.9,8.6,-7.5 rot=(0.7,0.3,0.6,64.1)
+    box ramp_6 size=16,0.4,2.3 at=-3.6,9.3,8.3 rot=(-0.7,-0.3,0.6,64.1)
+    box ramp_7 size=16,0.4,2.3 at=-2.9,8.6,8.5 rot=(0.7,0.3,0.6,64.1)
+    box ramp_8 size=16,0.4,2.3 at=-3.6,9.3,-7.6 rot=(-0.7,-0.3,0.6,64.1)
+  }
+}
+def Building_Dormitory_02_ExterWall_01 : Building_Dormitory_02_ExterWall_01 {
+  drop body
+  group body envelope=-36.1,0,-37.1,36.1,56.7,37.1 {
+    box box1 size=73.5,48.2,71.4 at=-0.4,0,0.3 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_ExterWall_01@1#1"
+    box box2 size=77.5,0,64.8 at=5.2,0,0.5 turn=-93.8 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_ExterWall_01@1#3"
+    box box4 size=54.7,13.7,1.1 at=-15.5,18.4,-8.1 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_ExterWall_01@1#9"
+    box box5 size=47.6,9.9,0 at=36.1,32.9,-13.4 rot=(0,1,0,90) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_ExterWall_01@1#6"
+    box box3 size=45.1,9.2,4.1 at=5.9,39.1,35.1 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_ExterWall_01@1#5"
+    wedge wedge1 size=40.5,8.6,19.9 on=box1 offset=14.7,0,0.5 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_ExterWall_01@1#4"
+  }
+}
+def Building_Dormitory_02_Ornament_01 : Building_Dormitory_02_Ornament_01 {
+  drop body
+  group body envelope=-17.8,0,-15.2,17.8,26.4,15.3 {
+    box floor size=35.7,1.2,31.4 at=0,25.2,0.5
+    subtract wall at=0,0,14.3 {
+      box body size=35.7,27.1,0.8
+      box hole size=1.4,12.9,2.3 at=-17.1,5.7,0
+      box hole_2 size=15.7,10,2.3 at=-8.6,7.1,0
+    }
+    box wall_2 size=34.3,8.6,0.6 at=-0.3,16.2,12.7
+    box wall_3 size=32.9,1.4,0.6 at=-1,24.7,12.7
+    box wall_4 size=1.4,5.7,0.9 at=-17,0,14 turn=-90
+    box wall_5 size=25.7,11.4,0.9 at=-17,15.7,0.5 turn=-90
+    box wall_6 size=1.4,8.6,0.9 at=-17,18.6,14 turn=-90
+    box wall_7 size=2.9,2.9,0.9 at=-17,24.3,-13.8 turn=-90
+    box wall_8 size=10,8.6,0.8 at=10.8,16.4,-11.9 turn=180
+    box wall_9 size=2.9,8.6,0.8 at=-15.7,16.4,-11.9 turn=180
+    box floor_2 size=4.3,0.5,1.4 at=-15.3,16.2,-11.7
+    box floor_3 size=11.4,0.5,1.4 at=11.1,16.2,-11.7
+    box floor_4 size=1.4,0.5,24.3 at=-16.7,16.2,1.2
+    box floor_5 size=1.4,0.5,8.6 at=16.1,16.2,9
+    box floor_6 size=31.4,0.5,1.4 at=-0.3,16.2,12.6
+    box wall_10 size=7.1,8.6,0.7 at=16,16.4,9.5 turn=90
+    box wall_11 size=1.4,8.6,0.7 at=16,16.4,-11.9 turn=90
+    box wall_12 size=1.4,27.1,0.4 at=17.5,0,14.5 turn=90
+    box wall_13 size=28.6,2.9,0.4 at=17.5,24.3,-0.5 turn=90
+    box floor_7 size=35.7,0.7,1.4 at=0.1,0,14
+    box wall_14 size=35.7,1.4,0.4 at=0,25.2,-15.1 turn=180
+  }
+}
+def Building_Dormitory_02_InterWall_04B : Building_Dormitory_02_InterWall_04B {
+  drop body
+  group body envelope=-30.1,0,-12.2,30.1,29.6,12.2 {
+    box wall size=22.9,1.4,0.4 at=-18.4,1,12.4 turn=180
+    box wall_2 size=20,12.1,0.4 at=-17,2.5,12.4 turn=180
+    box wall_3 size=1.4,12.1,0.4 at=-29.1,2.5,12.4 turn=180
+    box wall_4 size=57.1,13.6,0.4 at=1.6,16,12.4 turn=180
+    box wall_5 size=1.4,13.6,0.4 at=-29.1,16,12.4 turn=180
+    box wall_6 size=1.4,3.6,0.4 at=-27.7,26,12.4 turn=180
+    box floor size=15,1.1,24.3 at=22.5,14.8,0
+    box floor_2 size=45,1.1,13.6 at=-7.5,14.8,5.4
+    box ceiling size=15,0.4,24.3 at=22.5,29.6,0
+    box ceiling_2 size=45,0.4,13.6 at=-7.5,29.6,5.4
+    box wall_7 size=22.9,13.6,0.4 at=-18.6,1,-1.6
+    box wall_8 size=45,13.6,0.4 at=-7.5,16,-1.6
+    box wall_9 size=24.3,13.6,0.4 at=30.3,15.9,0 turn=-90
+    box floor_3 size=22.9,0.4,13.6 at=-18.6,0.7,5.4
+    box wall_10 size=15,13.6,0.4 at=22.5,15.9,-12.3
+    box wall_11 size=13.6,13.6,0.4 at=-6.8,1,5.4 turn=-90
+    box wall_12 size=10.7,13.6,0.4 at=14.9,15.9,-6.8 turn=90
+    box wall_13 size=13.6,8.6,0.4 at=-30.2,21.4,5.4 turn=90
+    box wall_14 size=13.6,1.4,0.4 at=-29.8,0,5.4 turn=-90
+    box wall_15 size=13.6,2.1,0.4 at=-29.8,14.3,5.4 turn=-90
+  }
+}
+def Building_Dormitory_01_Ornament_03 : Building_Dormitory_01_Ornament_03 {
+  drop body
+  group body envelope=-14.4,0,-19,14.5,13.4,19 {
+    box box2 size=27.4,12.2,0.8 at=-11.1,0,-3 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01_Ornament_03@1#2"
+    box box3 size=10.8,12.2,0.8 at=12.4,0,8.7 turn=-90 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01_Ornament_03@1#0"
+    mirror box4 of=box3 across=(0,0,-1.4) axis=(0,0,1)
+    box box6 size=7.2,12.2,0.8 at=9.1,0,14.5 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01_Ornament_03@1#1"
+    box box5 size=7.2,12.2,0.8 at=-7.9,0,-17.2 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01_Ornament_03@1#5"
+    box box1 size=38.1,1.2,28.9 on=box2[0.2,1,-27.7] ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01_Ornament_03@1#6"
+    box box7 size=7.2,12.2,0.8 at=9.1,0,-17.2 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_01_Ornament_03@1#4"
+  }
+}
+def Furniture_Chair_06 : Furniture_Chair_06 {
+  drop body
+  group body envelope=-1.1,0,-1.8,1.1,5.1,2.2 {
+    box column size=0.4,1.1,0.4 at=-1,0.7,-0.4
+    box block size=0.6,0.4,0.4 at=0.9,0.7,-0.4
+    box column_2 size=0.4,1.8,0.2 at=-1,0.7,1.3
+    box column_3 size=0.6,1.8,0.2 at=0.9,0.7,1.3
+    box column_4 size=0.4,3.6,0.4 at=0.8,1,-0.4
+    box block_2 size=0.4,1.4,0.7 at=-0.6,1.4,-0.3
+    box column_5 size=0.4,2.1,0.4 at=-1,1.4,-0.1
+    box column_6 size=0.4,2.1,0.4 at=0.8,1.4,-0.1
+    box column_7 size=0.4,1.1,0.2 at=-0.6,1.4,1.3
+    box block_3 size=1.1,0.7,0.7 at=0.1,1.8,-0.3
+    box block_4 size=0.4,0.7,1.1 at=-1,1.8,0.6
+    box block_5 size=0.6,0.7,1.1 at=0.9,1.8,0.6
+    box block_6 size=1.1,0.7,0.2 at=0.1,1.8,1.3
+    box column_8 size=0.4,2.5,0.4 at=-1,2.1,-0.4
+    box column_9 size=0.2,1.4,0.4 at=1.1,2.1,-0.1
+    box block_7 size=1.4,0.4,1.1 at=-0.1,2.1,0.6
+    box block_8 size=1.1,1.1,0.4 at=0.1,2.5,-0.4
+    box block_9 size=0.4,0.4,0.4 at=-1,2.5,0.3
+    box block_10 size=0.2,0.4,0.4 at=1.1,2.5,0.3
+    box column_10 size=0.4,2.1,0.4 at=0.1,2.8,-0.8
+    box column_11 size=0.4,1.8,0.4 at=-0.6,2.8,-0.4
+    box column_12 size=0.2,1.4,0.4 at=1.1,2.8,-0.4
+    box column_13 size=0.4,1.7,0.4 at=-0.3,3.2,-0.8
+    box column_14 size=0.4,1.7,0.4 at=0.4,3.2,-0.8
+    box column_15 size=0.4,1.4,0.4 at=-0.6,3.5,-0.8
+    box block_11 size=0.4,0.7,0.4 at=-0.3,3.5,-0.4
+    box block_12 size=0.4,0.7,0.4 at=0.4,3.5,-0.4
+    box column_16 size=0.4,1,0.4 at=-1,3.9,-0.8
+    box column_17 size=0.4,1,0.4 at=0.8,3.9,-0.8
+  }
+}
+def Commercial_Resort_Sofa_06_01 : Commercial_Resort_Sofa_06_01 {
+  drop body
+  group body envelope=-1.9,0,-1.9,1.9,3.3,1.9 {
+    box block size=3.8,1.8,3.8 at=0,0,0
+    box block_2 size=3.8,1.1,0.7 at=0,1.8,-1.5
+    box beam size=0.7,0.7,2.9 at=-1.5,1.8,0.2
+    box block_3 size=2,1.1,1.1 at=0.9,1.8,-0.7
+    box block_4 size=0.4,1.1,0.7 at=-0.3,1.8,-0.5
+    box block_5 size=0.6,1.4,1.8 at=1.6,1.8,0.8
+    box block_6 size=2.5,0.4,1.1 at=0.1,1.8,0.8
+    box block_7 size=1.1,0.7,0.4 at=-0.7,2.1,-1
+    box block_8 size=0.7,0.4,2.5 at=-1.5,2.5,0.1
+    box block_9 size=0.4,0.7,0.4 at=-1.7,2.5,1.5
+    box beam_2 size=3.6,0.4,0.7 at=-0.1,2.9,-1.5
+    box block_10 size=0.2,0.4,1.4 at=1.8,2.9,-0.8
+    box block_11 size=0.7,0.4,1.4 at=-1.5,2.9,-0.5
+    box block_12 size=2.1,0.4,0.7 at=0.6,2.9,-0.8
+    box block_13 size=0.7,0.4,0.4 at=0.2,2.9,-0.3
+    box block_14 size=0.4,0.4,0.4 at=1.5,2.9,-0.3
+    box block_15 size=0.4,0.4,1.1 at=-1.7,2.9,0.8
+    box slab size=0.7,0.1,0.4 at=-0.1,3.2,-1
+    box slab_2 size=0.7,0.1,0.4 at=1,3.2,-1
+  }
+}
+def Furniture_AirConditioning_01 : Furniture_AirConditioning_01 {
+  drop body
+  group body envelope=-3.5,0,-5.9,3.5,9.6,5.9 {
+    box beam size=7.1,1.1,0.4 at=0,0,-5.7
+    box beam_2 size=0.4,1.1,11.4 at=-3.3,0,0.2
+    box beam_3 size=0.3,1.1,11.4 at=3.4,0,0.2
+    box beam_4 size=6.4,1.1,0.3 at=0,0,5.7
+    box wall size=6.4,8.9,0.4 at=0,0.7,-5.3
+    box wall_2 size=0.4,8.9,10.7 at=-3,0.7,0.2
+    box wall_3 size=0.4,8.9,10.7 at=3.1,0.7,0.2
+    box wall_4 size=5.7,8.9,0.4 at=0,0.7,5.4
+    box slab size=5.7,0.3,10.4 at=0,9.3,0
+  }
+}
+def Government_Office_CoffeeMachine_01 : Government_Office_CoffeeMachine_01 {
+  drop body
+  group body envelope=-2.8,0,-1.9,2.9,8.6,1.9 {
+    box wall size=5.7,8.6,2.9 at=0,0,-0.4 turn=180
+    box wall_2 size=2.9,8.6,0.4 at=2.7,0,-0.6 turn=90
+    box wall_3 size=2.9,8.6,0.4 at=-2.6,0,-0.5 turn=-90
+    box ceiling size=5.7,0.4,2.9 at=0,0,-0.5
+    box floor size=5.7,0.4,2.9 at=0.2,8.2,-0.5
+    box wall_4 size=1.4,8.6,0.4 at=2.2,0.4,0.4
+    box ramp size=4.3,0.4,1.4 at=-0.4,0.6,1.5 rot=(-1,0,0,64.4)
+    box wall_5 size=1.4,5.7,0.4 at=-2,2.2,1 turn=-51.7
+    box wall_6 size=1.4,2.9,0.4 at=-2.4,0,1.2 turn=-63.3
+    box ramp_2 size=2.9,0.4,1.4 at=-1,1.6,1.6 rot=(1,0,0,24.3)
+  }
+}
+def Building_Dormitory_02_ExterWall_01C : Building_Dormitory_02_ExterWall_01C {
+  drop body
+  group body envelope=-2.2,0,-25.7,2.2,24.8,25.7 {
+    box wall size=15.7,10,0.4 at=-1.9,14.9,-17.8 turn=-90
+    box wall_2 size=15.7,10,0.4 at=-1.9,14.9,17.9 turn=-90
+    box wall_3 size=17.1,11.4,0.1 at=2.2,0,9.2 turn=90
+    box wall_4 size=17.1,11.4,0.1 at=2.2,0,-9.3 turn=90
+  }
+}
+over Building_GlassStair_01 : group envelope=-23.2,0,-4.7,23.2,9.6,4.7 {
+  span span1 from=-21.6,-0.3,0 to=24.4,7.2,0 steps=3 section=9.3,1.5 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_GlassStair_01@1#4"
+  box box1 size=45.4,4.3,0 at=-0.3,3.6,-4.5 rot=(0,0,1,8.3) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_GlassStair_01@1#1"
+  box box2 size=45.4,4.2,0 at=-0.3,3.6,-4.4 rot=(0,0,1,8.5) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_GlassStair_01@1#0"
+  box box3 size=45.4,4.2,0 at=-0.3,3.6,4.5 rot=(0,0,1,8.6) ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_H_Building_FutureTech_GlassStair_01@1#3"
+}

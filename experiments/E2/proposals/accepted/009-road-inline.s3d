@@ -1,0 +1,4 @@
+// layer=edits why=路的中线直接写进 sweep（smooth=true，省掉单独的样条），pin=bottom 让路面贴地、坐标少一位；按俯视图对比把右侧弯道的控制点往 +z 挪 0.35 m
+// retract 36
+// retract 37
+sweep road path=[(-45,0,3.1); (-36.8,0,8.4); (-28.9,0,11.8); (-21.1,0,12.2); (-13.2,0,11.3); (-5.4,0,9.4); (0.8,0,6); (6,0,0)] smooth=true section=9,0.08 pin=bottom mat=asphalt

@@ -1,0 +1,31 @@
+// layer=edits why=细化到 structure（按 δ=0.05 衡量）：类型 Building_Dormitory_02_Ornament_01 → 板件 1.429（23 块），23 个部件；局部分数 3778.98 → 2623.34
+def Building_Dormitory_02_Ornament_01 : Building_Dormitory_02_Ornament_01 {
+  drop body
+  group body envelope=-17.815,0,-15.25,17.815,26.38,15.25 {
+    box floor size=35.71,1.23,31.43 at=0.04,25.15,0.46
+    subtract wall at=0.04,0,14.33 {
+      box body size=35.71,27.14,0.77
+      box hole size=1.43,12.86,2.3 at=-17.14,5.71,0
+      box hole_2 size=15.71,10,2.3 at=-8.57,7.14,0
+    }
+    box wall_2 size=34.29,8.57,0.57 at=-0.31,16.15,12.72
+    box wall_3 size=32.86,1.43,0.57 at=-1.03,24.72,12.72
+    box wall_4 size=1.43,5.71,0.88 at=-16.96,0,14.03 turn=-90
+    box wall_5 size=25.71,11.43,0.88 at=-16.96,15.72,0.46 turn=-90
+    box wall_6 size=1.43,8.57,0.88 at=-16.96,18.57,14.03 turn=-90
+    box wall_7 size=2.86,2.86,0.88 at=-16.96,24.29,-13.82 turn=-90
+    box wall_8 size=10,8.57,0.81 at=10.76,16.39,-11.86 turn=180
+    box wall_9 size=2.86,8.57,0.81 at=-15.67,16.39,-11.86 turn=180
+    box floor_2 size=4.29,0.54,1.43 at=-15.32,16.15,-11.69
+    box floor_3 size=11.43,0.54,1.43 at=11.11,16.15,-11.69
+    box floor_4 size=1.43,0.54,24.29 at=-16.75,16.15,1.17
+    box floor_5 size=1.43,0.54,8.57 at=16.11,16.15,9.02
+    box floor_6 size=31.43,0.54,1.43 at=-0.32,16.15,12.6
+    box wall_10 size=7.14,8.57,0.73 at=15.96,16.39,9.51 turn=90
+    box wall_11 size=1.43,8.57,0.73 at=15.96,16.39,-11.92 turn=90
+    box wall_12 size=1.43,27.14,0.36 at=17.47,0,14.53 turn=90
+    box wall_13 size=28.57,2.86,0.36 at=17.47,24.29,-0.47 turn=90
+    box floor_7 size=35.71,0.74,1.43 at=0.05,0,14.02
+    box wall_14 size=35.71,1.43,0.36 at=-0.05,25.15,-15.08 turn=180
+  }
+}

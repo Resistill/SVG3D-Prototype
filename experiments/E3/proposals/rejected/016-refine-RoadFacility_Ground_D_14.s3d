@@ -1,0 +1,7 @@
+// layer=edits why=细化到 structure（按 δ=0.05 衡量）：物体 RoadFacility_Ground_D_14 → 面积前 90%（4/12 块），4 个部件；局部分数 768.56 → 808.92
+over RoadFacility_Ground_D_14 : group envelope=-20.93,0,-45.82,20.93,14.86,45.82 {
+  box box3 size=57.44,11.72,24.21 at=-8.83,0,0.11 turn=-90 mat=whitebox ~src="MidMeshGroup/MidMeshGroup_50_-37/SM_I_RoadFacility_Ground_D_14#6"
+  box box1 size=91.42,10.29,32.96 at=4.45,0,0.11 turn=-90 mat=whitebox ~src="MidMeshGroup/MidMeshGroup_50_-37/SM_I_RoadFacility_Ground_D_14#11"
+  box box2 size=58.71,13.79,14.57 at=9.5,1.08,0.11 turn=-89.4 mat=whitebox ~src="MidMeshGroup/MidMeshGroup_50_-37/SM_I_RoadFacility_Ground_D_14#9"
+  box box4 size=34.58,3.29,6.43 at=0,1.43,0.11 turn=-90 mat=whitebox ~src="MidMeshGroup/MidMeshGroup_50_-37/SM_I_RoadFacility_Ground_D_14#7"
+}

@@ -1,0 +1,15 @@
+// layer=edits why=细化到 structure（按 δ=0.05 衡量）：类型 Furniture_AirConditioning_01 → 体素 0.357（9 块），9 个部件；局部分数 1769.67 → 1111.31
+def Furniture_AirConditioning_01 : Furniture_AirConditioning_01 {
+  drop body
+  group body envelope=-3.53,0,-5.88,3.53,9.57,5.88 {
+    box beam size=7.06,1.07,0.36 at=0,0,-5.7
+    box beam_2 size=0.36,1.07,11.4 at=-3.35,0,0.18
+    box beam_3 size=0.28,1.07,11.4 at=3.39,0,0.18
+    box beam_4 size=6.43,1.07,0.33 at=0.04,0,5.71
+    box wall size=6.43,8.86,0.36 at=0.04,0.71,-5.34
+    box wall_2 size=0.36,8.86,10.71 at=-3,0.71,0.19
+    box wall_3 size=0.36,8.86,10.71 at=3.08,0.71,0.19
+    box wall_4 size=5.71,8.86,0.36 at=0.04,0.71,5.37
+    box slab size=5.71,0.28,10.36 at=0.04,9.29,0.01
+  }
+}
