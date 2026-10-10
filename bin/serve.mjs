@@ -22,4 +22,8 @@ createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream', 'Cache-Control': 'no-store', ...(html ? { 'Clear-Site-Data': '"cache"' } : {}) });
     res.end(await readFile(file));
   } catch { res.writeHead(404, { 'Cache-Control': 'no-store' }).end('not found'); }
-}).listen(port, '127.0.0.1', () => console.log(`SVG3D 预览：http://localhost:${port}/`));
+}).on('error', (e) => {
+  if (e.code === 'EADDRINUSE') console.log(`端口 ${port} 已被占用——预览服务可能已经在运行，直接打开 http://localhost:${port}/ 即可；或者换个端口：node bin/serve.mjs ${port + 1}`);
+  else console.error(e.message);
+  process.exitCode = 1;
+}).listen(port, '127.0.0.1', () => console.log(`SVG3D 预览：http://localhost:${port}/\n打开工程：http://localhost:${port}/index.html?file=work/<工程>/scene.s3d`));
