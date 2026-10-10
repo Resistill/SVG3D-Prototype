@@ -438,7 +438,7 @@ M0（最小闭环）、M0c（E1 之后的修正）、逆向档位完成；实战
 2. **几何词汇（4.9）**（台阶完成，见“C2 台阶”）：`steps`（楼梯）、`revolve`（轴对称）、`sweep`（截面沿曲线）的拟合；曲面锚点与地形取点（`on=terrain[u,1,w]`）。
 3. **M2 外部模型**：ABeautifulGame、Kenney 模块化场景（下载需要逐个征得同意）。
 4. **M3 规模**：stress 示例（1e4 / 1e5 部件）、分块逆向与局部校验。宿舍区 2000 部件现在 4 s，还没测过 1e4 以上。
-5. **4.8 浏览器内逆向**、**4.10 事实提供者注册表**（walkable / reach / sees）。
+5. ~~**4.8 浏览器内逆向**、**4.10 事实提供者注册表**~~（完成，见“C5 浏览器内逆向与事实提供者”）（walkable / reach / sees）。
 6. **E1 重跑**：在现在的工具上让子 agent 再跑一次 spaceport L2，以及在宿舍区上跑一次（没有真值，只看分数与渲染对比）。
 
 ### A1 场景单位（2026-10-10）
@@ -547,3 +547,15 @@ M0（最小闭环）、M0c（E1 之后的修正）、逆向档位完成；实战
 - **旋转体**（4.9.4）：`fitRevolve`：横截面接近圆形的坐标系里沿对称轴分 24 箱取最大半径得外轮廓（两端只看紧贴端面的点，尖顶的半径是 0），Douglas–Peucker 简化到最大半径的 1%，写成 `revolve profile=[(r,y); …]`（局部 y 是对称轴，原点在轴与 y=0 的交点）；误差是采样点到旋转面的径向距离，比基本体好、轮廓不超过 16 个点才用；网格面积不到旋转面面积的 60% 的不算（螺旋扶手曾被当成半径 9.48 的整个圆柱面）。语义档不用（灰盒一律用基本体）。spaceport 的整流罩：底部半径 2、高 7、尖顶 0.21（原文 `[(2,0); …; (0,7)]`）。阵列、镜像的尺寸签名改为用正则取全部数字（`profile=[…]` 这样的值以前会变成 NaN）。
 - 没做：带内凹的旋转体（水池、碗：外轮廓法得到的是实心体，误差大而落选）；扫掠（sweep）；曲面锚点与地形取点。
 
+
+### C5 浏览器内逆向与事实提供者（子 agent，2026-10-10）
+
+- **事实提供者注册表（4.10）**：`deriveFacts` 改成依次运行提供者 `{ name, rels, derive(objs, ctx) → facts }`。`objs` 是参与推导的物体（叶子与布尔组，带 path、kind、世界变换、世界凸块与包围盒、approx / boxy / convex）；`ctx` 给 `eps`、`metre`（每米多少场景单位，由 `factEps / FACT_EPS` 推出）、`options`（`compile` 的 `factOptions[名字]`）、`pairs()`（粗筛的物体对）、`gapOf()` 与凸块几何工具。原来的五种是默认的 `contact`，输出逐条不变（`test/fixtures/spaceport.facts.json` 是改造前的 spaceport 事实，测试按 JSON 逐条比；rotation / curves / basics / semantics / spaceport_edit 改造前后的哈希也一致）。每条事实加 `provider`；一元事实的 `b` 为 null（`buildRelations` 跳过它，不进集合函数）。`registerFactProvider(p)` 注册、`compile(src, { factProviders: [名字或对象…] })` 打开，没注册的名字报错并退回默认；一个提供者出错只记一条编译错误，不影响别的。
+- **walkable 示例**（默认不启用）：局部上方向与竖直夹角 ≤ 10°、顶面上均匀取格点（约 0.5 m 一格，每边 2–12 个，点要落在物体自己的凸块里，圆柱的顶面是圆的），从格点往上 2 m 的竖直线段不穿过别的物体就算空着，空着的面积 ≥ 0.36 m² 记 `X walkable`（带 area、share、clearance）。凸块是近似的（旋转体、网格的外包络）默认跳过。长度按米乘 `ctx.metre`，厘米场景结果相同（测试）。spaceport 上 68 条：地面、发射台、塔的各层平台、机库屋顶、螺旋楼梯的踏步……没有 `reach` / `sees`。
+- **界面**：「空间事实」面板按提供者分组（只有 contact 时与以前一样），上方勾选额外的提供者（记在 localStorage）；选中面板的关系列表显示一元事实。面板没打开时不生成事实列表（宿舍区一万多条）。
+- **浏览器内逆向（4.8）**：「逆向 GLB…」或把 `.glb` 拖进页面 → Worker 里 `WebIO.readBinary` + `partsOfDocument` + `reverse()`（`src/reverse-glb.js`，与 `bin/reverse.mjs` 同样的默认值：level 取自文件名、split auto）→ 作为没保存的 `scratch/<名字>.s3d` 打开，「下载 .s3d」取走；网格引用指向拖入的文件（预先放进加载器的缓存）。写回工程的 `base.s3d` 没做（工程的逆向仍走命令行 / `/api/run reverse`）。
+  - **模块 Worker 不认页面的 import map**（Chrome 152 实测），而 `tools/*.mjs` 里有 `'three'`、`'@gltf-transform/core'`、`'node:fs'` 这类裸名字，又不能改那些文件。做法（`src/shim-worker.js`）：经典 Worker 先 `importScripts` es-module-shims 2.6.2（Worker 里是 shim 模式），把页面的 import map 加上 `node:fs`（同步 XHR 读文件，`tools/eval.mjs` 加载时读 `lib/semantics.s3d`）、`node:module`（空的 `registerHooks`）两个替身交给它；`process.env` 给一个空对象。three-mesh-bvh 的打包产物里有一行“从自己导入”（`import { BVH as BVH$1 } from 'three-mesh-bvh'`），es-module-shims 按环处理时求值顺序不对（`Class extends value undefined`），加载时用 fetch 钩子把这种自引用去掉、别名换回本地名字（`patchSelfImports`，对任何映射到 URL 的包都适用）。`@gltf-transform/core` 用 jsDelivr 的 `+esm`（它的依赖 property-graph 改写成绝对地址），也加进了页面的 import map。
+  - **验收**：spaceport 导出的 L0 / L1 / L2 × 精细 / 结构 / 语义 9 种，浏览器结果与 `node bin/reverse.mjs … --fresh` 逐字节相同（srcFile 一致）；宿舍区 `dorm.glb`（2000 部件，语义档，unit 0.28）也相同，浏览器 Worker 里 3.2 s（命令行 3.9 s）。Node 里的测试（`test/browser.test.mjs`）比 `reverseGlb`（WebIO 读字节）与 `readParts`（NodeIO 读文件）的结果。第一次加载 Worker 要从 CDN 取 three、gltf-transform、es-module-shims。
+- **编译放进 Worker**：`src/compile-worker.js` 是普通的模块 Worker（s3d.js 不 import 任何东西），文件表 `{路径: 文本}` 代替 resolve 传过去，结果结构化克隆回主线程（宿舍区克隆约 30 ms）。`src/compile-client.js` 只保留最新的请求（正在编译时来的请求合并成一个，被取代的得到 null，`run()` 直接返回），建不了 Worker 时退回主线程同步编译。宿舍区（4552 个物体）：编译约 250 ms 在 Worker 里，主线程最长的任务约 120 ms（setScene 与对象树）。打字时的等待按主线程上的耗时放宽。
+- **相机预设一致**：`VIEWS` 与 `camera()` 移到 `src/views.js`，`tools/raster.mjs` 原样重新导出（行为不变）。`Viewer.setView(preset)` 把交互相机切到预设，`Viewer.snapshot(preset, { size, box, focus })` 按 raster 的相机渲染正方形 PNG。视图右上角是预设按钮、「快照」，工程模式下「离屏渲染」调 `/api/run render`（把界面的取景范围作为 `box` 传过去，隔离视图里加 `focus`），两张图并排、下面是编号图例（点击选中）。宿舍区 iso / top / left 两张图前景轮廓的 IoU 0.92–0.95（差别是雾、描边与编号标签）。没有单独的 `/api/render` 接口。
+- **没做 / 已知问题**：`reach`、`sees` 提供者；工具侧（`inspect`、`outline`、`eval`）还假设事实都是二元的，打开一元提供者之后 `tools/agent.mjs` 的 inspect 会在 `f.b` 为 null 时出错（工具默认不打开，没改那些文件）；score / raster 放进浏览器 Worker（4.8 第二条）；浏览器逆向不读工程的 `decisions.s3d`、没有 previous（稳定命名）；界面快照里有雾，与 raster 的平涂着色观感不同，取景相同。

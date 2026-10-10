@@ -198,7 +198,8 @@ export const COMMANDS = {
         return {
           path, kind: n.kind, file: n.file, line: n.line, statement: lineOf(n), types: n.types, of: n.of, tags: n.tags, concepts: n.concepts, meta: n.meta,
           geom: it?.geom ?? null, material: it?.material ?? null, center: ctr(n.tight ?? n.box), size: ext(n.tight ?? n.box),
-          facts: r.facts.filter((f) => inside(f.a) !== inside(f.b) && (inside(f.a) || inside(f.b))).map((f) => ({ rel: f.rel, a: f.a, b: f.b, gap: f.gap })).slice(0, 40),
+          // 一元事实（b 为空，例如 walkable 提供者的 X walkable）只看主体
+          facts: r.facts.filter((f) => (f.b == null ? inside(f.a) : inside(f.a) !== inside(f.b) && (inside(f.a) || inside(f.b)))).map((f) => ({ rel: f.rel, a: f.a, b: f.b, gap: f.gap, ...(f.provider && f.provider !== 'contact' ? { provider: f.provider } : {}) })).slice(0, 40),
           groups, sameType: sameType && { type: n.types[0], count: sameType.length, examples: sameType.slice(0, 8) },
           score: sc?.objects?.filter((o) => inside(o.path)) ?? null,
         };

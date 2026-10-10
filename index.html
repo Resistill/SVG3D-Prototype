@@ -10,7 +10,8 @@
     "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js",
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.2/examples/jsm/",
     "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.9/build/index.module.js",
-    "three-bvh-csg": "https://cdn.jsdelivr.net/npm/three-bvh-csg@0.0.18/build/index.module.js"
+    "three-bvh-csg": "https://cdn.jsdelivr.net/npm/three-bvh-csg@0.0.18/build/index.module.js",
+    "@gltf-transform/core": "https://cdn.jsdelivr.net/npm/@gltf-transform/core@4.5.0/+esm"
   }
 }
 </script>
@@ -29,6 +30,8 @@
   header h1 span { color: var(--accent); }
   header .sub { color: var(--mute); }
   #status { margin-left: auto; color: var(--mute); font-family: var(--mono); font-size: 12px; }
+  .revgrp { display: inline-flex; gap: 4px; align-items: center; }
+  body.dropping #view::after { content: '松开：在浏览器里逆向这个 .glb'; position: absolute; inset: 12px; display: grid; place-items: center; border: 2px dashed var(--accent); border-radius: 10px; background: rgba(21,24,28,.6); color: #ffd2b0; font-size: 15px; pointer-events: none; }
   #status.bad { color: var(--err); }
   select, button { background: #262b33; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; font: inherit; cursor: pointer; }
   button:hover, select:hover { border-color: #3b4450; }
@@ -97,6 +100,23 @@
   #isobar b { font-family: var(--mono); color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40ch; }
   #isobar label { color: #c8ced6; display: flex; gap: 4px; align-items: center; cursor: pointer; }
   #isobar button { padding: 1px 8px; font-size: 12px; }
+  /* 相机预设（与 raster.mjs 同一份）、快照与离屏渲染对照 */
+  #viewbar { position: absolute; right: 10px; top: 8px; display: flex; gap: 2px; align-items: center; padding: 3px; border-radius: 6px; background: rgba(20,22,26,.78); }
+  #viewbar button { padding: 1px 7px; font: 11.5px var(--mono); border-radius: 4px; }
+  #viewbar .sep { width: 1px; height: 16px; background: var(--line); margin: 0 3px; }
+  #snap { position: absolute; inset: 40px 10px 10px; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 8px; background: rgba(20,22,26,.96); border: 1px solid var(--line); z-index: 5; overflow: auto; }
+  #snap[hidden] { display: none; }
+  #snap .sh { display: flex; gap: 10px; align-items: center; font-size: 12px; color: var(--mute); }
+  #snap .sh b { color: var(--text); font-family: var(--mono); }
+  #snap .sh button { margin-left: auto; padding: 1px 8px; font-size: 12px; }
+  #snap .imgs { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+  #snap figure { margin: 0; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  #snap figure img { width: 100%; aspect-ratio: 1; object-fit: contain; background: #e8e8ea; border-radius: 4px; }
+  #snap figcaption { font-size: 11.5px; color: var(--mute); }
+  #snap figcaption a { color: var(--kw); margin-left: 6px; }
+  #snap .legend { display: flex; flex-wrap: wrap; gap: 3px; font: 11.5px var(--mono); }
+  #snap .legend span { padding: 0 5px; border-radius: 3px; background: #262b33; cursor: pointer; }
+  #snap .legend span b { color: var(--accent); margin-right: 4px; }
   .ins .isob { margin-left: 6px; padding: 0 8px; font-size: 11px; }
   #objects li.sel { background: #3a2a1c; }
   #objects li.inst .nm { color: var(--mute); }
@@ -123,6 +143,11 @@
   #facts .kw { color: var(--kw); }
   #facts .ref { color: var(--ref); }
   #facts .empty, .note { color: var(--mute); padding: 8px 12px; margin: 0; }
+  #facts h3 { margin: 10px 12px 2px; font-size: 12px; color: var(--accent); font-weight: 600; }
+  #facts h3 small { color: var(--mute); font-weight: 400; margin-left: 6px; }
+  #fact-providers { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding: 0 12px 4px; color: var(--mute); font-size: 12px; }
+  #fact-providers label { display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
+  #fact-providers[hidden] { display: none; }
   #sem { padding: 0 0 12px; }
   #sem h4 { margin: 10px 12px 4px; font-size: 11.5px; color: var(--mute); font-weight: 500; }
   .concept { padding: 4px 12px 6px; border-bottom: 1px solid #1f242b; }
@@ -207,6 +232,11 @@
   <button id="fit">适配视角</button>
   <button id="fly" title="漫游：点击画面锁定鼠标，鼠标转视角，WASD 移动，Q/E 升降，Shift 加速，滚轮调速，Esc 退出">漫游</button>
   <button id="export">导出 GLB</button>
+  <span class="revgrp" title="浏览器内逆向：选择或拖入一个 .glb，在 Worker 里逆向成 .s3d（与命令行 bin/reverse.mjs 结果相同），作为一个没保存的新文件打开">
+    <button id="rev-open">逆向 GLB…</button><select id="rev-fid" aria-label="逆向档位"><option value="detail">精细</option><option value="structure">结构</option><option value="semantic">语义</option></select>
+    <button id="rev-save" hidden title="把逆向结果（含编辑器里的修改）下载为 .s3d">下载 .s3d</button>
+    <input type="file" id="rev-file" accept=".glb,model/gltf-binary" hidden>
+  </span>
   <span id="status"></span>
 </header>
 <div id="projbar" hidden>
@@ -235,6 +265,8 @@
   <section id="right">
     <div id="view"><div id="tip" hidden></div><div class="hint">拖动旋转 · 右键平移 · 滚轮缩放 · 点击物体定位到源码（Shift+点击：多选 · Alt+点击：类型的 def）</div>
       <div id="isobar" hidden><span>只看</span><b id="iso-name"></b><label title="叠加这个物体对应的源模型部件（score.json 的 src 与网格引用）"><input type="checkbox" id="iso-src">源模型部件</label><button id="iso-exit" title="显示全部（Esc）">退出隔离</button></div>
+      <div id="viewbar" title="相机预设：与离屏渲染 render --view= 是同一份（src/views.js），人与 AI 说“iso 视角左上角那个”指的是同一张图"><span id="views"></span><span class="sep"></span><button id="snap-btn" title="按当前预设视角截一张正方形快照（相机与 raster.mjs 相同）">快照</button><button id="raster-btn" hidden title="调 render（tools/raster.mjs，AI 看到的那张图），与界面快照并排对照；隔离视图里只对准隔离的物体">离屏渲染</button></div>
+      <div id="snap" hidden><div class="sh"><b id="snap-title"></b><span id="snap-note"></span><button id="snap-close">关闭</button></div><div class="imgs" id="snap-imgs"></div><div class="legend" id="snap-legend"></div></div>
     </div>
     <div id="panel">
       <div class="tabs">
@@ -263,7 +295,8 @@
         <div id="sem"></div>
       </div>
       <div class="pane" id="facts-pane" hidden>
-        <p class="note">从求解后的几何中反向读出的关系，用的是同一套语言。点击高亮两者。</p>
+        <p class="note">从求解后的几何中反向读出的关系，用的是同一套语言，按提供者分组。点击高亮。</p>
+        <div id="fact-providers" title="事实提供者（docs/PLAN2.md 4.10）：contact 总是打开；别的按需打开，会让编译变慢"></div>
         <ul id="facts"></ul>
       </div>
       <div class="pane" id="cheat" hidden>

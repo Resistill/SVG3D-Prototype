@@ -4,6 +4,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { worldGeom, itemGeometry, makeEvaluator } from './geometry.js';
+import { VIEWS, camera as presetCam } from './views.js';
 
 export class Viewer {
   constructor(el) {
@@ -382,6 +383,47 @@ export class Viewer {
     for (const p of paths) { const n = this.nodeMap?.get(p); if (n?.box) box.union(new THREE.Box3(new THREE.Vector3(...n.box.min), new THREE.Vector3(...n.box.max))); }
     return box.isEmpty() ? null : box;
   }
+  // ── 相机预设（与 tools/raster.mjs 同一份：src/views.js）──
+  // 取景范围：整个场景的精确包围盒（逐顶点，与 raster 按三角形求的一致）；返回 { min, max } 数组形式，可以原样传给 render --box
+  sceneBox() {
+    const b = new THREE.Box3().setFromObject(this.content, true);
+    return b.isEmpty() ? null : { min: b.min.toArray(), max: b.max.toArray() };
+  }
+  // 预设相机：view ∈ VIEWS；box 不给时取整个场景；focus 为 true 时按聚焦取景（2.4 倍半径，同 render --focus）
+  presetCamera(view = 'iso', { box = null, focus = false } = {}) {
+    const b = box ?? this.sceneBox() ?? { min: [-1, -1, -1], max: [1, 1, 1] };
+    return { ...presetCam(b, VIEWS[view] ? view : 'iso', focus), box: b };
+  }
+  // 把交互相机切到预设视角（之后照常可以拖动）。画面不是正方形时横向看到的比 raster 的正方形图多一些，竖直方向的视野相同
+  setView(view = 'iso', opts = {}) {
+    if (this.fly.on) this.setFly(false);
+    const cam = this.presetCamera(view, opts);
+    this.controls.target.set(...cam.target);
+    this.camera.position.set(...cam.eye);
+    this.camera.fov = cam.fov;
+    this.camera.far = Math.max(3000, cam.r * 10);
+    this.camera.updateProjectionMatrix();
+    this.controls.update();
+    this.view = view;
+    return cam;
+  }
+  // 预设视角的快照（PNG data URL）：正方形、size 像素、相机与 raster.mjs 完全相同，可以与 render 的 PNG 并排对照
+  snapshot(view = 'iso', { size = 1024, box = null, focus = false } = {}) {
+    const cam = this.presetCamera(view, { box, focus });
+    const c = new THREE.PerspectiveCamera(cam.fov, 1, cam.near, Math.max(3000, cam.r * 10));
+    c.position.set(...cam.eye);
+    c.lookAt(...cam.target);
+    const r = this.renderer, ratio = r.getPixelRatio(), prev = r.getSize(new THREE.Vector2());
+    r.setPixelRatio(1);
+    r.setSize(size, size, false);
+    r.render(this.scene, c);
+    const url = r.domElement.toDataURL('image/png');
+    r.setPixelRatio(ratio);
+    r.setSize(prev.x, prev.y, false);
+    r.render(this.scene, this.camera);
+    return { url, view, box: cam.box, camera: { eye: cam.eye, target: cam.target, fov: cam.fov } };
+  }
+
   // 写进 state/selection.json 的相机（AI 想从同一个角度看时用）
   cameraState() {
     const r = (v) => v.toArray().map((x) => +x.toFixed(3));

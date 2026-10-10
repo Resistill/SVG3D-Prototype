@@ -1,12 +1,16 @@
 // 预览器界面：编辑器 ⇄ 编译 ⇄ 3D 视图 ⇄ 对象树 / 空间事实；工程模式下还有选中面板、工程栏、提议（src/collab.js）
-import { compile, FACT_EPS } from './s3d.js';
+import { compile, FACT_EPS, factProviderList } from './s3d.js';
 import { Viewer } from './render.js';
 import { createCollab, detectApi, esc } from './collab.js';
+import { shimWorker, rpc } from './shim-worker.js';
+import { createCompiler } from './compile-client.js';
+import { VIEWS } from './views.js';
 
 const $ = (s) => document.querySelector(s);
 const src = $('#src'), gutter = $('#gutter'), errorsEl = $('#errors'), statusEl = $('#status');
 const objList = $('#objects'), factList = $('#facts'), semEl = $('#sem'), tip = $('#tip');
 const viewer = new Viewer($('#view'));
+const compileAsync = createCompiler();
 const EXAMPLES = {
   semantics: '变量 · 集合 · 语义', spaceport: '航天基地', spaceport_edit: '航天基地 · 修改层', spaceport_blueprint: '航天基地 · 蓝图风格',
   curves: '曲线 · 镜像 · 旋转', rotation: '三维旋转', basics: '基础关系',
@@ -65,7 +69,8 @@ src.addEventListener('input', () => {
   if (src.readOnly) return;
   setFile(active, src.value);
   const wasDirty = dirty.has(active);
-  if (fileParam) dirty.add(active); else if (active === rootFile()) store.set('s3d:' + current, src.value);
+  if (isScratch()) scratch.text = src.value; // 逆向结果不落盘，也不进浏览器缓存；「下载 .s3d」取走
+  else if (fileParam) dirty.add(active); else if (active === rootFile()) store.set('s3d:' + current, src.value);
   // 文件列表只在“未保存”标记或行数变了时重建
   const n = lineCounts.get(active);
   if (!wasDirty || n !== shownCounts.get(active)) renderFileList();
@@ -75,7 +80,10 @@ src.addEventListener('input', () => {
 // 打开任意文件：index.html?file=work/xxx/scene.s3d（路径相对于服务根目录；工程的组合根会顺带加载各层）；?project=work/xxx 等价于打开它的 scene.s3d
 const params = new URLSearchParams(location.search);
 const fileParam = params.get('file') ?? (params.get('project') ? params.get('project').replace(/\/*$/, '/scene.s3d') : null);
-const rootFile = () => fileParam ?? `examples/${current}.s3d`;
+// 浏览器内逆向的结果是一个没保存的新文件（scratch，见下面“浏览器内逆向”）
+let scratch = null;
+const isScratch = () => current === 'scratch' && !!scratch;
+const rootFile = () => (isScratch() ? scratch.path : fileParam ?? `examples/${current}.s3d`);
 // 多文件：总是编译组合根；编辑器显示其中一个文件（active），被 import 的文件也能看、能改
 const files = new Map(), dirty = new Set(), etags = new Map(), lineCounts = new Map(), shownCounts = new Map();
 let active = null;
@@ -228,21 +236,31 @@ async function run() {
   await preload(files.get(rootFile()), rootFile());
   renderFileList();
   const t0 = performance.now();
+  // 编译在 Worker 里（src/compile-client.js）：各文件的文本一起传过去；正在编译时又改了，只编最新的一版，被取代的这次直接返回
   // 工程的场景单位不是米时，空间事实的容差（FACT_EPS，按米）换算成场景单位——与工具（tools/project.mjs）一致
-  const r = compile(files.get(rootFile()), { file: rootFile(), resolve: (p) => files.get(p), ...(project ? { factEps: FACT_EPS / project.unit } : {}) });
+  const root = rootFile();
+  let out;
+  try { out = await compileAsync(files.get(root), { file: root, files: Object.fromEntries(files), factProviders, ...(project ? { factEps: FACT_EPS / project.unit } : {}) }); } catch (e) {
+    statusEl.textContent = `编译器出错：${e.message.split('\n')[0]}`;
+    statusEl.classList.add('bad');
+    return;
+  }
+  if (!out || root !== rootFile()) return;
+  const r = out.result;
   const t1 = performance.now();
   // 网格引用的 src 相对组合根所在的目录（工程目录；与工具的约定一致）
   viewer.srcBase = new URL(rootFile(), location.href).href;
   const warn = viewer.setScene(r);
   const t2 = performance.now();
-  lastCost = t2 - t0;
+  // 打字时的等待按主线程上的耗时放宽（编译本身在 Worker 里，不卡界面）
+  lastCost = out.worker ? t2 - t1 : t2 - t0;
   last = r;
   renderGutter();
   errorsEl.innerHTML = [...r.errors.map((e) => `<div class="e" data-file="${esc(e.file ?? '')}" data-line="${e.line ?? ''}"><b>${e.file && e.file !== rootFile() ? esc(e.file) + ' ' : ''}第 ${e.line ?? '?'} 行</b>${esc(e.message)}</div>`),
     ...warn.map((w) => `<div class="e w">${esc(w)}</div>`)].join('');
   errorsEl.hidden = !r.errors.length && !warn.length;
   const failed = r.checks.filter((c) => !c.ok).length;
-  statusEl.textContent = `${r.nodes.length} 个对象 · ${r.items.length} 个实体 · ${r.concepts.length} 个概念 · ${r.facts.length} 条空间事实${failed ? ` · ${failed} 项检查未通过` : ''} · 求解 ${(t1 - t0).toFixed(0)}ms · 建模 ${(t2 - t1).toFixed(0)}ms`;
+  statusEl.textContent = `${r.nodes.length} 个对象 · ${r.items.length} 个实体 · ${r.concepts.length} 个概念 · ${r.facts.length} 条空间事实${failed ? ` · ${failed} 项检查未通过` : ''} · 求解 ${out.ms.toFixed(0)}ms${out.worker ? '（Worker）' : ''} · 建模 ${(t2 - t1).toFixed(0)}ms`;
   statusEl.classList.toggle('bad', r.errors.length > 0);
   $('#sem-badge').textContent = failed ? `✗${failed}` : '';
   renderObjects(r);
@@ -347,15 +365,48 @@ semEl.addEventListener('click', (e) => {
   if (head) { const ps = JSON.parse(head.dataset.paths), at = head.closest('[data-line]'); if (ps.length) select(ps, { line: head.classList.contains('match') ? 0 : +at.dataset.line, file: at.dataset.file }); }
 });
 
+// ── 空间事实：按提供者分组（docs/PLAN2.md 4.10），组内按关系 ──
+// contact 总是打开；别的提供者（walkable 等）在面板上方勾选，记在浏览器里，重新编译时传给 compile 的 factProviders
+const PROVIDERS = factProviderList();
+const PROVIDER_TITLE = { contact: '接触 contact', walkable: '可行走 walkable' };
+const REL_TITLE = { on: '支撑 on', against: '贴面 against', inside: '包含 inside', touching: '接触 touching', intersects: '相交 intersects', walkable: '可行走 walkable' };
+let factProviders = (() => {
+  const on = new Set((store.get('s3d:factProviders') ?? '').split(',').filter(Boolean));
+  return PROVIDERS.filter((p) => p.default || on.has(p.name)).map((p) => p.name);
+})();
+const provEl = $('#fact-providers');
+function renderProviderToggles() {
+  provEl.hidden = !PROVIDERS.some((p) => !p.default);
+  provEl.innerHTML = '<span>提供者</span>' + PROVIDERS.map((p) => `<label><input type="checkbox" data-p="${esc(p.name)}" ${factProviders.includes(p.name) ? 'checked' : ''} ${p.default ? 'disabled' : ''}>${esc(p.name)}</label>`).join('');
+}
+provEl.addEventListener('change', () => {
+  const on = new Set([...provEl.querySelectorAll('input:checked')].map((x) => x.dataset.p));
+  factProviders = PROVIDERS.filter((p) => p.default || on.has(p.name)).map((p) => p.name);
+  store.set('s3d:factProviders', PROVIDERS.filter((p) => !p.default && on.has(p.name)).map((p) => p.name).join(','));
+  run();
+});
+renderProviderToggles();
+// 面板没打开时不生成（大场景上万条事实，每次编译都拼一遍 HTML 也要几十毫秒），切到面板时再补
+let factsFor = null;
 function renderFacts(r) {
-  const groups = { on: '支撑 on', against: '贴面 against', inside: '包含 inside', touching: '接触 touching', intersects: '相交 intersects' };
-  factList.innerHTML = Object.entries(groups).map(([k, title]) => {
-    const fs = r.facts.filter((f) => f.rel === k);
-    if (!fs.length) return '';
-    return `<h4>${title} <small>${fs.length}</small></h4>` + fs.map((f) => {
-      const parts = f.text.split(' ');
-      return `<li data-a="${esc(f.a)}" data-b="${esc(f.b)}"><code><span class="ref">${esc(parts[0])}</span> <span class="kw">${esc(parts[1])}</span> <span class="ref">${esc(parts.slice(2).join(' '))}</span></code></li>`;
+  if ($('#facts-pane').hidden) { factsFor = r; return; }
+  factsFor = null;
+  const provs = r.factProviders ?? [...new Set(r.facts.map((f) => f.provider ?? 'contact'))];
+  const li = (f) => {
+    // 一元事实（X walkable）只有 a；二元事实按“A 关系 B”着色
+    const [a, kw, ...rest] = f.text.split(' ');
+    const title = f.area != null ? ` title="空着的顶面 ${f.area}（占 ${Math.round(f.share * 100)}%）"` : '';
+    return `<li data-a="${esc(f.a)}"${f.b != null ? ` data-b="${esc(f.b)}"` : ''}${title}><code><span class="ref">${esc(a)}</span> <span class="kw">${esc(kw ?? '')}</span> <span class="ref">${esc(rest.join(' '))}</span></code></li>`;
+  };
+  factList.innerHTML = provs.map((name) => {
+    const fs = r.facts.filter((f) => (f.provider ?? 'contact') === name);
+    const rels = [...new Set([...(PROVIDERS.find((p) => p.name === name)?.rels ?? []), ...fs.map((f) => f.rel)])];
+    const body = rels.map((k) => {
+      const xs = fs.filter((f) => f.rel === k);
+      return xs.length ? `<h4>${esc(REL_TITLE[k] ?? k)} <small>${xs.length}</small></h4>` + xs.map(li).join('') : '';
     }).join('');
+    // 只有一个提供者时不加组标题（与以前的样子相同）
+    return provs.length > 1 ? `<h3>${esc(PROVIDER_TITLE[name] ?? name)}<small>${fs.length} 条</small></h3>` + (body || '<p class="empty">没有</p>') : body;
   }).join('') || '<p class="empty">没有推导出空间事实</p>';
 }
 
@@ -422,7 +473,7 @@ document.addEventListener('keydown', (e) => {
 });
 factList.addEventListener('click', (e) => {
   const li = e.target.closest('li');
-  if (li) select([li.dataset.a, li.dataset.b]);
+  if (li) select(li.dataset.b != null ? [li.dataset.a, li.dataset.b] : [li.dataset.a]);
 });
 // 类型实例里的部件：定位到放置这个实例的语句（def 是共享的，改它会改所有实例）；按住 Alt 点击才跳到 def
 function locate(path, toDef) {
@@ -454,6 +505,7 @@ function showPane(id) {
   document.querySelectorAll('.pane').forEach((p) => { p.hidden = p.id !== id; });
   if (id === 'prop-pane') { collab?.loadProposals(); collab?.loadInbox(); }
   if (id === 'objects-pane') markSelected(selected);
+  if (id === 'facts-pane' && factsFor) renderFacts(factsFor);
 }
 for (const b of document.querySelectorAll('.tabs button')) b.addEventListener('click', () => showPane(b.dataset.pane));
 
@@ -464,13 +516,16 @@ async function load(name, { reset } = {}) {
   current = name;
   sel.value = name;
   if (reset) store.del('s3d:' + name);
-  const saved = fileParam ? null : store.get('s3d:' + name);
+  if (reset && isScratch()) scratch.text = scratch.orig;
+  const saved = fileParam || isScratch() ? null : store.get('s3d:' + name);
   // ?file= 打开的文件总是从磁盘读（它可能刚被工具改过），不用浏览器里的缓存
   files.clear(); dirty.clear(); etags.clear(); lineCounts.clear(); showConflicts([]);
-  try { setFile(rootFile(), saved ?? await fetchText(rootFile())); } catch (e) { setFile(rootFile(), ''); statusEl.textContent = `读取失败：${e.message}`; }
+  if (isScratch()) setFile(rootFile(), scratch.text);
+  else try { setFile(rootFile(), saved ?? await fetchText(rootFile())); } catch (e) { setFile(rootFile(), ''); statusEl.textContent = `读取失败：${e.message}`; }
   active = null;
   openFile(rootFile());
-  $('#reset').hidden = saved == null;
+  $('#reset').hidden = isScratch() ? scratch.text === scratch.orig : saved == null;
+  $('#rev-save').hidden = !isScratch();
   viewer.firstFrame = true;
   select(null, { silent: true });
   await run();
@@ -491,6 +546,113 @@ $('#curves').addEventListener('click', (e) => {
   e.target.classList.toggle('on', viewer.curveLayer.visible);
 });
 $('#export').addEventListener('click', () => viewer.exportGLB(current));
+
+// ── 相机预设、快照与离屏渲染（docs/PLAN2.md 4.7 多视角一致）──
+// 预设与 tools/raster.mjs 是同一份（src/views.js）：切到 iso 看到的就是 AI 用 render --view=iso 看到的取景。
+// 「快照」按预设相机截正方形图；「离屏渲染」（有接口的工程）调 render 并把同一个取景范围（box）传过去，两张图并排对照
+let viewPreset = null;
+const boxArr = (b) => b && { min: b.min.toArray(), max: b.max.toArray() };
+// 隔离视图里对准隔离的物体（同 render --focus），否则整个场景
+const presetOpts = () => (iso ? { box: boxArr(viewer.boxOf(iso.paths)), focus: true } : {});
+$('#views').innerHTML = Object.keys(VIEWS).map((v) => `<button data-view="${v}" title="视角 ${v}（render --view=${v}）">${v}</button>`).join('');
+$('#views').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-view]');
+  if (!b) return;
+  b.blur();
+  viewPreset = b.dataset.view;
+  viewer.setView(viewPreset, presetOpts());
+  for (const x of $('#views').children) x.classList.toggle('on', x === b);
+});
+// 拖动相机之后就不再是预设视角了
+viewer.controls.addEventListener('start', () => { if (viewPreset) { viewPreset = null; for (const x of $('#views').children) x.classList.remove('on'); } });
+const snapEl = $('#snap');
+const figure = (title, url, name) => `<figure><img src="${esc(url)}" alt="${esc(title)}"><figcaption>${esc(title)}<a href="${esc(url)}" download="${esc(name)}">下载</a></figcaption></figure>`;
+function showSnap(view, figs, note = '', legend = []) {
+  snapEl.hidden = false;
+  $('#snap-title').textContent = `视角 ${view}`;
+  $('#snap-note').textContent = note;
+  $('#snap-imgs').innerHTML = figs.join('');
+  $('#snap-legend').innerHTML = legend.map((l) => `<span data-path="${esc(l.path)}" title="${esc(l.path)}"><b>${l.n ?? ''}</b>${esc(l.path.length > 32 ? '…' + l.path.slice(-31) : l.path)}</span>`).join('');
+}
+$('#snap-close').addEventListener('click', () => { snapEl.hidden = true; });
+$('#snap-legend').addEventListener('click', (e) => { const s = e.target.closest('[data-path]'); if (s) { const n = locate(s.dataset.path); select(s.dataset.path, { line: n?.line, file: n?.file, focus: true }); } });
+$('#snap-btn').addEventListener('click', (e) => {
+  e.target.blur();
+  const view = viewPreset ?? 'iso';
+  const s = viewer.snapshot(view, presetOpts());
+  showSnap(view, [figure('界面快照（Viewer.snapshot）', s.url, `snapshot-${view}.png`)], `取景 box=${[...s.box.min, ...s.box.max].map((v) => +v.toFixed(3)).join(',')}`);
+});
+$('#raster-btn').addEventListener('click', async (e) => {
+  const b = e.target;
+  b.blur();
+  const view = viewPreset ?? 'iso', opts = presetOpts();
+  const s = viewer.snapshot(view, { ...opts, size: 768 });
+  const box = [...s.box.min, ...s.box.max].join(',');
+  b.disabled = true;
+  showSnap(view, [figure('界面快照（Viewer.snapshot）', s.url, `snapshot-${view}.png`)], '离屏渲染中…');
+  try {
+    const args = { view, mode: 'labels', size: 768, box, ...(iso ? { focus: iso.paths } : {}) };
+    const r = await fetch('api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dir: project.apiDir, cmd: 'render', args }) }).then(async (x) => { const j = await x.json(); if (!x.ok) throw new Error(j.error); return j; });
+    showSnap(view, [figure('界面快照（Viewer.snapshot）', s.url, `snapshot-${view}.png`), figure(`离屏渲染（render --view=${view} --mode=labels，AI 看到的）`, `${r.url}?t=${Date.now()}`, r.url.split('/').pop())],
+      `同一个相机与取景 box=${box.split(',').map((v) => +(+v).toFixed(3)).join(',')}${dirty.size ? ' · 离屏渲染读的是磁盘上的文件，没保存的修改不在里面' : ''}`, r.legend ?? []);
+  } catch (err) { showSnap(view, [figure('界面快照（Viewer.snapshot）', s.url, `snapshot-${view}.png`)], `离屏渲染失败：${err.message}`); } finally { b.disabled = false; }
+});
+
+// ── 浏览器内逆向（docs/PLAN2.md 4.8）──
+// 选择或拖入一个 .glb：在 Worker 里读 GLB、跑 tools/reverse.mjs 的 reverse()（与 bin/reverse.mjs 同样的参数，结果逐字节相同），
+// 结果作为没保存的新文件 scratch/<名字>.s3d 打开；网格引用（src="<名字>.glb#节点"）直接用拖入的文件显示。「下载 .s3d」取走
+let revCall = null;
+async function reverseFile(file) {
+  if (!file || !/\.glb$/i.test(file.name)) { statusEl.textContent = '浏览器内逆向只接受 .glb'; return; }
+  const fidelity = $('#rev-fid').value;
+  const btn = $('#rev-open');
+  btn.disabled = true;
+  try {
+    statusEl.textContent = `逆向 ${file.name}：加载逆向模块（第一次要从 CDN 取 three、gltf-transform）…`;
+    // Worker 只建一次；加载失败下次重来
+    revCall ??= shimWorker('./reverse-worker.js').then(rpc).catch((e) => { revCall = null; throw e; });
+    const call = await revCall;
+    statusEl.textContent = `逆向 ${file.name}（${fidelity}）…`;
+    const buf = await file.arrayBuffer();
+    const r = await call({ buffer: buf, name: file.name, srcFile: file.name, fidelity }, [buf]);
+    const base = file.name.replace(/\.glb$/i, '');
+    const path = `scratch/${base}.s3d`;
+    // 网格引用相对 .s3d 所在的目录：把那个位置的 URL 预先指向拖入的文件
+    const glbUrl = new URL(file.name, new URL(path, location.href)).href;
+    viewer.gltfCache.set(glbUrl, viewer.loader.loadAsync(URL.createObjectURL(file)));
+    scratch = { path, name: file.name, text: r.src, orig: r.src, report: r.report };
+    if (!sel.querySelector('option[value=scratch]')) sel.insertAdjacentHTML('beforeend', '<option value="scratch"></option>');
+    sel.querySelector('option[value=scratch]').textContent = `逆向：${base}（未保存）`;
+    await load('scratch');
+    const k = r.report?.kinds ?? {};
+    statusEl.textContent = `逆向完成：${r.parts} 个部件 → ${countLines(r.src)} 行（${Object.entries(k).map(([a, b]) => `${a} ${b}`).join(' · ')}）· ${fidelity} · ${r.ms}ms · ${statusEl.textContent}`;
+  } catch (e) {
+    statusEl.textContent = `逆向失败：${e.message.split('\n')[0]}`;
+    console.error(e);
+  } finally { btn.disabled = false; }
+}
+$('#rev-open').addEventListener('click', () => $('#rev-file').click());
+$('#rev-file').addEventListener('change', (e) => { reverseFile(e.target.files[0]); e.target.value = ''; });
+$('#rev-save').addEventListener('click', () => {
+  if (!isScratch()) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([files.get(rootFile())], { type: 'text/plain' }));
+  a.download = scratch.path.split('/').pop();
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+// 拖入：只认带文件的拖动；松开时取第一个 .glb
+let dragDepth = 0;
+const hasFiles = (e) => [...(e.dataTransfer?.types ?? [])].includes('Files');
+addEventListener('dragenter', (e) => { if (hasFiles(e)) { dragDepth++; document.body.classList.add('dropping'); } });
+addEventListener('dragleave', (e) => { if (hasFiles(e) && --dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dropping'); } });
+addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault(); });
+addEventListener('drop', (e) => {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+  dragDepth = 0; document.body.classList.remove('dropping');
+  reverseFile([...e.dataTransfer.files].find((f) => /\.glb$/i.test(f.name)) ?? e.dataTransfer.files[0]);
+});
 
 // 工程：project.json 是静态文件，没有接口也能读（单位、档位、源模型）；有接口时再取待处理提议数
 async function openProjectFor(file) {
@@ -520,6 +682,7 @@ collab = createCollab({
 });
 if (project) {
   $('#prop-tab').hidden = !api;
+  $('#raster-btn').hidden = !api;
   collab.renderBar();
   document.title = `${project.apiDir} · SVG3D`;
 }

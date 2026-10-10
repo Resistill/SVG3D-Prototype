@@ -39,7 +39,8 @@ function inspectLocal(r, paths, { files, rootFile, score }) {
     return {
       path, kind: n.kind, file: n.file ?? rootFile, line: n.line, statement: text?.split('\n')[n.line - 1]?.trim() ?? null, types: n.types, of: n.of, tags: n.tags, concepts: n.concepts, meta: n.meta,
       center: ctr(n.tight ?? n.box), size: ext(n.tight ?? n.box),
-      facts: r.facts.filter((f) => inside(f.a) !== inside(f.b) && (inside(f.a) || inside(f.b))).map((f) => ({ rel: f.rel, a: f.a, b: f.b, gap: f.gap })).slice(0, 40),
+      // 二元事实：一端在里面、一端在外面；一元事实（walkable 等，b 为 null）：主体在里面
+      facts: r.facts.filter((f) => (f.b == null ? inside(f.a) : inside(f.a) !== inside(f.b) && (inside(f.a) || inside(f.b)))).map((f) => ({ rel: f.rel, a: f.a, b: f.b, gap: f.gap, provider: f.provider })).slice(0, 40),
       groups, sameType: sameType && { type: n.types[0], count: sameType.length, examples: sameType.slice(0, 8) },
       score: score?.objects?.filter((o) => inside(o.path)) ?? null,
     };
@@ -98,7 +99,9 @@ export function createCollab(ctx) {
     const meta = Object.entries(x.meta ?? {});
     if (meta.length) h += row('元数据', meta.map(([k, v]) => `<span class="sc">~${esc(k)}=${esc(typeof v === 'string' ? v : JSON.stringify(v))}</span>`).join(' '));
     h += scoreRow(x.score);
-    if (x.facts?.length) h += row('关系', `<ul class="rel">${x.facts.map((f) => `<li data-a="${esc(f.a)}" data-b="${esc(f.b)}" title="点击高亮两者"><span class="ref">${esc(f.a)}</span> <span class="kw">${esc(f.rel)}</span> <span class="ref">${esc(f.b)}</span> <span class="gap">gap ${f.gap}</span></li>`).join('')}</ul>`);
+    if (x.facts?.length) h += row('关系', `<ul class="rel">${x.facts.map((f) => (f.b == null
+      ? `<li data-a="${esc(f.a)}" title="${esc(f.provider ?? '')}"><span class="ref">${esc(f.a)}</span> <span class="kw">${esc(f.rel)}</span></li>`
+      : `<li data-a="${esc(f.a)}" data-b="${esc(f.b)}" title="点击高亮两者"><span class="ref">${esc(f.a)}</span> <span class="kw">${esc(f.rel)}</span> <span class="ref">${esc(f.b)}</span>${f.gap != null ? ` <span class="gap">gap ${f.gap}</span>` : ''}</li>`)).join('')}</ul>`);
     return h + '</div>';
   }
   function scoreRow(list) {
@@ -121,7 +124,7 @@ export function createCollab(ctx) {
     if (!t) return;
     if (t.dataset.iso) return ctx.isolate([t.dataset.iso]);
     if (t.dataset.file) return ctx.openFile(t.dataset.file, +t.dataset.line);
-    if (t.dataset.a) return ctx.highlightOnly([t.dataset.a, t.dataset.b]);
+    if (t.dataset.a) return ctx.highlightOnly(t.dataset.b != null ? [t.dataset.a, t.dataset.b] : [t.dataset.a]);
     if (t.dataset.hl) return ctx.highlightOnly(JSON.parse(t.dataset.hl));
     if (t.dataset.type) return ctx.highlightOnly(ctx.last().nodes.filter((m) => m.types?.[0] === t.dataset.type).map((m) => m.path));
     if (t.dataset.sel) { const n = ctx.locate(t.dataset.sel); ctx.select(t.dataset.sel, { line: n?.line, file: n?.file, focus: !!t.dataset.focus }); }
