@@ -55,10 +55,83 @@ export class Viewer {
     this.renderer.domElement.addEventListener('pointerleave', () => this.hoverCb && this.hoverCb(null));
     this.renderer.domElement.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
     this.renderer.domElement.addEventListener('pointerup', (e) => {
+      if (this.fly.on) return;
       if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 4 && this.clickCb) this.clickCb(this.pick(ptr(e)));
     });
-    const loop = () => { this.controls.update(); this.renderer.render(this.scene, this.camera); requestAnimationFrame(loop); };
+    this.initFly();
+    let tPrev = performance.now();
+    const loop = () => {
+      const t = performance.now(), dt = Math.min(0.1, (t - tPrev) / 1000);
+      tPrev = t;
+      if (this.fly.on) this.stepFly(dt); else this.controls.update();
+      this.renderer.render(this.scene, this.camera);
+      requestAnimationFrame(loop);
+    };
     loop();
+  }
+
+  // ── 漫游：点击锁定鼠标，鼠标转视角，WASD 移动、Q/E 升降、Shift 加速、滚轮调速，Esc 退出 ──
+  initFly() {
+    this.fly = { on: false, keys: new Set(), yaw: 0, pitch: 0, speed: 10, onChange: null };
+    const canvas = this.renderer.domElement;
+    const typing = () => /^(TEXTAREA|INPUT|SELECT)$/.test(document.activeElement?.tagName ?? '');
+    addEventListener('keydown', (e) => {
+      if (!this.fly.on || typing()) return;
+      this.fly.keys.add(e.code);
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'Space'].includes(e.code)) e.preventDefault();
+    });
+    addEventListener('keyup', (e) => this.fly.keys.delete(e.code));
+    addEventListener('blur', () => this.fly.keys.clear());
+    document.addEventListener('mousemove', (e) => {
+      if (!this.fly.on || document.pointerLockElement !== canvas) return;
+      this.fly.yaw -= e.movementX * 0.0022;
+      this.fly.pitch = Math.max(-1.55, Math.min(1.55, this.fly.pitch - e.movementY * 0.0022));
+    });
+    canvas.addEventListener('wheel', (e) => { if (this.fly.on) { e.preventDefault(); this.fly.speed *= e.deltaY > 0 ? 1 / 1.2 : 1.2; } }, { passive: false });
+    canvas.addEventListener('click', () => { if (this.fly.on && document.pointerLockElement !== canvas) canvas.requestPointerLock?.(); });
+    // 鼠标锁被释放（Esc）就退出漫游
+    document.addEventListener('pointerlockchange', () => { if (this.fly.on && document.pointerLockElement !== canvas && this.fly.locked) this.setFly(false); this.fly.locked = document.pointerLockElement === canvas; });
+  }
+  setFly(on) {
+    if (on === this.fly.on) return;
+    const canvas = this.renderer.domElement;
+    if (on) {
+      const d = new THREE.Vector3();
+      this.camera.getWorldDirection(d);
+      this.fly.yaw = Math.atan2(-d.x, -d.z);
+      this.fly.pitch = Math.asin(Math.max(-1, Math.min(1, d.y)));
+      // 速度按场景大小：大约 8 秒走完场景的半径
+      const b = this.bounds();
+      this.fly.speed = b.isEmpty() ? 10 : Math.max(2, b.getSize(new THREE.Vector3()).length() / 16);
+      this.controls.enabled = false;
+      this.fly.on = true;
+      canvas.requestPointerLock?.();
+    } else {
+      this.fly.on = false;
+      this.fly.keys.clear();
+      // 回到环视：把目标点放在眼前
+      const d = new THREE.Vector3();
+      this.camera.getWorldDirection(d);
+      this.controls.target.copy(this.camera.position).add(d.multiplyScalar(Math.max(5, this.fly.speed)));
+      this.controls.enabled = true;
+      if (document.pointerLockElement === canvas) document.exitPointerLock();
+    }
+    this.fly.onChange?.(on);
+  }
+  toggleFly() { this.setFly(!this.fly.on); }
+  stepFly(dt) {
+    const f = this.fly, k = f.keys;
+    this.camera.rotation.set(f.pitch, f.yaw, 0, 'YXZ');
+    const fwd = new THREE.Vector3(-Math.sin(f.yaw) * Math.cos(f.pitch), Math.sin(f.pitch), -Math.cos(f.yaw) * Math.cos(f.pitch));
+    const right = new THREE.Vector3(Math.cos(f.yaw), 0, -Math.sin(f.yaw));
+    const v = new THREE.Vector3();
+    if (k.has('KeyW')) v.add(fwd);
+    if (k.has('KeyS')) v.sub(fwd);
+    if (k.has('KeyD')) v.add(right);
+    if (k.has('KeyA')) v.sub(right);
+    if (k.has('KeyE') || k.has('Space')) v.y += 1;
+    if (k.has('KeyQ')) v.y -= 1;
+    if (v.lengthSq() > 0) this.camera.position.addScaledVector(v.normalize(), f.speed * dt * (k.has('ShiftLeft') || k.has('ShiftRight') ? 4 : 1));
   }
 
   resize() {
@@ -156,6 +229,10 @@ export class Viewer {
     const b = box ?? this.bounds();
     if (b.isEmpty()) return;
     const c = b.getCenter(new THREE.Vector3()), r = Math.max(b.getSize(new THREE.Vector3()).length() / 2, 2);
+    // 雾与远裁剪面按场景大小：大场景（几百米）不会被雾吃掉
+    const all = this.bounds(), R = all.isEmpty() ? r : Math.max(all.getSize(new THREE.Vector3()).length() / 2, 2);
+    this.scene.fog.near = R * 2.5; this.scene.fog.far = R * 7;
+    this.camera.far = Math.max(3000, R * 10); this.camera.updateProjectionMatrix();
     const dir = this.camera.position.clone().sub(this.controls.target).normalize();
     if (!box) dir.set(0.75, 0.55, 0.9).normalize();
     this.controls.target.copy(c);

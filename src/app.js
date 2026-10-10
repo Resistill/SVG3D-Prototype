@@ -219,6 +219,13 @@ sel.addEventListener('change', () => load(sel.value));
 $('#reset').addEventListener('click', () => load(current, { reset: true }));
 src.addEventListener('input', () => { $('#reset').hidden = false; });
 $('#fit').addEventListener('click', () => viewer.frame());
+$('#fly').addEventListener('click', (e) => { e.target.blur(); viewer.toggleFly(); });
+let statusSaved = '';
+viewer.fly.onChange = (on) => {
+  $('#fly').classList.toggle('on', on);
+  if (on) { statusSaved = statusEl.textContent; statusEl.textContent = '漫游中：鼠标转视角 · WASD 移动 · Q/E 升降 · Shift 加速 · 滚轮调速 · Esc 退出（鼠标没锁住就点一下画面）'; }
+  else statusEl.textContent = statusSaved;
+};
 $('#curves').addEventListener('click', (e) => {
   viewer.curveLayer.visible = !viewer.curveLayer.visible;
   e.target.classList.toggle('on', viewer.curveLayer.visible);
