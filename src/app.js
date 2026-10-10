@@ -255,18 +255,62 @@ errorsEl.addEventListener('click', (e) => { const d = e.target.closest('[data-li
 
 const fmt = (v) => v.map((x) => (Math.abs(x) < 0.005 ? 0 : x).toFixed(1)).join(', ');
 
+// ── 对象树（类似 Godot 的场景树）──
+// 阵列、类型实例、group 都是可折叠节点，默认只展开第一层；展开状态按路径记住（重新编译后不变）。
+// 几千个对象也流畅：只为滚动到视口里的行生成 DOM
+const ROW_H = 22, objPane = $('#objects-pane'), objTree = $('#objtree');
+const expanded = new Set();
+let tree = { roots: [], kids: new Map(), parent: new Map() }, rows = [], marked = new Set();
+function buildTree(r) {
+  const known = new Set(r.nodes.map((n) => n.path)), kids = new Map(), parent = new Map(), roots = [];
+  for (const n of r.nodes) {
+    // 父节点：路径上最近的、确实存在的前缀（nodes 是深度优先序，子节点自然按顺序排好）
+    let p = null;
+    for (let j = n.path.lastIndexOf('.'); j > 0; j = n.path.lastIndexOf('.', j - 1)) { const q = n.path.slice(0, j); if (known.has(q)) { p = q; break; } }
+    if (p) { if (!kids.has(p)) kids.set(p, []); kids.get(p).push(n); parent.set(n.path, p); } else roots.push(n);
+  }
+  return { roots, kids, parent };
+}
+function flatten() {
+  rows = [];
+  const walk = (list, d) => { for (const n of list) { rows.push([n, d]); if (expanded.has(n.path) && tree.kids.has(n.path)) walk(tree.kids.get(n.path), d + 1); } };
+  walk(tree.roots, 0);
+  objTree.style.height = rows.length * ROW_H + 'px';
+  paintRows();
+}
+function rowHtml(n, d) {
+  const name = n.path.split('.').pop(), kids = tree.kids.get(n.path);
+  const size = n.box ? fmt(n.box.max.map((x, k) => x - n.box.min[k])) : '';
+  const pos = n.box ? fmt(n.box.min.map((x, k) => (k === 1 ? x : (x + n.box.max[k]) / 2))) : '';
+  const title = n.ghost ? '副本：由镜像/旋转关系生成，跟随原物体' : n.hidden ? '已被变体替换：仍参与求解（外包络、关系不变），但不再渲染' : n.skin ? '变体：填充在原对象的外包络里' : '';
+  return `<li data-path="${esc(n.path)}" data-line="${n.line}" data-file="${esc(n.file ?? '')}" style="--d:${d}" class="${n.kind === 'instance' ? 'inst' : ''} ${n.ghost ? 'ghost' : ''} ${n.curve ? 'curve' : ''} ${n.hidden ? 'hid' : ''} ${n.skin ? 'skin' : ''} ${marked.has(n.path) ? 'sel' : ''}" title="${title}">
+    <span class="tw ${kids ? 'has' : ''}">${kids ? (expanded.has(n.path) ? '▾' : '▸') : ''}</span><span class="nm">${esc(name)}</span><span class="kd">${esc(n.kind)}</span>${kids ? `<span class="cnt">${kids.length}</span>` : ''}${n.tags.map((t) => `<span class="tg">#${esc(t)}</span>`).join('')}${n.concepts.map((c) => `<span class="cc">${esc(c)}</span>`).join('')}
+    ${n.late ? '<span class="late" title="引用了容器外部的对象，不参与容器尺寸计算">后置</span>' : ''}
+    <button class="iso" title="只看这个（隔离视图；也可以双击）">只看</button>
+    <span class="geo" title="底面中心 · 尺寸">@ ${pos} <i>⟂</i> ${size}</span></li>`;
+}
+function paintRows() {
+  if (objPane.hidden) return;
+  const top = objPane.scrollTop, h = objPane.clientHeight || 400;
+  const i0 = Math.max(0, Math.floor(top / ROW_H) - 15), i1 = Math.min(rows.length, Math.ceil((top + h) / ROW_H) + 15);
+  objList.style.transform = `translateY(${i0 * ROW_H}px)`;
+  objList.innerHTML = rows.slice(i0, i1).map(([n, d]) => rowHtml(n, d)).join('');
+}
+objPane.addEventListener('scroll', () => requestAnimationFrame(paintRows));
 function renderObjects(r) {
-  objList.innerHTML = r.nodes.map((n) => {
-    const name = n.path.split('.').pop();
-    const size = n.box ? fmt(n.box.max.map((x, k) => x - n.box.min[k])) : '';
-    const pos = n.box ? fmt(n.box.min.map((x, k) => (k === 1 ? x : (x + n.box.max[k]) / 2))) : '';
-    const title = n.ghost ? '副本：由镜像/旋转关系生成，跟随原物体' : n.hidden ? '已被变体替换：仍参与求解（外包络、关系不变），但不再渲染' : n.skin ? '变体：填充在原对象的外包络里' : '';
-    return `<li data-path="${esc(n.path)}" data-line="${n.line}" data-file="${esc(n.file ?? '')}" style="--d:${n.depth}" class="${n.kind === 'instance' ? 'inst' : ''} ${n.ghost ? 'ghost' : ''} ${n.curve ? 'curve' : ''} ${n.hidden ? 'hid' : ''} ${n.skin ? 'skin' : ''}" title="${title}">
-      <span class="nm">${esc(name)}</span><span class="kd">${esc(n.kind)}</span>${n.tags.map((t) => `<span class="tg">#${esc(t)}</span>`).join('')}${n.concepts.map((c) => `<span class="cc">${esc(c)}</span>`).join('')}
-      ${n.late ? '<span class="late" title="引用了容器外部的对象，不参与容器尺寸计算">后置</span>' : ''}
-      <span class="geo" title="底面中心 · 尺寸">@ ${pos} <i>⟂</i> ${size}</span></li>`;
-  }).join('');
+  tree = buildTree(r);
+  flatten();
   markSelected();
+}
+// 让某个路径可见：展开它的所有祖先并滚动到它
+function reveal(path) {
+  let changed = false;
+  for (let p = tree.parent.get(path); p; p = tree.parent.get(p)) if (!expanded.has(p)) { expanded.add(p); changed = true; }
+  if (changed) flatten();
+  const i = rows.findIndex(([n]) => n.path === path);
+  if (i < 0 || objPane.hidden) return;
+  const y = i * ROW_H;
+  if (y < objPane.scrollTop || y + ROW_H > objPane.scrollTop + objPane.clientHeight) objPane.scrollTop = Math.max(0, y - objPane.clientHeight / 3);
 }
 
 function renderSemantics(r) {
@@ -318,13 +362,13 @@ function renderFacts(r) {
 // ── 选择与高亮 ──
 // selected：选中的物体（写进 state/selection.json，选中面板显示它们）；highlightOnly 只改 3D 视图里的高亮（看同类、看关系、看提议改了什么）
 let selected = null;
-function select(paths, { line, file, focus, silent } = {}) {
+function select(paths, { line, file, focus, silent, scroll = true } = {}) {
   selected = paths == null ? null : [].concat(paths);
   if (selected && !selected.length) selected = null;
   const box = viewer.highlight(selected);
   if (focus && box) viewer.frame(box);
   if (line) openFile(file, line);
-  markSelected();
+  markSelected(selected, { scroll });
   collab?.inspect(selected);
   if (!silent) collab?.saveSelection(selected ?? []);
 }
@@ -340,21 +384,41 @@ function toggle(path, opts) {
   if (i >= 0) cur.splice(i, 1); else cur.push(path);
   select(cur, opts);
 }
-function markSelected(paths = selected) {
-  const set = new Set(paths ? [].concat(paths) : []);
-  let first = null;
-  for (const li of objList.children) { const on = set.has(li.dataset.path); li.classList.toggle('sel', on); if (on && !first) first = li; }
-  if (first) first.scrollIntoView({ block: 'nearest' });
+function markSelected(paths = selected, { scroll = true } = {}) {
+  marked = new Set(paths ? [].concat(paths) : []);
+  const first = paths && [].concat(paths)[0];
+  if (scroll && first) reveal(first);
+  paintRows();
 }
 objList.addEventListener('click', (e) => {
   const li = e.target.closest('li');
   if (!li) return;
-  if (e.shiftKey) return toggle(li.dataset.path);
-  select(li.dataset.path, { line: +li.dataset.line, file: li.dataset.file });
+  const path = li.dataset.path;
+  if (e.target.closest('.tw.has')) { if (expanded.has(path)) expanded.delete(path); else expanded.add(path); flatten(); return; }
+  if (e.target.closest('.iso')) return isolate([path]);
+  if (e.shiftKey) return toggle(path);
+  select(path, { line: +li.dataset.line, file: li.dataset.file, scroll: false });
 });
 objList.addEventListener('dblclick', (e) => {
   const li = e.target.closest('li');
-  if (li) select(li.dataset.path, { focus: true });
+  if (li && !e.target.closest('.tw,.iso')) isolate([li.dataset.path]);
+});
+
+// ── 隔离视图：只看选中的物体 / 子树（可选叠加它对应的源模型部件），其余隐藏；相机对准它 ──
+let iso = null;
+function isolate(paths, { source } = {}) {
+  iso = paths?.length ? { paths: [].concat(paths), source: source ?? $('#iso-src').checked } : null;
+  viewer.isolate(iso?.paths ?? null);
+  if (iso) { const b = viewer.boxOf(iso.paths); if (b) viewer.frame(b); }
+  $('#isobar').hidden = !iso;
+  if (iso) $('#iso-name').textContent = iso.paths.length > 1 ? `${iso.paths[0]} 等 ${iso.paths.length} 个` : iso.paths[0];
+  $('#iso-src').disabled = !project?.cfg.source;
+  collab?.applyMode();
+}
+$('#iso-exit').addEventListener('click', () => isolate(null));
+$('#iso-src').addEventListener('change', (e) => { if (iso) { iso.source = e.target.checked; collab?.applyMode(); } });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && iso && !viewer.fly.on && !/^(TEXTAREA|INPUT|SELECT)$/.test(document.activeElement?.tagName ?? '')) isolate(null);
 });
 factList.addEventListener('click', (e) => {
   const li = e.target.closest('li');
@@ -374,8 +438,6 @@ viewer.clickCb = (hit, e) => {
   const n = locate(hit.path, e && e.altKey);
   if (e?.shiftKey) toggle(hit.path);
   else select(hit.path, { line: n && n.line, file: n && n.file });
-  // 工程模式：点 3D 视图里的物体时切到“选中”面板
-  if (project && $('#objects-pane').hidden === false) showPane('inspect-pane');
 };
 viewer.hoverCb = (hit, e) => {
   if (!hit) { tip.hidden = true; return; }
@@ -391,6 +453,7 @@ function showPane(id) {
   document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('on', x.dataset.pane === id));
   document.querySelectorAll('.pane').forEach((p) => { p.hidden = p.id !== id; });
   if (id === 'prop-pane') { collab?.loadProposals(); collab?.loadInbox(); }
+  if (id === 'objects-pane') markSelected(selected);
 }
 for (const b of document.querySelectorAll('.tabs button')) b.addEventListener('click', () => showPane(b.dataset.pane));
 
@@ -449,7 +512,8 @@ if (fileParam) {
   [project, api] = await Promise.all([openProjectFor(fileParam), detectApi()]);
 }
 collab = createCollab({
-  viewer, files, dirty, rootFile, locate, openFile, select, highlightOnly, refreshFromDisk,
+  viewer, files, dirty, rootFile, locate, openFile, select, highlightOnly, refreshFromDisk, isolate,
+  isolation: () => iso,
   get project() { return project; }, get api() { return api; },
   last: () => last, selected: () => selected ?? [],
   status: (m) => { statusEl.textContent = m; },

@@ -88,6 +88,7 @@ export function createCollab(ctx) {
     if (x.error) return `<div class="ins"><div class="ih"><span class="nm">${esc(x.path)}</span><span class="bad">${esc(x.error)}</span></div></div>`;
     const file = fileKey(x.file);
     let h = `<div class="ins"><div class="ih"><span class="nm" data-sel="${esc(x.path)}" data-focus="1" title="选中并对准视角">${esc(x.path)}</span><span class="kd">${esc(x.kind)}</span>${(x.tags ?? []).map((t) => `<span class="tg">#${esc(t)}</span>`).join('')}${(x.concepts ?? []).map((c) => `<span class="cc">${esc(c)}</span>`).join('')}`
+      + `<button class="isob" data-iso="${esc(x.path)}" title="隔离视图：只显示它（Esc 退出）">只看这个</button>`
       + `<span class="loc" data-file="${esc(file)}" data-line="${x.line ?? ''}" title="打开源码">${esc(short(file))}:${x.line ?? '?'}</span></div>`;
     if (x.statement) h += `<code class="stmt">${esc(x.statement)}</code>`;
     if (x.size) h += row('尺寸', `<span class="sc">${fmt(x.size)}</span><span class="gap">中心 ${fmt(x.center)}</span>`);
@@ -116,8 +117,9 @@ export function createCollab(ctx) {
     return h;
   }
   inspectEl.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-sel],[data-hl],[data-type],[data-a],[data-file]');
+    const t = e.target.closest('[data-sel],[data-hl],[data-type],[data-a],[data-file],[data-iso]');
     if (!t) return;
+    if (t.dataset.iso) return ctx.isolate([t.dataset.iso]);
     if (t.dataset.file) return ctx.openFile(t.dataset.file, +t.dataset.line);
     if (t.dataset.a) return ctx.highlightOnly([t.dataset.a, t.dataset.b]);
     if (t.dataset.hl) return ctx.highlightOnly(JSON.parse(t.dataset.hl));
@@ -193,12 +195,28 @@ export function createCollab(ctx) {
       $('#heatmax').textContent = `4δ = ${+full.toFixed(4)} m`;
     } else if (ctx.viewer.heat) ctx.viewer.setHeat(null);
     $('#heatlegend').hidden = !(m === 'heat' && s);
-    const url = m === 'overlay' && p?.cfg.source ? new URL(p.cfg.source, new URL(p.dir, location.href)).href : null;
-    if (url !== overlayUrl) {
-      overlayUrl = url;
+    // 叠加：隔离视图里勾了“源模型部件”时只叠加这个物体对应的部件，否则按视图模式叠加整个源模型
+    const srcUrl = p?.cfg.source ? new URL(p.cfg.source, new URL(p.dir, location.href)).href : null;
+    const iso = ctx.isolation?.();
+    const only = iso?.source && srcUrl ? sourcePartsOf(iso.paths) : null;
+    const url = only ? srcUrl : m === 'overlay' ? srcUrl : null;
+    const key = url && (only ? url + '|' + only.join('|') : url);
+    if (key !== overlayUrl) {
+      overlayUrl = key;
       if (url) ctx.status('加载源模型…');
-      ctx.viewer.setOverlay(url).then(() => { if (url) ctx.status('源模型叠加：蓝色半透明是源模型，实体是重建结果'); }).catch((err) => ctx.status(`源模型加载失败：${err.message}`));
+      ctx.viewer.setOverlay(url, only).then((n) => {
+        if (!url) return;
+        ctx.status(only ? `叠加了 ${n} / ${only.length} 个源部件（蓝色半透明）${only.length ? '' : '：score.json 里没有它的来源，也不是网格引用'}` : '源模型叠加：蓝色半透明是源模型，实体是重建结果');
+      }).catch((err) => ctx.status(`源模型加载失败：${err.message}`));
     }
+  }
+  // 物体对应的源部件：score.json 里逐物体的 src，加上网格引用直接引用的节点
+  function sourcePartsOf(paths) {
+    const set = new Set(paths), under = (x) => { for (let i = x.length; i > 0; i = x.lastIndexOf('.', i - 1)) if (set.has(x.slice(0, i))) return true; return false; };
+    const names = new Set();
+    for (const o of P()?.score?.objects ?? []) if (under(o.path)) for (const s of o.src ?? []) names.add(s);
+    for (const it of ctx.last()?.items ?? []) if (it.geom?.type === 'mesh' && under(it.path)) names.add(String(it.geom.src).split('#').pop());
+    return [...names];
   }
   $('#viewmode').addEventListener('change', (e) => { e.target.blur(); applyMode(); });
 

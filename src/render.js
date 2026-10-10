@@ -190,6 +190,7 @@ export class Viewer {
     this.nodeMap = new Map(result.nodes.map((n) => [n.path, n]));
     this.fitShadow();
     if (this.firstFrame && this.content.children.length) { this.frame(); this.firstFrame = false; }
+    if (this.isolated) this.applyIsolation();
     if (this.selected) this.highlight(this.selected);
     return warnings;
   }
@@ -284,7 +285,9 @@ export class Viewer {
 
   pick(v) {
     this.raycaster.setFromCamera(v, this.camera);
-    const hit = this.raycaster.intersectObjects(this.content.children, true)[0];
+    // 隔离视图里隐藏的物体不参与拾取
+    const shown = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
+    const hit = this.raycaster.intersectObjects(this.content.children, true).find((h) => shown(h.object));
     return hit ? hit.object.userData : null;
   }
 
@@ -337,18 +340,47 @@ export class Viewer {
     this.content.traverse((o) => { if (o.isMesh && o.userData.origMat) this.paint(o); });
     this.highlight(this.selected);
   }
-  // 源模型半透明叠加（与 mesh 引用共用加载器与缓存）；url 为 null 时移除。源模型本身就在场景坐标里，不用变换
-  async setOverlay(url) {
+  // 源模型半透明叠加（与 mesh 引用共用加载器与缓存）；url 为 null 时移除。源模型本身就在场景坐标里，不用变换。
+  // only：只叠加这些源部件（名字同 ~src / score.json 的 src，即 名字@k），隔离视图里看一个物体对应的源网格时用
+  async setOverlay(url, only = null) {
     const token = (this.overlayToken = (this.overlayToken ?? 0) + 1);
     this.overlay.clear();
-    if (!url) return;
+    if (!url) return 0;
     if (!this.gltfCache.has(url)) this.gltfCache.set(url, this.loader.loadAsync(url));
     const gltf = await this.gltfCache.get(url);
-    if (token !== this.overlayToken) return;
+    if (token !== this.overlayToken) return 0;
     this.ghostMat ??= new THREE.MeshBasicMaterial({ color: '#2f7dff', transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
-    const obj = gltf.scene.clone(true);
-    obj.traverse((o) => { if (o.isMesh) { o.material = this.ghostMat; o.castShadow = o.receiveShadow = false; o.renderOrder = 5; } });
-    this.overlay.add(obj);
+    const ghost = (obj) => { obj.traverse((o) => { if (o.isMesh) { o.material = this.ghostMat; o.castShadow = o.receiveShadow = false; o.renderOrder = 5; } }); this.overlay.add(obj); };
+    if (!only) { ghost(gltf.scene.clone(true)); return 1; }
+    gltf.scene.updateMatrixWorld(true);
+    let n = 0;
+    for (const name of only) {
+      const s = this.findSourceNode(gltf, name);
+      if (!s) continue;
+      const obj = s.isMesh ? s.clone(false) : s.clone(true);
+      obj.matrixAutoUpdate = false;
+      obj.matrix.copy(s.matrixWorld);
+      ghost(obj);
+      n++;
+    }
+    return n;
+  }
+  // 隔离视图：只显示这些路径（及其后代），其余隐藏；null 退出
+  isolate(paths) {
+    this.isolated = paths?.length ? [...paths] : null;
+    this.applyIsolation();
+  }
+  applyIsolation() {
+    const set = this.isolated && new Set(this.isolated);
+    const under = (p) => { for (let i = p.length; i > 0; i = p.lastIndexOf('.', i - 1)) if (set.has(p.slice(0, i))) return true; return false; };
+    for (const c of this.content.children) c.visible = !set || under(c.name);
+    for (const l of this.curveLayer.children) l.visible = !set || under(l.userData.path ?? '');
+  }
+  // 一组路径的世界包围盒（隔离时对准用）
+  boxOf(paths) {
+    const box = new THREE.Box3();
+    for (const p of paths) { const n = this.nodeMap?.get(p); if (n?.box) box.union(new THREE.Box3(new THREE.Vector3(...n.box.min), new THREE.Vector3(...n.box.max))); }
+    return box.isEmpty() ? null : box;
   }
   // 写进 state/selection.json 的相机（AI 想从同一个角度看时用）
   cameraState() {
