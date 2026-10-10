@@ -139,3 +139,38 @@ test('阵列的例外：缺成员的阵列写成 repeat + drop；只有更短时
   `);
   assert.doesNotMatch(L.out.src, /^(repeat|drop) /m);
 });
+
+test('沿曲线的阵列：恢复出曲线本身（闭合样条上的枕木、路肩外侧的路灯）', () => {
+  const src = `
+    box ground size=80,1,80 pin=top
+    spline road path=[(-30,0,10); (-10,0,-5); (10,0,8); (30,0,-6)]
+    repeat lamps n=12 along=road {
+      cyl pole r=0.15 h=5 at=0,0,3
+      box arm size=1.6,0.12,0.12 at=0,4.9,2.4
+    }
+    spline loop closed=true path=[(0,2,20); (15,6,28); (5,9,38); (-12,4,30)]
+    repeat ties n=40 along=loop orient=full { box tie size=0.2,0.1,1.5 pin=top }
+  `;
+  const out = reverse(partsOfDocument(sceneToGLB(src, { level: 'L1' }).doc), { level: 'L1' });
+  const ev = evaluate(src, out.src);
+  assert.equal(ev.errors.recon, 0);
+  assert.equal(ev.objects.matched, ev.objects.orig);
+  assert.equal(ev.compression.array.recall, 1, JSON.stringify(ev.compression.array));
+  // 路灯：灯杆与灯臂是同一个 repeat 的两个部件，曲线落在地面上，控制点就是原来的那 4 个（方向可能相反）
+  const road = /^spline (\S+) path=\[(.*)\]$/m.exec(out.src);
+  assert.ok(road, out.src);
+  const pts = road[2].split(';').map((p) => p.replace(/[()\s]/g, '').split(',').map(Number));
+  const want = [[-30, 0, 10], [-10, 0, -5], [10, 0, 8], [30, 0, -6]];
+  const near = (a, b) => a.every((v, k) => Math.abs(v - b[k]) < 1e-3);
+  assert.ok(pts.every((p, j) => near(p, want[j])) || pts.every((p, j) => near(p, want[3 - j])), road[0]);
+  assert.match(out.src, new RegExp(`^repeat \\S+ n=12 along=${road[1]} \\{\\n  \\S+ \\S+ .*\\n  \\S+ \\S+ .*\\n\\}`, 'm'));
+  // 枕木：闭合曲线，orient=full
+  assert.match(out.src, /^spline \S+ closed=true path=\[/m);
+  assert.match(out.src, /^repeat \S+ n=40 along=\S+ orient=full \{/m);
+});
+
+test('部分圆弧上的旋转阵列：沿 300° 弧排的路灯写成 rotate', () => {
+  const { out, ev } = roundTrip('curves.s3d', 'L0');
+  assert.equal(ev.compression.array.recall, 1, JSON.stringify(ev.compression.array));
+  assert.match(out.src, /^rotate \S+ n=10 angle=30 /m);
+});

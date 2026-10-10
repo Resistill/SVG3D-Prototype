@@ -6,6 +6,7 @@
 //      朝向写成相对参照物的
 //   4. 校验：编译关系版本，逐个比对位置与朝向，不一致的退回坐标
 import { semanticNames } from './naming.mjs';
+import { chainsOf, fitAlong, alongPoses } from './curvefit.mjs';
 import { NodeIO } from '@gltf-transform/core';
 import { compile } from '../src/s3d.js';
 
@@ -425,10 +426,12 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
 
   // ── 压缩：阵列（平移 / 绕竖直轴旋转 / 螺旋）──
   const units = compress ? detectArrays(objs, related) : [];
+  // 沿曲线的阵列：剩下的物体里，等间距排成一串、朝向随切线变化的（过山车枕木）
+  if (compress) units.push(...detectCurveArrays(objs, units));
   const unitOf = new Map(); // 物体 id → { unit, child, k }
   for (const u of units) u.children.forEach((c, ci) => c.members.forEach((o, k) => unitOf.set(o.id, { unit: u, child: c, k: instOf(u, k) })));
   // 镜像：成对的物体或阵列关于同一个竖直平面对称 → 一个写出来，另一个是它的镜像副本
-  const mirrors = compress ? detectMirrors(objs, units, unitOf) : [];
+  const mirrors = compress ? detectMirrors(objs, units.filter((u) => !u.along), unitOf) : [];
   const ghostPath = new Map(); // 被镜像出来的物体 id → 它在副本里的路径
   for (const mi of mirrors) for (const [bid, path] of mi.paths) ghostPath.set(bid, path);
   const pathOf = (o) => {
@@ -520,6 +523,29 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       }
       const u = x, anchor = u.children[0], a0 = anchor.members[0];
       const inUnit = (B) => unitOf.get(B.id)?.unit === u;
+      if (u.along) {
+        // 曲线本身写成 spline（世界坐标），成员写在第 0 个实例的坐标系里
+        const { ctrl, closed, mode } = u.along;
+        lines.push(`spline ${u.along.id}${closed ? ' closed=true' : ''} path=[${ctrl.map((p) => `(${vec6(p)})`).join('; ')}]`);
+        stats.curve = (stats.curve ?? 0) + 1;
+        lines.push(`repeat ${u.id} n=${u.n} along=${u.along.id}${mode === 'yaw' ? '' : ` orient=${mode}`} {`);
+        const poses = alongPoses(ctrl, closed, u.n, mode);
+        for (const ch of u.children) {
+          const o = ch.members[0];
+          const lp = mvT(poses[0].M, sub(o.at, poses[0].q));
+          const colsL = o.cols.map((c) => mvT(poses[0].M, c));
+          const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
+          const orient = o.symY && Math.abs(colsL[1][1] - 1) < 1e-6 ? '' : orientText(colsL);
+          lines.push('  ' + [o.kind, ch.id, props, `at=${vec6(lp)}`, orient, `mat=${o.mat}`, `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' '));
+          for (const [k, m] of ch.members.entries()) {
+            targets.push({ o: m, path: `${u.id}.${k}.${ch.id}`, tol: 2e-3, unit: u.id, kind: 'along' });
+            setPose(m, colsL.map((c) => mvC(poses[k].M, c)), o.box);
+            placed.add(m.id);
+          }
+        }
+        lines.push('}');
+        continue;
+      }
       if (u.rotate) {
         // rotate 容器：坐标系就是父坐标系，第一个成员照常用关系定位；其余成员由旋转生成
         const { u: ax, deg, c } = u.rotate;
@@ -628,7 +654,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   const report = {
     source: srcFile, level, parts: parts.length,
     kinds: Object.fromEntries(Object.entries(objs.reduce((m, o) => ((m[o.kind] = (m[o.kind] ?? 0) + 1), m), {})).sort()),
-    arrays: kept.map((u) => ({ id: nm(u.id), n: u.n, ...(u.holes?.length ? { holes: u.holes } : {}), kind: u.rotate ? 'rotate' : u.turn ? 'screw' : u.grid ? 'grid' : 'linear', children: u.children.map((c) => c.id) })),
+    arrays: kept.map((u) => ({ id: nm(u.id), n: u.n, ...(u.holes?.length ? { holes: u.holes } : {}), kind: u.along ? 'along' : u.rotate ? 'rotate' : u.turn ? 'screw' : u.grid ? 'grid' : 'linear', children: u.children.map((c) => c.id) })),
     mirrors: mirrors.filter((mi) => !droppedMirrors.has(mi.B.id)).map((mi) => ({ id: nm(mi.B.id), of: nm(mi.A.id), across: mi.across, objects: mi.paths.size })),
     covered: kept.reduce((s, u) => s + u.children.reduce((t, c) => t + c.members.length, 0), 0),
     placement: out.stats,
@@ -754,6 +780,69 @@ function detectMirrors(objs, units, unitOf) {
   return out;
 }
 
+// ───────── 沿曲线的阵列 ─────────
+// 同形状、同尺寸、同材质、还没进阵列的物体，按最近邻排成等间距的链（至少 8 个），再拟合一条样条：
+// 第 k 个成员 = 曲线上等弧长的第 k 个点 + 随切线转动的固定偏移。拟合与校验都通过才算。
+function detectCurveArrays(objs, units) {
+  const inUnit = new Set(units.flatMap((u) => u.children.flatMap((c) => c.members.map((o) => o.id))));
+  const nums = (o) => Object.entries(o.props).filter(([k]) => !['src', 'pivot', 'axis'].includes(k)).flatMap(([, v]) => String(v).split(',').map(Number));
+  const sameSize = (a, b) => { const x = nums(a), y = nums(b); return x.length === y.length && x.every((v, i) => Math.abs(v - y[i]) < 0.01 + 0.005 * Math.abs(v)); };
+  const groups = [];
+  for (const o of objs) {
+    if (o.kind === 'mesh' || inUnit.has(o.id)) continue;
+    const g = groups.find((gg) => gg[0].kind === o.kind && gg[0].mat === o.mat && (gg[0].props.axis ?? '') === (o.props.axis ?? '') && sameSize(gg[0], o));
+    if (g) g.push(o); else groups.push([o]);
+  }
+  const out = [];
+  const taken = new Set([...objs.map((o) => o.id), ...units.map((u) => u.id)]);
+  let ci = 0;
+  for (const g of groups) {
+    if (g.length < 8) continue;
+    for (const ch of chainsOf(g.map(centerOf))) {
+      let members = ch.order.map((i) => g[i]);
+      let f = fitAlong(members.map(centerOf), { closed: ch.closed });
+      // 不闭合的链两个方向都试（第 0 个实例在哪一头）；闭合的链由 fitAlong 自己处理方向
+      if (!f && !ch.closed) { members = [...members].reverse(); f = fitAlong(members.map(centerOf), { closed: false }); }
+      if (!f) continue;
+      if (f.reversed) members = [members[0], ...members.slice(1).reverse()];
+      if (f.start) members = [...members.slice(f.start), ...members.slice(0, f.start)];
+      let id = `${g[0].kind}s`, k = 2;
+      while (taken.has(id)) id = `${g[0].kind}s_${k++}`;
+      taken.add(id);
+      out.push({ id, children: [{ id: g[0].kind, members }], n: members.length, along: { id: `curve${++ci}`, ctrl: f.ctrl, closed: f.closed, mode: f.mode } });
+    }
+  }
+  // 合并：同一条水平曲线上的几组（路灯的灯杆与灯臂）。yaw 模式下实例坐标系的 y 朝上，
+  // 曲线整体竖直平移等价于部件的高度偏移，所以控制点只差一个竖直平移（或正好反向）就是同一条曲线
+  const sameCurve = (a, b) => {
+    if (a.n !== b.n || a.along.closed !== b.along.closed || a.along.mode !== 'yaw' || b.along.mode !== 'yaw' || a.along.ctrl.length !== b.along.ctrl.length) return null;
+    for (const rev of [false, true]) {
+      if (rev && a.along.closed) break;
+      const cb = rev ? [...b.along.ctrl].reverse() : b.along.ctrl;
+      const d = sub(cb[0], a.along.ctrl[0]);
+      if (Math.abs(d[0]) < 1e-4 && Math.abs(d[2]) < 1e-4 && cb.every((p, j) => len(sub(sub(p, a.along.ctrl[j]), d)) < 1e-4)) return { rev };
+    }
+    return null;
+  };
+  const merged = [];
+  for (const u of out) {
+    let host = null, how = null;
+    for (const h of merged) if ((how = sameCurve(h, u))) { host = h; break; }
+    if (!host) { merged.push(u); continue; }
+    const ids = new Set(host.children.map((c) => c.id));
+    let cid = u.children[0].id;
+    while (ids.has(cid)) cid += '_';
+    host.children.push({ id: cid, members: how.rev ? [...u.children[0].members].reverse() : u.children[0].members });
+  }
+  // 水平曲线的高度是任意的（部件的高度偏移可以补上）：放到成员的最低点，曲线就是它们立着的那条路
+  for (const u of merged) if (u.along.mode === 'yaw') {
+    const corner = (o, b) => add(o.at, mvC(o.cols, [0, 1, 2].map((k) => ((b >> k) & 1 ? o.box.max[k] : o.box.min[k]))));
+    const bottom = Math.min(...u.children.flatMap((c) => c.members.flatMap((o) => [0, 1, 2, 3, 4, 5, 6, 7].map((b) => corner(o, b)[1]))));
+    u.along.ctrl = u.along.ctrl.map((p) => [p[0], bottom, p[2]]);
+  }
+  return merged;
+}
+
 // ───────── 阵列检测 ─────────
 // 同形状、同尺寸、同材质（且相对竖直方向的姿态相同）的物体，如果相邻两个之间总是同一个刚体运动 M，
 // 它们就是一个阵列：M 是平移 → 直线阵列（两组平移 → 网格）；M 绕竖直轴旋转 → 旋转对称；旋转加竖直平移 → 螺旋。
@@ -852,13 +941,30 @@ function detectArrays(objs, related) {
       for (const o of g.filter((x) => !used.has(x.id))) { const hgt = dot(ctr(o), ax); const lv = levels.find((l) => Math.abs(l.h - hgt) < tol); if (lv) lv.items.push(o); else levels.push({ h: hgt, items: [o] }); }
       for (const lv of levels) {
         if (lv.items.length < 3 || !accept(lv.items.length)) continue;
-        const ps = lv.items.map(ctr), cc = scl(ps.reduce((s2, p) => add(s2, p), [0, 0, 0]), 1 / ps.length);
+        const ps = lv.items.map(ctr);
+        // 圆心：在垂直于轴的平面里拟合圆（整圈时就是质心；部分圆弧——例如沿 300° 弧排的路灯——质心不在圆心上）
+        const g0 = scl(ps.reduce((s2, p) => add(s2, p), [0, 0, 0]), 1 / ps.length);
+        const uv = ps.map((p) => [dot(sub(p, g0), e1), dot(sub(p, g0), e2)]);
+        let Suu = 0, Suv = 0, Svv = 0, Su = 0, Sv = 0;
+        for (const [u, v] of uv) { const w = u * u + v * v; Suu += u * u; Suv += u * v; Svv += v * v; Su += u * w; Sv += v * w; }
+        const det = Suu * Svv - Suv * Suv;
+        if (Math.abs(det) < 1e-12) continue;
+        const cu = (Su * Svv - Sv * Suv) / (2 * det), cv = (Sv * Suu - Su * Suv) / (2 * det);
+        const cc = add(g0, add(scl(e1, cu), scl(e2, cv)));
         const rs = ps.map((p) => len(sub(sub(p, cc), scl(ax, dot(sub(p, cc), ax)))));
         const rbar = rs.reduce((s2, x) => s2 + x, 0) / rs.length;
         if (rbar < 10 * tol || rs.some((x) => Math.abs(x - rbar) > tol)) continue;
         const angOf = (p) => (Math.atan2(dot(sub(p, cc), e2), dot(sub(p, cc), e1)) * 180) / Math.PI;
-        const items = lv.items.map((o, i) => ({ o, a: angOf(ps[i]) })).sort((x, y) => x.a - y.a);
-        const n = items.length, step = 360 / n;
+        let items = lv.items.map((o, i) => ({ o, a: angOf(ps[i]) })).sort((x, y) => x.a - y.a);
+        const n = items.length;
+        // 相邻角差；最大的那个空当之后是第 0 个成员（整圈时各个空当一样大）
+        const gaps = items.map((it, i) => ((items[(i + 1) % n].a - it.a) % 360 + 360) % 360 || 360);
+        const gi = gaps.indexOf(Math.max(...gaps));
+        items = [...items.slice(gi + 1), ...items.slice(0, gi + 1)];
+        const full = gaps.every((x) => Math.abs(x - 360 / n) < 0.05);
+        const step = full ? 360 / n : ((items[n - 1].a - items[0].a) % 360 + 360) % 360 / (n - 1);
+        // 部分圆弧至少 4 个：任意 3 个等距的点都落在一段圆弧上，不算规律；角步长太小就是直线，交给平移
+        if (!full && (n < 4 || step < 2)) continue;
         if (!items.every((it, i) => Math.abs(((((it.a - items[0].a - i * step) % 360) + 540) % 360) - 180) < 0.05)) continue;
         // e1 → e2 是绕 ax 的右手正向；中心取在第一个成员的原点高度上
         const c = cc;

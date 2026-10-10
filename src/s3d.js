@@ -1955,6 +1955,9 @@ function buildItems(root, S, materials) {
 // 每一对物体只输出最强的一条关系：on > against > inside > touching（接触）> intersects（相交）。
 // on / against 在参照物 B 自己的坐标系里判断，所以 “A against B.left” 指的是 B 自身的左面；
 // 接触与相交用有向包围盒的分离轴测试，对任意朝向都精确（不再用世界包围盒近似）。
+// 曲线工具（逆向管线拟合“沿曲线的阵列”时要和编译器用完全相同的曲线）
+export const _curves = { catmullRom, measureCurve, curveAt };
+
 export const FACT_EPS = 0.02;
 
 // ── 碰撞代理：每个物体 → 若干凸块（凸多面体或球），用于判断接触、相交、包含 ──
