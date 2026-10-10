@@ -2052,6 +2052,7 @@ function buildItems(root, S, materials) {
 // 曲线工具（逆向管线拟合“沿曲线的阵列”时要和编译器用完全相同的曲线）
 export const _curves = { catmullRom, measureCurve, curveAt };
 
+// 空间事实（接触、on、against）的容差，单位是场景单位；默认 2 cm（按米）。场景单位不是米时由调用方换算后传 opts.factEps
 export const FACT_EPS = 0.02;
 
 // ── 碰撞代理：每个物体 → 若干凸块（凸多面体或球），用于判断接触、相交、包含 ──
@@ -2159,8 +2160,7 @@ function tightBox(n) {
   } catch { return null; }
 }
 
-function deriveFacts(root, S) {
-  const eps = FACT_EPS;
+function deriveFacts(root, S, eps = FACT_EPS) {
   const objs = [];
   const walk = (n, inCsg) => {
     const k = K(n);
@@ -2343,7 +2343,7 @@ function compileOnce(src, plan, opts) {
     }
   }
   let items = [], curves = [], facts = [];
-  try { facts = deriveFacts(root, S); } catch (e) { errors.push(fail(e, root)); }
+  try { facts = deriveFacts(root, S, opts.factEps ?? FACT_EPS); } catch (e) { errors.push(fail(e, root)); }
   S.buildRelations(facts);
 
   // —— 语义层：概念 → 样式 → 检查（都在求解之后，可以使用空间事实）——

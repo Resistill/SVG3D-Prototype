@@ -7,8 +7,8 @@
 ## 工程
 
 ```
-init <源模型.glb> [--fidelity=semantic|structure|detail] --project=dir   新建工程：按档位跑一次逆向，生成 scene.s3d 与各层
-reverse [--fidelity=…] [--fresh]                                          重跑逆向（可以换档位）
+init <源模型.glb> [--fidelity=semantic|structure|detail] [--unit=米] --project=dir   新建工程：按档位跑一次逆向，生成 scene.s3d 与各层
+reverse [--fidelity=…] [--unit=…] [--fresh]                               重跑逆向（可以换档位、改场景单位）
 ```
 
 **档位**：逆向不要求 100% 复原，保留语义就够，剩下的由人细化。档位 = 容差，一个参数同时决定逆向的拟合门槛、数字位数、角度取整、阵列与校验的容差，以及分数的 δ：
@@ -18,6 +18,8 @@ reverse [--fidelity=…] [--fresh]                                          重�
 | `semantic` | 25 cm | 一律用最接近的基本体当语义代理（灰盒） | 只要语义；最适合风格化 |
 | `structure`（默认） | 5 cm | 明显不是基本体时才保留网格 | 结构清楚，细节交给人 |
 | `detail` | 5 mm | 误差稍大就保留网格引用 | 尽量复原 |
+
+**场景单位**：表里的容差、分数的 δ 与 `dMax`、`score` 输出的误差都按米。源模型不是按米建的（厘米 0.01、stud 0.28），工程的 `unit` 记每个场景单位多少米，计算前换算。`init` 不给 `--unit` 时按部件尺寸猜，结果里的 `unitNote` 要人确认；猜错了用 `reverse --unit=… --fresh` 改。
 
 | 文件 | 内容 | 谁改 |
 |---|---|---|

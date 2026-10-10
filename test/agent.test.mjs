@@ -221,3 +221,40 @@ test('文件拆分：基础层超过 splitLines 行就拆成 base/ 下的类型�
   await runCommand('reverse', proj, {});
   assert.equal(imports.map((f) => readFileSync(join(proj, f), 'utf8')).join('\n'), files0, '重跑逆向：拼回的旧文本作为名字记忆，结果不变');
 });
+
+test('场景单位：init 按部件尺寸猜单位（厘米场景猜成 0.01）并提示确认；分数与米制工程一致；reverse --unit 改单位', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 's3d-'));
+  const make = async (name, k) => {
+    const { doc, io } = sceneToGLB(SCENE, { level: 'L1' });
+    for (const scene of doc.getRoot().listScenes()) {
+      const top = doc.createNode('units').setScale([k, k, k]);
+      for (const c of scene.listChildren()) { scene.removeChild(c); top.addChild(c); }
+      scene.addChild(top);
+    }
+    const glb = join(dir, name + '.glb');
+    writeFileSync(glb, await io.writeBinary(doc));
+    return glb;
+  };
+  const m = await runCommand('init', join(dir, 'm'), { source: await make('m', 1) });
+  const cm = await runCommand('init', join(dir, 'cm'), { source: await make('cm', 100) });
+  assert.equal(m.unit, 1);
+  assert.equal(cm.unit, 0.01, JSON.stringify(cm));
+  assert.match(cm.unitNote, /0.01 米/);
+  assert.equal(JSON.parse(readFileSync(join(dir, 'cm', 'project.json'), 'utf8')).unit, 0.01);
+  assert.equal(cm.arrays, m.arrays);
+  const sm = await runCommand('score', join(dir, 'm'), { objects: true }), scm = await runCommand('score', join(dir, 'cm'), { objects: true });
+  assert.equal(scm.consts.delta, sm.consts.delta, 'δ 按米记录，两个工程相同');
+  const R = (x) => x.R_src + x.R_recon;
+  assert.ok(Math.abs(R(scm) - R(sm)) <= 0.01 * R(sm) + 0.5, `残差 ${R(scm)} 对 ${R(sm)}`);
+  // 误差按米输出：两边同一个源部件的误差一样
+  const err = (x, n) => x.sources.find((y) => y.name === n)?.meanErr;
+  for (const s0 of sm.sources) assert.ok(Math.abs(err(scm, s0.name) - s0.meanErr) < 1e-3, s0.name);
+  // 改单位：写进 project.json，评分随之换算
+  const re = await runCommand('reverse', join(dir, 'cm'), { unit: 1, fresh: true });
+  assert.equal(re.unit, 1);
+  assert.equal(JSON.parse(readFileSync(join(dir, 'cm', 'project.json'), 'utf8')).unit, 1);
+  await assert.rejects(runCommand('reverse', join(dir, 'cm'), { unit: -2 }), /unit/);
+  const wrong = await runCommand('score', join(dir, 'cm'), {});
+  assert.equal(wrong.consts.unit, 1);
+  assert.equal(wrong.consts.delta, scm.consts.delta, 'δ 仍按米');
+});

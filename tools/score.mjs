@@ -2,6 +2,7 @@
 //   S = L_stmt + L_mesh + R_src + R_recon，越低越好
 //   L_stmt  描述长度：名字、关键字、引用各 1；数字 1 + 0.5 × (小数位 − 1)；注释与 ~元数据不计
 //   L_mesh  仍以源网格引用保留的部分：c_mesh × log2(1 + 三角形数)
+//   长度都按米计（δ、dMax、输出的误差），场景单位不是米时按 unit 换算
 //   R_src   源模型的每个部件表面采样，到重建表面的距离 d → log2(1 + max(0, d − δ)/δ)，按 log2(1 + 面积/δ²) 加权
 //           （这块表面在当前精度下有多少个 δ 见方的格子：精度要求越细、表面越大，同样的误差越贵——评分标准随档位变化）。
 //           δ 由档位决定；误差在 δ 以内不计代价（逆向只要求保留语义，不奖励“猜中作者的精确数值”）。
@@ -15,7 +16,10 @@ import { MeshBVH } from 'three-mesh-bvh';
 import { samplePoints } from './reverse.mjs';
 import { sceneObjects, trisToArray } from './worldtris.mjs';
 
-export const SCORE_DEFAULTS = { delta: 0.005, cRes: 4, cMesh: 10, dMax: 2, samples: 600 };
+// 长度常数（delta、dMax）按米给出，unit 是每个场景单位多少米；计算前换算成场景单位（inScene），输出的误差（meanErr、maxErr）再换回米。
+// 换算之后分数与单位无关：残差是 d/δ，面积权重是 面积/δ²，都是无量纲的
+export const SCORE_DEFAULTS = { delta: 0.005, cRes: 4, cMesh: 10, dMax: 2, samples: 600, unit: 1 };
+const inScene = (k) => ({ ...k, delta: k.delta / k.unit, dMax: k.dMax / k.unit });
 
 // 不计入描述长度的语句：语义层与风格层（它们不描述几何）
 const SEMANTIC = /^\s*(concept|pattern|check|style|variant|import)\b/;
@@ -99,7 +103,7 @@ function residual(points, target, k, color = null) {
 
 // result：compile() 的结果；files：描述文本（[{file, text}]，已包括 import 的文件）；sourceParts：readParts() 的源部件
 export function score({ result, files, sourceParts, consts = {} }) {
-  const k = { ...SCORE_DEFAULTS, ...consts };
+  const k0 = { ...SCORE_DEFAULTS, ...consts }, k = inScene(k0), u = k0.unit;
   const recon = sceneObjects(result, { sourceParts }).filter((o) => o.pos.length);
   const src = sourceParts.map((p, i) => ({ i, name: p.uid ?? p.name ?? p.from ?? `part_${i}`, tris: p.tris, pos: trisToArray(p.tris), color: p.material?.color }));
   const D0 = descriptionLength(files);
@@ -138,7 +142,7 @@ export function score({ result, files, sourceParts, consts = {} }) {
     const top = [...votes].sort((a, b) => b[1] - a[1])[0];
     const who = top ? recon[top[0]].path : null;
     if (who) { const p = per.get(who); p.rSrc += c; p.src.push(s.name); p.meanErr = Math.max(p.meanErr, res.mean); p.maxErr = Math.max(p.maxErr, res.max); }
-    srcOut.push({ name: s.name, tris: s.tris.length, cost: +c.toFixed(3), meanErr: +res.mean.toFixed(5), maxErr: +res.max.toFixed(5), explainedBy: who });
+    srcOut.push({ name: s.name, tris: s.tris.length, cost: +c.toFixed(3), meanErr: +(res.mean * u).toFixed(5), maxErr: +(res.max * u).toFixed(5), explainedBy: who });
   }
   // R_recon：重建物体 → 源。权重以顶层语句为单位：一个物体被细化成很多块、一个类型实例里的各个部件，
   // 共享一个权重、内部按面积分摊——拆分不会因为“块数多”而受罚；凭空多出来的语句照样各算一份
@@ -171,11 +175,11 @@ export function score({ result, files, sourceParts, consts = {} }) {
     Smesh += lineCost(`mesh p src="x#${s.name}" size=${[0, 1, 2].map((j) => fmt(hi[j] - lo[j])).join(',')} pivot=${pv.map(fmt).join(',')} at=${pv.map(fmt).join(',')} mat=m`) + k.cMesh * Math.log2(1 + s.tris.length);
   }
   const S = D.total + Lmesh + Rsrc + Rrecon;
-  const objects = [...per.values()].map((p) => ({ ...p, total: +(p.stmt + p.mesh + p.rSrc + p.rRecon).toFixed(3), stmt: +p.stmt.toFixed(2), mesh: +p.mesh.toFixed(2), rSrc: +p.rSrc.toFixed(3), rRecon: +p.rRecon.toFixed(3), meanErr: +p.meanErr.toFixed(5), maxErr: +p.maxErr.toFixed(5) }));
+  const objects = [...per.values()].map((p) => ({ ...p, total: +(p.stmt + p.mesh + p.rSrc + p.rRecon).toFixed(3), stmt: +p.stmt.toFixed(2), mesh: +p.mesh.toFixed(2), rSrc: +p.rSrc.toFixed(3), rRecon: +p.rRecon.toFixed(3), meanErr: +(p.meanErr * u).toFixed(5), maxErr: +(p.maxErr * u).toFixed(5) }));
   const r3 = (x) => +x.toFixed(2);
   return {
     S: r3(S), L_stmt: r3(D.total), droppedLines: D.dropped, L_mesh: r3(Lmesh), R_src: r3(Rsrc), R_recon: r3(Rrecon), S_mesh: r3(Smesh), explain: +(1 - S / Smesh).toFixed(4),
-    consts: k, objects, sources: srcOut,
+    consts: k0, objects, sources: srcOut,
     worst: [...objects].sort((a, b) => (b.mesh + b.rSrc + b.rRecon) - (a.mesh + a.rSrc + a.rRecon)).slice(0, 20).map((o) => ({ path: o.path, cost: +(o.mesh + o.rSrc + o.rRecon).toFixed(2), meanErr: o.meanErr, mesh: o.mesh > 0 })),
   };
 }
@@ -184,7 +188,7 @@ export function score({ result, files, sourceParts, consts = {} }) {
 // 与全场景分数同一套计价（δ、面积权重、铰链残差；重建侧整组共享一个权重），但不分材质、只和这一块源网格比，
 // 用来在细化的几个候选之间挑一个，不必每个候选都编译、评分整个场景
 export function localScore({ lines = [], objs, srcTris, consts = {}, samples = 2000 }) {
-  const k = { ...SCORE_DEFAULTS, ...consts };
+  const k0 = { ...SCORE_DEFAULTS, ...consts }, k = inScene(k0);
   const L = lines.reduce((s, l) => s + lineCost(l), 0);
   const recon = objs.filter((o) => o.pos.length);
   const reconBVH = surfaces(recon.map((o) => ({ ...o, color: null })));
@@ -195,5 +199,5 @@ export function localScore({ lines = [], objs, srcTris, consts = {}, samples = 2
   const A = parts.reduce((s, x) => s + x.area, 0);
   const Rrecon = A > 0 ? k.cRes * Math.log2(1 + A / (k.delta * k.delta)) * parts.reduce((s, x) => s + (x.area / A) * x.res.r, 0) : 0;
   const r3 = (x) => +x.toFixed(2);
-  return { S: r3(L + Rsrc + Rrecon), L: r3(L), R_src: r3(Rsrc), R_recon: r3(Rrecon), meanErr: +resS.mean.toFixed(4), maxErr: +resS.max.toFixed(4) };
+  return { S: r3(L + Rsrc + Rrecon), L: r3(L), R_src: r3(Rsrc), R_recon: r3(Rrecon), meanErr: +(resS.mean * k0.unit).toFixed(4), maxErr: +(resS.max * k0.unit).toFixed(4) };
 }

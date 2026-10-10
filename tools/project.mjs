@@ -1,5 +1,5 @@
 // 工程：人与 AI 共用的一个目录（docs/PLAN2.md 2.2）。工具与界面都只通过这里读写，没有隐藏状态。
-//   project.json   源模型、分数常数、容差
+//   project.json   源模型、场景单位（unit：每个场景单位多少米）、档位、分数常数（长度按米）
 //   scene.s3d      组合根：import 各层（工具与界面只编译它）
 //   base.s3d       逆向基础层（机器生成，重跑逆向会重写；人和 AI 不直接改）；大的时候是索引，内容拆在 base/ 下
 //   edits.s3d      修改层；semantics.s3d 语义层；style.s3d 风格层；decisions.s3d 决定层（逆向的约束，不进 scene）
@@ -8,7 +8,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync
 import { createHash } from 'node:crypto';
 import { join, relative, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { compile } from '../src/s3d.js';
+import { compile, FACT_EPS } from '../src/s3d.js';
 import { readParts, reverse, FIDELITY } from './reverse.mjs';
 import { SCORE_DEFAULTS } from './score.mjs';
 import { splitSource, joinSource, importedFiles } from './split.mjs';
@@ -34,6 +34,9 @@ export function openProject(dir) {
   const cfg = JSON.parse(readFileSync(cfgPath, 'utf8'));
   const P = {
     dir, cfg,
+    get unit() { return cfg.unit ?? 1; },
+    // 分数常数：长度按米（project.json 的 score），加上场景单位；extra 临时覆盖（如细化时用目标档位的 δ）
+    consts: (extra = {}) => ({ ...SCORE_DEFAULTS, ...cfg.score, ...extra, unit: cfg.unit ?? 1 }),
     path: (name) => join(dir, name),
     read: (name) => readFileSync(join(dir, name), 'utf8'),
     write: (name, text) => { mkdirSync(dirname(join(dir, name)), { recursive: true }); writeFileSync(join(dir, name), text); },
@@ -43,7 +46,7 @@ export function openProject(dir) {
     compile(extra = '', overrides = {}) {
       const main = 'scene.s3d';
       const text = P.read(main) + (extra ? '\n' + extra : '');
-      return compile(text, { file: main, resolve: (p) => overrides[p] ?? readFileSync(resolve(dir, p), 'utf8') });
+      return compile(text, { file: main, factEps: FACT_EPS / (cfg.unit ?? 1), resolve: (p) => overrides[p] ?? readFileSync(resolve(dir, p), 'utf8') });
     },
     // 计入描述长度的文本
     // 基础层可能拆成了多个文件（base.s3d 是索引），它 import 的文件一并计入
@@ -68,38 +71,56 @@ export function writeBase(P, text) {
   return sp.zones;
 }
 
-// 新建工程：记录源模型，跑一次逆向，生成各层文件
-export async function initProject(dir, source, { split = 'auto', copy = false, fidelity = 'structure' } = {}) {
+// 场景单位的默认值：glTF 规定按米，但导出时常常是厘米、毫米。部件尺寸（包围盒最长边）的中位数在米制里一般是 0.1–10，
+// 只有明显偏大时才猜成厘米（> 50）或毫米（> 500）；猜不出非公制的单位（如 stud），所以 init 的结果里总是提示人确认
+export function guessUnit(parts) {
+  const ext = parts.map((p) => { const vs = p.tris.flat(); return Math.max(...[0, 1, 2].map((k) => Math.max(...vs.map((v) => v[k])) - Math.min(...vs.map((v) => v[k])))); })
+    .filter((x) => x > 0).sort((a, b) => a - b);
+  const median = ext.length ? ext[ext.length >> 1] : 1;
+  const unit = median > 500 ? 0.001 : median > 50 ? 0.01 : 1;
+  return { unit, median: +median.toPrecision(3) };
+}
+const checkUnit = (u) => { if (!(u > 0) || !Number.isFinite(u)) throw new Error(`unit 是每个场景单位多少米，要是正数（米 1、厘米 0.01、stud 0.28）：${u}`); return u; };
+const writeCfg = (path, cfg) => writeFileSync(path, JSON.stringify(cfg, null, 2) + '\n');
+
+// 新建工程：记录源模型，跑一次逆向，生成各层文件。unit 不给时按部件尺寸猜一个，并在结果里提示确认
+export async function initProject(dir, source, { split = 'auto', copy = false, fidelity = 'structure', unit = null } = {}) {
   if (!FIDELITY[fidelity]) throw new Error(`没有档位 ${fidelity}（可用：${Object.keys(FIDELITY).join(' / ')}）`);
+  if (unit != null) checkUnit(unit);
   dir = resolve(dir);
   mkdirSync(dir, { recursive: true });
   if (existsSync(join(dir, 'project.json'))) throw new Error(`${dir} 已经是一个工程`);
   let src = resolve(source);
   if (copy) { mkdirSync(join(dir, 'source'), { recursive: true }); const to = join(dir, 'source', 'world.glb'); writeFileSync(to, readFileSync(src)); src = to; }
-  // 档位：逆向不要求 100% 复原；它同时决定逆向的精度与分数的 δ（几何误差的单位）
-  const cfg = { version: 1, source: relative(dir, src), sourceHash: sha1(src), split, fidelity, score: { ...SCORE_DEFAULTS, delta: FIDELITY[fidelity].tau } };
-  writeFileSync(join(dir, 'project.json'), JSON.stringify(cfg, null, 2) + '\n');
+  const parts = await readParts(src, { split });
+  const guess = unit == null ? guessUnit(parts) : null;
+  // 档位：逆向不要求 100% 复原；它同时决定逆向的精度与分数的 δ（几何误差的单位，按米）
+  const { unit: _u, ...score } = SCORE_DEFAULTS;
+  const cfg = { version: 1, source: relative(dir, src), sourceHash: sha1(src), unit: unit ?? guess.unit, split, fidelity, score: { ...score, delta: FIDELITY[fidelity].tau } };
+  writeCfg(join(dir, 'project.json'), cfg);
   writeFileSync(join(dir, 'scene.s3d'), '// 组合根：按顺序叠加各层（工具与界面只编译这个文件）\n' + LAYERS.map((f) => `import "${f}"`).join('\n') + '\n');
   for (const [f, h] of Object.entries(HEADERS)) if (!existsSync(join(dir, f))) writeFileSync(join(dir, f), typeof h === 'function' ? h(dir) : h);
   mkdirSync(join(dir, 'state'), { recursive: true });
   const P = openProject(dir);
+  P._parts = parts;
   const rep = await runReverse(P, { fresh: true });
-  return { dir, ...rep };
+  const note = guess && `场景单位按 1 = ${cfg.unit} 米（部件尺寸的中位数是 ${guess.median} 个单位，猜的）；不对的话用 reverse --unit=<每个单位多少米> --fresh 改（stud 是 0.28）`;
+  return { dir, ...rep, ...(note ? { unitNote: note } : {}) };
 }
 
-// 重跑逆向：上一次的 base.s3d 作为名字记忆（稳定命名），除非 fresh
-export async function runReverse(P, { fresh = false, fidelity = null } = {}) {
-  if (fidelity) {
-    if (!FIDELITY[fidelity]) throw new Error(`没有档位 ${fidelity}（可用：${Object.keys(FIDELITY).join(' / ')}）`);
-    P.cfg.fidelity = fidelity; P.cfg.score = { ...P.cfg.score, delta: FIDELITY[fidelity].tau };
-    writeFileSync(P.path('project.json'), JSON.stringify(P.cfg, null, 2) + '\n');
-  }
+// 重跑逆向：上一次的 base.s3d 作为名字记忆（稳定命名），除非 fresh。fidelity / unit 给了就先改工程设置
+export async function runReverse(P, { fresh = false, fidelity = null, unit = null } = {}) {
+  if (fidelity && !FIDELITY[fidelity]) throw new Error(`没有档位 ${fidelity}（可用：${Object.keys(FIDELITY).join(' / ')}）`);
+  if (unit != null) checkUnit(unit);
+  if (fidelity) { P.cfg.fidelity = fidelity; P.cfg.score = { ...P.cfg.score, delta: FIDELITY[fidelity].tau }; }
+  if (unit != null) P.cfg.unit = unit;
+  if (fidelity || unit != null) writeCfg(P.path('project.json'), P.cfg);
   const parts = await P.sourceParts();
   const previous = !fresh && P.exists('base.s3d') ? joinSource(P.read) : null;
-  const out = reverse(parts, { srcFile: P.cfg.source, level: 'project', previous, fidelity: P.cfg.fidelity ?? 'detail' });
+  const out = reverse(parts, { srcFile: P.cfg.source, level: 'project', previous, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit });
   writeBase(P, out.src);
   P.write('base.report.json', JSON.stringify(out.report, null, 2) + '\n');
   const hash = sha1(P.sourcePath());
-  if (hash !== P.cfg.sourceHash) { P.cfg.sourceHash = hash; writeFileSync(P.path('project.json'), JSON.stringify(P.cfg, null, 2) + '\n'); }
-  return { fidelity: P.cfg.fidelity ?? 'detail', parts: parts.length, arrays: out.report.arrays.length, mirrors: out.report.mirrors.length, meshes: out.objs.filter((o) => o.kind === 'mesh').length, renamed: out.report.renamed };
+  if (hash !== P.cfg.sourceHash) { P.cfg.sourceHash = hash; writeCfg(P.path('project.json'), P.cfg); }
+  return { fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, parts: parts.length, arrays: out.report.arrays.length, mirrors: out.report.mirrors.length, meshes: out.objs.filter((o) => o.kind === 'mesh').length, renamed: out.report.renamed };
 }

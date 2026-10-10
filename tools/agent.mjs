@@ -44,7 +44,7 @@ function applyProposal(P, id, prop) {
 // consts 可以覆盖分数常数：细化到某个档位时，用那个档位的 δ 衡量（细化到结构档就用结构档的尺子）
 async function scoreWith(P, overrides = {}, consts = {}) {
   const r = P.compile('', overrides);
-  const s = score({ result: r, files: P.geometryFiles(overrides), sourceParts: await P.sourceParts(), consts: { ...P.cfg.score, ...consts } });
+  const s = score({ result: r, files: P.geometryFiles(overrides), sourceParts: await P.sourceParts(), consts: P.consts(consts) });
   return { r, s };
 }
 // 自动细化：从最差的物体开始，逐个按更细的档位拆分；分数下降就写进修改层，直到解释率达标或预算用完
@@ -61,7 +61,7 @@ async function refineAuto(P, parts, { to, budget, target }) {
     while (cands.length && !pr) {
       const o = cands.shift();
       tried.add(o.path);
-      const x = refineProposal(cur.r, parts, o.path, { to });
+      const x = refineProposal(cur.r, parts, o.path, { to, unit: P.unit });
       if (x.error) log.push({ path: o.path, skipped: x.error });
       else if (tried.has('T:' + x.target)) log.push({ path: o.path, skipped: '同一种类型已经试过' });
       else { tried.add('T:' + x.target); if (x.gain < 0) pr = x; else log.push({ path: o.path, target: x.target, skipped: '局部分数没有变好', local: { current: x.current.S, best: x.local.S, chosen: x.name } }); }
@@ -133,7 +133,7 @@ async function inspectSource(P, names) {
     const area = p.tris.reduce((s, [A, B, C]) => { const u = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], w = [C[0] - A[0], C[1] - A[1], C[2] - A[2]]; return s + Math.hypot(u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]) / 2; }, 0);
     const F = pcaFrame(samplePoints(p.tris, 800, i + 1));
     let suggestion = null;
-    try { suggestion = reverseParts([p], { srcFile: P.cfg.source, compress: false, names: false, fidelity: P.cfg.fidelity ?? 'detail' }).src.split('\n').find((l) => /^(box|cyl|cone|sphere|wedge|mesh) /.test(l))?.replace(/ ~src=.*$/, '') ?? null; } catch { /* 单独逆向失败 */ }
+    try { suggestion = reverseParts([p], { srcFile: P.cfg.source, compress: false, names: false, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit }).src.split('\n').find((l) => /^(box|cyl|cone|sphere|wedge|mesh) /.test(l))?.replace(/ ~src=.*$/, '') ?? null; } catch { /* 单独逆向失败 */ }
     return {
       name, tris: p.tris.length, material: p.material, area: +area.toFixed(3),
       box: { min: r4(lo), max: r4(hi), size: r4(hi.map((v, k) => v - lo[k])), center: r4(hi.map((v, k) => (v + lo[k]) / 2)) },
@@ -147,14 +147,14 @@ async function inspectSource(P, names) {
 export const COMMANDS = {
   init: {
     desc: '从源模型（GLB）新建工程：记录源模型、按档位跑一次逆向、生成各层文件。档位：semantic（只保留语义，一律用基本体当代理，最适合风格化）/ structure（默认）/ detail（尽量复原）',
-    args: { source: '源模型 .glb 的路径', fidelity: '档位：semantic / structure（默认）/ detail', copy: '可选：把源模型复制进工程（source/world.glb）' },
+    args: { source: '源模型 .glb 的路径', fidelity: '档位：semantic / structure（默认）/ detail', copy: '可选：把源模型复制进工程（source/world.glb）', unit: '可选：场景单位，每个单位多少米（米 1、厘米 0.01、stud 0.28）；不给时按部件尺寸猜，并在结果的 unitNote 里提示确认' },
     noProject: true,
-    async run(dir, a) { return initProject(dir, a.source ?? a._?.[0], { copy: !!a.copy, fidelity: a.fidelity ?? 'structure' }); },
+    async run(dir, a) { return initProject(dir, a.source ?? a._?.[0], { copy: !!a.copy, fidelity: a.fidelity ?? 'structure', unit: a.unit != null ? +a.unit : null }); },
   },
   reverse: {
-    desc: '重跑逆向，重写 base.s3d（上一次的结果作为名字记忆，修改层的路径保持有效）；可以换档位',
-    args: { fresh: '可选：不沿用上一次的名字', fidelity: '可选：换档位 semantic / structure / detail（同时改变分数的 δ）' },
-    async run(P, a) { return runReverse(P, { fresh: !!a.fresh, fidelity: a.fidelity ?? null }); },
+    desc: '重跑逆向，重写 base.s3d（上一次的结果作为名字记忆，修改层的路径保持有效）；可以换档位、改场景单位',
+    args: { fresh: '可选：不沿用上一次的名字', fidelity: '可选：换档位 semantic / structure / detail（同时改变分数的 δ）', unit: '可选：改场景单位（每个单位多少米）；档位容差、分数的 δ 与 dMax 都按米，随之换算' },
+    async run(P, a) { return runReverse(P, { fresh: !!a.fresh, fidelity: a.fidelity ?? null, unit: a.unit != null ? +a.unit : null }); },
   },
   outline: {
     desc: '分层概要：阵列与副本折叠成一行；每行给出类型、尺寸、实体数、主要关系、概念',
@@ -339,7 +339,7 @@ export const COMMANDS = {
       if (!targets.length) throw new Error('要细化哪些物体？给路径，或 --worst=N，或 --auto');
       const r = P.compile(), out = [], seen = new Set();
       for (const path of targets) {
-        const pr = refineProposal(r, parts, path, { to });
+        const pr = refineProposal(r, parts, path, { to, unit: P.unit });
         if (pr.error) { out.push(pr); continue; }
         if (seen.has(pr.target)) continue; // 同一种类型只细化一次
         seen.add(pr.target);
@@ -377,7 +377,7 @@ export const COMMANDS = {
     desc: '自评分数：S = 描述长度 + 网格引用 + 双向几何残差（越低越好）；explain 是解释率；worst 是下一步最值得修的物体',
     args: { objects: '可选：输出每个物体的分数' },
     async run(P, a) {
-      const s = score({ result: P.compile(), files: P.geometryFiles(), sourceParts: await P.sourceParts(), consts: P.cfg.score });
+      const s = score({ result: P.compile(), files: P.geometryFiles(), sourceParts: await P.sourceParts(), consts: P.consts() });
       P.write('score.json', JSON.stringify(s, null, 2) + '\n');
       const { objects, sources, ...summary } = s;
       // 解释得最差的源部件（L2 里是合并网格的分量）：render --source --focus=名字 可以看它是什么

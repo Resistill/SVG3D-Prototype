@@ -102,10 +102,10 @@ export function toLocal(tris, world) {
 }
 
 // ── 生成细化的提议 ──
-import { fitPart, orientText, setFidelity, FIDELITY, splitComponents, reverse as reverseParts } from './reverse.mjs';
+import { fitPart, orientText, setFidelity, FIDELITY, digitsFor, splitComponents, reverse as reverseParts } from './reverse.mjs';
 import { sceneObjects } from './worldtris.mjs';
 import { localScore } from './score.mjs';
-import { compile } from '../src/s3d.js';
+import { compile, FACT_EPS } from '../src/s3d.js';
 
 const mvT = (cols, v) => [dot(cols[0], v), dot(cols[1], v), dot(cols[2], v)];
 const mvC = (cols, v) => [0, 1, 2].map((k) => cols[0][k] * v[0] + cols[1][k] * v[1] + cols[2][k] * v[2]);
@@ -131,9 +131,9 @@ function voxelLines(tris, { voxel, maxBoxes, digits }) {
 
 // 一组分量 → 在物体自己的坐标系里跑一遍逆向（逐块拟合、找关系、找阵列与镜像）；
 // 面积大、又拟合不好的分量（一整栋楼的外壳）换成同名的一组体素盒子
-function nestedLines(comps, { to, digits, voxel, substitute = true }) {
-  const out = reverseParts(comps.map((c) => ({ ...c, name: null })), { srcFile: 'refine', fidelity: to, types: false, names: false });
-  setFidelity(to);
+function nestedLines(comps, { to, unit, digits, voxel, substitute = true }) {
+  const out = reverseParts(comps.map((c) => ({ ...c, name: null })), { srcFile: 'refine', fidelity: to, unit, types: false, names: false });
+  setFidelity(to, unit);
   const total = comps.reduce((s2, c) => s2 + c.area, 0);
   const bySrc = new Map(comps.map((c) => [c.from, c]));
   const poor = new Map();
@@ -154,8 +154,8 @@ function nestedLines(comps, { to, digits, voxel, substitute = true }) {
 
 // 一个物体（编译结果里的节点路径）→ 细化提议 { target, kind: 'type' | 'object', text, boxes, candidates, current, local }；拆不了返回 { error }
 // 候选：全部分量 / 按面积只留大块（99%、97%、90%）/ 整体体素（几种粒度）。用只看这个物体的局部分数挑最好的（按目标档位的 δ）：
-// 窗框、饰条这种小构件在粗档位下“写出来的代价 > 省掉的残差”，自然被舍弃
-export function refineProposal(result, parts, path, { to = 'structure' } = {}) {
+// 窗框、饰条这种小构件在粗档位下“写出来的代价 > 省掉的残差”，自然被舍弃。unit：场景单位（每个单位多少米），档位的数值按米、随之换算
+export function refineProposal(result, parts, path, { to = 'structure', unit = 1 } = {}) {
   const byPath = new Map(result.nodes.map((n) => [n.path, n]));
   let n = byPath.get(path);
   if (!n) return { path, error: '没有这个物体' };
@@ -178,7 +178,7 @@ export function refineProposal(result, parts, path, { to = 'structure' } = {}) {
   if (!n.world || Math.abs(Math.abs(det3(n.world.R)) - 1) > 1e-6 || det3(n.world.R) < 0) return { path, error: '物体的变换不是刚体（缩放或镜像），暂不支持' };
   if (n.kind === 'mesh' || part && result.items.find((i) => i.path === n.path)?.geom?.type === 'mesh') return { path, error: '它是网格引用（几何已经精确），细化只针对用基本体近似的物体' };
   const F = FIDELITY[to] ?? FIDELITY.structure;
-  const consts = { delta: F.tau };
+  const consts = { delta: F.tau, unit };
   const local = toLocal(part.tris, n.world);
   // 现在的几何（物体坐标系里）：局部分数的基准；它的包围盒写成名义外包络 envelope——
   // 关系、锚点、定位点都按它算，拆成多少块，挂在它上面的物体都不动（保住第一遍的骨架）
@@ -200,14 +200,14 @@ export function refineProposal(result, parts, path, { to = 'structure' } = {}) {
     const key = c.lines.join('\n');
     if (seen.has(key)) return;
     seen.add(key);
-    const r = compile([...(c.materials ?? []), ...c.lines].join('\n'));
+    const r = compile([...(c.materials ?? []), ...c.lines].join('\n'), { factEps: FACT_EPS / unit });
     if (r.errors.length) { cands.push({ name, error: r.errors[0].message }); return; }
     const w = wrap(c.lines);
     const ls = localScore({ lines: w.text.split('\n'), objs: sceneObjects(r), srcTris: local, consts });
     ls.S = total(ls);
     cands.push({ name, ...w, boxes: c.boxes, parts: c.parts, arrays: c.arrays, voxel: c.voxel, local: ls });
   };
-  const digits = F.digits, voxel = Math.max(2 * F.tau, 1e-3);
+  const digits = digitsFor(to, unit), voxel = Math.max(2 * F.tau, 1e-3) / unit;
   const comps = splitComponents({ ...part, tris: local }).map((c) => ({ ...c, area: areaOf(c.tris) })).sort((a, b) => b.area - a.area);
   if (comps.length > 1) {
     const total = comps.reduce((s2, c) => s2 + c.area, 0);
@@ -219,12 +219,12 @@ export function refineProposal(result, parts, path, { to = 'structure' } = {}) {
       if (kept.has(k)) continue;
       kept.add(k);
       const label = frac === 1 ? `全部 ${comps.length} 块` : `面积前 ${Math.round(frac * 100)}%（${k}/${comps.length} 块）`;
-      add(label, { ...nestedLines(comps.slice(0, k), { to, digits, voxel, substitute: false }), parts: k });
-      const v = nestedLines(comps.slice(0, k), { to, digits, voxel });
+      add(label, { ...nestedLines(comps.slice(0, k), { to, unit, digits, voxel, substitute: false }), parts: k });
+      const v = nestedLines(comps.slice(0, k), { to, unit, digits, voxel });
       if (v.voxelized) add(`${label}，拟合差的 ${v.voxelized} 块换成体素`, { ...v, parts: k });
     }
   }
-  setFidelity(to);
+  setFidelity(to, unit);
   for (const [v, mb] of [[voxel, to === 'detail' ? 120 : 40], [voxel * 4, 16], [voxel * 16, 6]]) {
     const c = voxelLines(local, { voxel: v, maxBoxes: mb, digits });
     if (c) add(`体素 ${fmt(c.voxel, 3)}（${c.boxes} 块）`, { ...c, parts: comps.length });

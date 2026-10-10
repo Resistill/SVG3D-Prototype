@@ -9,7 +9,7 @@ import { semanticNames } from './naming.mjs';
 import { chainsOf, fitAlong, alongPoses } from './curvefit.mjs';
 import { lineCost } from './score.mjs';
 import { NodeIO } from '@gltf-transform/core';
-import { compile, _curves } from '../src/s3d.js';
+import { compile, _curves, FACT_EPS } from '../src/s3d.js';
 
 // ───────── 小工具 ─────────
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -28,18 +28,24 @@ const fx = (x, d = 3) => (Math.round(x * 10 ** d) / 10 ** d + 0).toFixed(d);
 // 档位（逆向不要求 100% 复原，保留语义即可）：一个参数决定所有“要多精确”的旋钮
 //   tau     位置容差的单位（米）；所有与位置有关的容差按 S = tau / 5mm 缩放（精细档 S = 1，就是原来的数值）
 //   fitTol  拟合的相对误差超过它就退回网格引用；语义档一律用最接近的基本体当语义代理（如实写 ~err）
-//   digits  尺寸、坐标的小数位；angle 朝向取整的步长（度，0 表示不取整）
+//   digits  尺寸、坐标的小数位（按米）；angle 朝向取整的步长（度，0 表示不取整）
+// 场景单位 unit（每个场景单位多少米，默认 1）：档位的数值都按米写，进入几何计算前换算成场景单位——
+//   S 再除以 unit，小数位按 10^−digits 米折算，原来写死为米的绝对容差乘 M = 1/unit
 export const FIDELITY = {
   detail: { name: 'detail', tau: 0.005, fitTol: 0.02, digits: 4, angle: 0 },
   structure: { name: 'structure', tau: 0.05, fitTol: 0.25, digits: 2, angle: 0.1 },
   semantic: { name: 'semantic', tau: 0.25, fitTol: Infinity, digits: 1, angle: 1 },
 };
-let FID = FIDELITY.detail, S = 1;
-export const setFidelity = (name) => { FID = FIDELITY[name] ?? FIDELITY.detail; S = FID.tau / 0.005; };
-const fmt = (x) => { const p = 10 ** FID.digits, v = Math.round(x * p) / p; return Object.is(v, -0) ? '0' : String(v); };
+// 场景单位下的小数位：分辨率不粗于 10^−digits 米（stud ≈ 0.28 m 时与米相同，厘米、毫米时更少，最少 0 位）
+export const digitsFor = (name, unit = 1) => Math.max(0, Math.ceil((FIDELITY[name] ?? FIDELITY.detail).digits + Math.log10(unit) - 1e-9));
+let FID = FIDELITY.detail, S = 1, M = 1, DIGITS = FID.digits;
+export const setFidelity = (name, unit = 1) => { FID = FIDELITY[name] ?? FIDELITY.detail; S = FID.tau / unit / 0.005; M = 1 / unit; DIGITS = digitsFor(FID.name, unit); };
+// 尺寸签名的量化步长（场景单位）：档位的小数位与 1 cm 中较粗的那个，按米折算——米制下就是原来“写出的数再量化到厘米”
+const SIZE_Q = () => Math.max(10 ** -FID.digits, 0.01) * M;
+const fmt = (x) => { const p = 10 ** DIGITS, v = Math.round(x * p) / p; return Object.is(v, -0) ? '0' : String(v); };
 const fmtA = (deg) => fmt6(FID.angle ? Math.round(deg / FID.angle) * FID.angle : deg); // 角度按档位取整
 // 阵列的步长会被乘以实例数：取整误差放大 n 倍，所以位数按“n × 0.5·10^−d ≤ 容差”单独取（至少是档位的位数）
-const fmtStep = (x, n) => { const d = Math.min(6, Math.max(FID.digits, Math.ceil(Math.log10((0.5 * Math.max(1, n)) / (1e-3 * S))))); const v = Math.round(x * 10 ** d) / 10 ** d; return Object.is(v, -0) ? '0' : String(v); };
+const fmtStep = (x, n) => { const d = Math.min(6, Math.max(DIGITS, Math.ceil(Math.log10((0.5 * Math.max(1, n)) / (1e-3 * S))))); const v = Math.round(x * 10 ** d) / 10 ** d; return Object.is(v, -0) ? '0' : String(v); };
 const angTol = () => Math.max(3e-3, (FID.angle * Math.PI / 180) * 1.5);
 const vec = (v) => v.map(fmt).join(',');
 const fmt6 = (x) => { const v = Math.round(x * 1e6) / 1e6; return Object.is(v, -0) ? '0' : String(v); };
@@ -442,13 +448,13 @@ function primitiveOf(fit, part, srcFile) {
       const k = [0, 1, 2].reduce((b2, i) => (Math.abs(cols[i][1]) > Math.abs(cols[b2][1]) + 1e-6 ? i : b2), 0);
       const ny = cols[k][1] < 0 ? scl(cols[k], -1) : cols[k];
       const [i1, i2] = [0, 1, 2].filter((i) => i !== k);
-      const ix = hh[i2] > hh[i1] + 1e-6 ? i2 : i1, iz = ix === i1 ? i2 : i1;
+      const ix = hh[i2] > hh[i1] + 1e-6 * M ? i2 : i1, iz = ix === i1 ? i2 : i1;
       const ref = minRot(ny);
       let nx = cols[ix];
       if (dot(nx, ref[0]) < -1e-9 || (Math.abs(dot(nx, ref[0])) <= 1e-9 && dot(nx, ref[2]) < 0)) nx = scl(nx, -1);
       cols = [nx, ny, cross(nx, ny)];
       hh = [hh[ix], hh[k], hh[iz]];
-    } else if (hh[2] > hh[0] + 1e-6) { hh = [hh[2], hh[1], hh[0]]; cols = [cols[2], cols[1], scl(cols[0], -1)]; }
+    } else if (hh[2] > hh[0] + 1e-6 * M) { hh = [hh[2], hh[1], hh[0]]; cols = [cols[2], cols[1], scl(cols[0], -1)]; }
     return { ...base, kind: 'box', props: { size: vec(scl(hh, 2)) }, cols, at: sub(F.c, scl(cols[1], hh[1])), box: { min: [-hh[0], 0, -hh[2]], max: [hh[0], 2 * hh[1], hh[2]] }, sym180: true };
   }
   if (fit.shape === 'sphere') return { ...base, kind: 'sphere', props: { r: fmt(fit.r) }, cols: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], at: sub(fit.vc, [0, fit.r, 0]), box: { min: [-fit.r, 0, -fit.r], max: [fit.r, 2 * fit.r, fit.r] } };
@@ -563,8 +569,8 @@ function unifyBoxLabels(objs) {
 }
 
 // ───────── 3 & 4. 关系与校验 ─────────
-export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', types: useTypes = true } = {}) {
-  setFidelity(fidelity);
+export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true } = {}) {
+  setFidelity(fidelity, sceneUnit);
   // 计时：S3D_TIMING=1 时把各阶段耗时打到 stderr（实战里定位瓶颈用）
   const T0 = performance.now(), lap = (what) => process.env.S3D_TIMING && console.error(`[reverse] ${what} ${Math.round(performance.now() - T0)}ms`);
   // ── 享元：同一个网格（加同样的缩放、同样的镜像）被多个节点用到 → 一个类型（def），只拟合一次 ──
@@ -654,7 +660,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   const absSrc = header.concat(objs.map(absLine)).join('\n');
 
   // 空间事实（全坐标版本）
-  const r0 = compile(absSrc);
+  const r0 = compile(absSrc, { factEps: FACT_EPS * M });
   lap('全坐标版本编译');
   const byId = new Map(objs.map((o) => [o.id, o]));
   const onOf = new Map(), againstOf = new Map(), nearOf = new Map();
@@ -942,7 +948,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   for (let round = 0; round < 6; round++) {
     out = emit(dissolved, fallback);
     lap(`第 ${round} 轮发射`);
-    const r1 = compile(out.text);
+    const r1 = compile(out.text, { factEps: FACT_EPS * M });
     lap(`第 ${round} 轮编译`);
     if (process.env.S3D_DUMP && round === 0) dumpText(process.env.S3D_DUMP, out.text);
     const byPath = new Map(r1.nodes.map((n) => [n.path, n]));
@@ -952,7 +958,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const n = byPath.get(t.path);
       // 位置：一般比较原点（底面中心）；绕自身轴对称的形状比较几何中心——它们的“原点”是包围盒底面中心，
       // 离轴有一个半径，旋转副本会把这个偏移一起转走，而拟合时每个副本的坐标系是按世界“上”规范选的
-      const tolP = t.unit || t.mirror ? 2e-3 * S * Math.max(1, len(t.o.at) / 50) : t.tol;
+      const tolP = t.unit || t.mirror ? 2e-3 * S * Math.max(1, len(t.o.at) / (50 * M)) : t.tol;
       // 一律比较几何中心：中心与表示无关；加上考虑对称的朝向比较，位姿就完全确定了
       const posOk = () => len(sub(scl(add(n.box.min, n.box.max), 0.5), centerOf(t.o))) < tolP;
       // span 的杆轴是局部 x：比较杆轴与圆柱轴线
@@ -1017,7 +1023,7 @@ function sameOrientation(o, Rw, mirrored = false) {
 function detectMirrors(objs, units, unitOf) {
   const reflect = (p, n, d) => sub(p, scl(n, 2 * (dot(p, n) - d)));
   const reflectDir = (v, n) => sub(v, scl(n, 2 * dot(v, n)));
-  const sizeKey = (o) => [o.kind, o.props.axis ?? '', o.mat, ...Object.entries(o.props).filter(([k]) => !['src', 'pivot', 'axis'].includes(k)).map(([k, v]) => `${k}=${String(v).split(',').map((x) => Math.round(+x * 100)).join(',')}`)].join('|');
+  const sizeKey = (o) => [o.kind, o.props.axis ?? '', o.mat, ...Object.entries(o.props).filter(([k]) => !['src', 'pivot', 'axis'].includes(k)).map(([k, v]) => `${k}=${String(v).split(',').map((x) => Math.round(+x / SIZE_Q())).join(',')}`)].join('|');
   const ents = [];
   // 参考点用全部成员的质心（网格反射后原点会换到另一个角上，质心不会）
   const centroid = (u) => scl(u.children.flatMap((c) => c.members.map(centerOf)).reduce((s2, p) => add(s2, p), [0, 0, 0]), 1 / u.children.reduce((s2, c) => s2 + c.members.length, 0));
@@ -1036,14 +1042,14 @@ function detectMirrors(objs, units, unitOf) {
   const planes = [];
   for (let i = 0; i < ents.length; i++) for (let j = i + 1; j < ents.length; j++) {
     const A = ents[i], B = ents[j];
-    if (A.key !== B.key || Math.abs(A.ref[1] - B.ref[1]) > 1e-3) continue;
+    if (A.key !== B.key || Math.abs(A.ref[1] - B.ref[1]) > 1e-3 * M) continue;
     let nrm = sub(B.ref, A.ref); nrm[1] = 0;
     if (len(nrm) < 1e-6) continue;
     nrm = unit(nrm);
     const f = nrm.find((v) => Math.abs(v) > 1e-9);
     if (f < 0) nrm = scl(nrm, -1);
     const d = dot(nrm, scl(add(A.ref, B.ref), 0.5));
-    let pl = planes.find((p) => len(sub(p.n, nrm)) < 1e-3 && Math.abs(p.d - d) < 5e-3);
+    let pl = planes.find((p) => len(sub(p.n, nrm)) < 1e-3 && Math.abs(p.d - d) < 5e-3 * M);
     if (!pl) planes.push((pl = { n: nrm, d, pairs: [] }));
     pl.pairs.push([A, B]);
   }
@@ -1074,7 +1080,7 @@ function detectMirrors(objs, units, unitOf) {
     for (const o of objs) {
       if (o.kind === 'mesh') continue;
       const cLocal = scl(add(o.box.min, o.box.max), 0.5), c = add(o.at, mvC(o.cols, cLocal));
-      if (Math.abs(dot(c, pl.n) - pl.d) > 1e-3) continue;
+      if (Math.abs(dot(c, pl.n) - pl.d) > 1e-3 * M) continue;
       const ax = ['x', 'z'].find((a) => Math.abs(Math.abs(dot(o.cols[a === 'x' ? 0 : 2], pl.n)) - 1) < 1e-6);
       if (ax) { across = { obj: o, axis: ax }; break; }
     }
@@ -1159,7 +1165,7 @@ function detectCurveArrays(objs, units, onOf) {
       if (rev && a.along.closed) break;
       const cb = rev ? [...b.along.ctrl].reverse() : b.along.ctrl;
       const d = sub(cb[0], a.along.ctrl[0]);
-      if (Math.abs(d[0]) < 1e-4 && Math.abs(d[2]) < 1e-4 && cb.every((p, j) => len(sub(sub(p, a.along.ctrl[j]), d)) < 1e-4)) return { rev };
+      if (Math.abs(d[0]) < 1e-4 * M && Math.abs(d[2]) < 1e-4 * M && cb.every((p, j) => len(sub(sub(p, a.along.ctrl[j]), d)) < 1e-4 * M)) return { rev };
     }
     return null;
   };
@@ -1187,7 +1193,7 @@ function detectCurveArrays(objs, units, onOf) {
   }
   const topOf = (o) => add(o.at, mvC(o.cols, [(o.box.min[0] + o.box.max[0]) / 2, o.box.max[1], (o.box.min[2] + o.box.max[2]) / 2]));
   for (const g of poleGroups.values()) {
-    if (g.length < 8 || g.every((o) => Math.abs(o.box.max[1] - g[0].box.max[1]) < 1e-3)) continue;
+    if (g.length < 8 || g.every((o) => Math.abs(o.box.max[1] - g[0].box.max[1]) < 1e-3 * M)) continue;
     for (const ch of chainsOf(g.map(topOf))) {
       let members = ch.order.map((i) => g[i]);
       // drop 的方向是实例坐标系的“下”，只有 yaw（保持竖直）时才是世界的下
@@ -1202,7 +1208,7 @@ function detectCurveArrays(objs, units, onOf) {
         const hc = h.along.ctrl;
         if (h.along.closed !== f.closed || hc.length !== f.ctrl.length) continue;
         const cands = f.closed ? [f.ctrl, [f.ctrl[0], ...f.ctrl.slice(1).reverse()]] : [f.ctrl, [...f.ctrl].reverse()];
-        if (cands.some((c) => { const d = sub(c[0], hc[0]); return Math.abs(d[0]) < 1e-4 && Math.abs(d[2]) < 1e-4 && c.every((p, j) => len(sub(sub(p, hc[j]), d)) < 1e-4); })) {
+        if (cands.some((c) => { const d = sub(c[0], hc[0]); return Math.abs(d[0]) < 1e-4 * M && Math.abs(d[2]) < 1e-4 * M && c.every((p, j) => len(sub(sub(p, hc[j]), d)) < 1e-4 * M); })) {
           // 方向必须和那条曲线一致：用它重新核对一遍（反向时成员顺序也反过来）
           for (const ms of f.closed ? [members, [members[0], ...members.slice(1).reverse()]] : [members, [...members].reverse()]) {
             const poses = alongPoses(hc, h.along.closed, ms.length, 'yaw');
@@ -1253,7 +1259,7 @@ function detectArrays(objs, related) {
     const used = new Set();
     const rawStart = raw.length;
     const scale = Math.max(...g.map((o) => len(sub(o.box.max, o.box.min)))) || 1;
-    const tol = (0.004 + 1e-4 * scale) * S;
+    const tol = (0.004 + 1e-4 * scale / M) * S; // scale 是场景单位，S 已经含 1/unit：相对项按米折算
     const close = (a, b) => len(sub(a, b)) < tol;
     // 每一对给出一个候选运动，按容差聚类。
     // 规模：组很大时只和空间上最近的 10 个配对（阵列由相邻成员构成）；小组仍然两两配对，结果与原来完全一样

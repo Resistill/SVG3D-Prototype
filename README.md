@@ -248,6 +248,7 @@ node bin/eval.mjs examples/spaceport.s3d out/spaceport.L0.s3d
 4. **关系**：先发射全坐标版本、编译得到空间事实，再自下而上为每个物体选一条主关系（`on` / `against` / 相对某物的锚点），朝向写成相对参照物的。
 5. **校验**：编译关系版本，逐个比对几何中心与（考虑对称的）朝向；不一致的阵列拆开、物体退回坐标。
 6. **档位**（`--fidelity=semantic|structure|detail`）：一个容差参数同时决定拟合失败时是否退回网格、数字位数、角度取整、阵列与校验的容差。`semantic`（25 cm）一律用基本体当语义代理，得到干净的灰盒；`structure`（5 cm）结构清楚、细节交给人；`detail`（5 mm）尽量复原。阵列的步长按实例数单独取精度，取整误差不会逐级累加。
+   **场景单位**（`--unit=每个场景单位多少米`，默认 1）：档位的容差都按米写，进入计算前换算成场景单位（数字位数按 10^−位数 米折算），所以同一个场景用米、厘米或 stud（0.28 m）逆向，得到的形状、阵列、镜像相同，残差分数也相同。
 7. **命名**：源模型没有名字时（L1/L2），按通用语义库识别出的概念起名：`box46` → `terrain`，`cyls_2` → `columns`，阵列里的子物体 → `column`、`prop`。输出文件已经存在时，把它当作上一次的结果：几何上对得上的物体沿用原来的名字，所以源模型改动后重跑逆向，编辑层里的 `over` / `drop` 路径仍然有效（`--fresh` 重新起名）。
 
 **评测**（`bin/eval.mjs`）：按紧包围盒 IoU 一一匹配对象，报告形状种类正确率、空间事实的 P/R/F1、语义识别的 P/R/F1（两边都附加通用语义库，逐个概念比较成员）、阵列与镜像的召回、世界坐标依赖率、语句数比。三个难度：L0 保留名字、L1 抹去名字并打乱、L2 按材质合并网格。
@@ -277,6 +278,8 @@ node bin/eval.mjs examples/spaceport.s3d out/spaceport.L0.s3d
 node bin/s3d-tool.mjs init out/spaceport.L2.glb --fidelity=structure --project=work/spaceport
 ```
 
+源模型不是按米建的，加 `--unit`（每个场景单位多少米，如厘米 0.01、stud 0.28）。不给时按部件尺寸猜：明显偏大才猜成厘米或毫米，结果里的 `unitNote` 提示确认；已有的工程用 `reverse --unit=… --fresh` 改。
+
 ```bash
 node bin/s3d-tool.mjs score --project=work/spaceport
 ```
@@ -285,7 +288,7 @@ node bin/s3d-tool.mjs score --project=work/spaceport
 node bin/s3d-tool.mjs render --focus=beam_1 --project=work/spaceport
 ```
 
-- **工程**：`base.s3d`（逆向结果，可重新生成）+ `edits.s3d` / `semantics.s3d` / `style.s3d` / `decisions.s3d`，由 `scene.s3d` 组合；档位记在 `project.json`。基础层超过 400 行（`project.json` 的 `splitLines`）时自动拆成多个文件：`base/types.s3d`（材质与类型）+ 按水平位置分区的 `base/NN-名字.s3d`，`base.s3d` 只做索引；名字跨文件可见，拆分不改变编译结果与分数。
+- **工程**：`base.s3d`（逆向结果，可重新生成）+ `edits.s3d` / `semantics.s3d` / `style.s3d` / `decisions.s3d`，由 `scene.s3d` 组合；档位和场景单位（`unit`）记在 `project.json`，分数常数（δ、`dMax`）与输出的误差一律按米。基础层超过 400 行（`project.json` 的 `splitLines`）时自动拆成多个文件：`base/types.s3d`（材质与类型）+ 按水平位置分区的 `base/NN-名字.s3d`，`base.s3d` 只做索引；名字跨文件可见，拆分不改变编译结果与分数。
 - **看**：`render` 离屏渲染（纯 JS，零依赖）：多视角、物体编号标注（去重叠）、聚焦时被选中的物体不会被遮挡、误差热图、源模型与重建结果共用取景对照（可用正交相机）。
 - **查**：`outline`、`inspect`（`--source` 看源模型的部件：包络、主轴尺寸、建议语句）、`select`（集合表达式）、`similar`（同形部件，类型与阵列的候选）。
 - **做**：AI 的修改以提议出现——`propose` / `preview`（逐物体的分数变化，可渲染提议后的场景）/ `accept` / `reject`；`check` 空跑；`note` / `inbox` 是人与 AI 之间的留言；每次调用都记在 `state/log.jsonl`。
@@ -311,5 +314,6 @@ node bin/s3d-tool.mjs render --focus=beam_1 --project=work/spaceport
 - 锚点基于包围盒；还没有曲面锚点（圆柱侧面的 θ 角）和地形。
 - copy 复制的是原对象的定义，不包括后来对原对象的 over。
 - 改模板参数会重建该实例，之前对其内部的修改需要写在参数修改之后。
-- 逆向管线的局限见上一节；场景单位目前按米处理（档位容差写死为米），其他单位的模型要等 `project.json` 的 `unit`。
+- 逆向管线的局限见上一节。
+- 场景单位只在工程（`project.json` 的 `unit`）和逆向命令行里生效；界面直接打开 `.s3d` 时空间事实的容差仍按米（2 cm）。
 - 后续工作见 [docs/PLAN2.md](docs/PLAN2.md) 末尾的待办清单。
