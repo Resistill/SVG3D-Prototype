@@ -1,7 +1,7 @@
 // 工具集：人（界面）与 AI（命令行 / MCP）共用的“看 / 查 / 做 / 评”。一张命令表，CLI、MCP、HTTP 都由它生成。
 // 每个命令：desc（给人和模型看的说明）、args（参数说明）、run(工程, 参数) → 可序列化为 JSON 的结果
 import { outline } from './outline.mjs';
-import { score } from './score.mjs';
+import { score, pointErrors } from './score.mjs';
 import { sceneObjects } from './worldtris.mjs';
 import { rasterize, VIEWS } from './raster.mjs';
 import { initProject, openProject, runReverse } from './project.mjs';
@@ -39,6 +39,8 @@ function applyProposal(P, id, prop) {
   for (const n of prop.retract) if (!lines[n - 1]?.trim()) throw new Error(`${prop.layer} 第 ${n} 行是空的，无法撤销`);
   const drop = new Set(prop.retract.map((n) => n - 1));
   lines = lines.filter((_, i) => !drop.has(i));
+  // 撤回之后只剩注释头的旧提议（// 提议 NNN：…，后面直到下一条提议或文件末尾都没有语句了）：注释头一起删掉
+  if (drop.size) lines = lines.filter((l, i) => { if (!/^\/\/ 提议 \d+/.test(l)) return true; const next = lines.slice(i + 1).find((x) => x.trim()); return next != null && !/^\/\/ 提议 \d+/.test(next); });
   const text = lines.join('\n').replace(/\n*$/, '\n') + (prop.body ? `// 提议 ${id}${prop.why ? '：' + prop.why : ''}\n${prop.body}\n` : '');
   return text;
 }
@@ -110,10 +112,12 @@ async function previewProposal(P, p, opts = {}) {
   const after = await scoreWith(P, { [prop.layer]: text }, consts);
   const known = new Set(before.r.errors.map((e) => `${e.file}:${e.message}`));
   const errors = after.r.errors.filter((e) => !known.has(`${e.file}:${e.message}`));
-  // 逐物体的分数变化：只列变化明显的（≥ 0.5），按幅度排序
+  // 逐物体的分数变化，按幅度排序：默认只列变化明显的（≥ 0.5）前 20 个，opts.all 全部列出；描述（语句 + 网格）与残差分开给
   const bmap = new Map(before.s.objects.map((o) => [o.path, o])), amap = new Map(after.s.objects.map((o) => [o.path, o]));
-  const changed = [...amap.values()].filter((o) => bmap.has(o.path)).map((o) => ({ path: o.path, before: bmap.get(o.path).total, after: o.total, delta: +(o.total - bmap.get(o.path).total).toFixed(2) }))
-    .filter((x) => Math.abs(x.delta) >= 0.5).sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta)).slice(0, 20);
+  const desc = (o) => o.stmt + o.mesh, res = (o) => o.rSrc + o.rRecon;
+  let changed = [...amap.values()].filter((o) => bmap.has(o.path)).map((o) => { const b = bmap.get(o.path); return { path: o.path, before: b.total, after: o.total, delta: +(o.total - b.total).toFixed(2), desc: +(desc(o) - desc(b)).toFixed(2), res: +(res(o) - res(b)).toFixed(2) }; })
+    .filter((x) => opts.all ? Math.abs(x.delta) > 1e-6 : Math.abs(x.delta) >= 0.5).sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta));
+  if (!opts.all) changed = changed.slice(0, 20);
   const added = [...amap.values()].filter((o) => !bmap.has(o.path)).map((o) => ({ path: o.path, cost: o.total }));
   const removed = [...bmap.values()].filter((o) => !amap.has(o.path)).map((o) => ({ path: o.path, cost: o.total }));
   let render = null;
@@ -124,7 +128,7 @@ async function previewProposal(P, p, opts = {}) {
     P.write(out, res.png);
     render = { file: P.path(out), legend: res.legend };
   }
-  return { id: p.id, layer: prop.layer, why: prop.why, delta_unit: before.s.consts.delta, errors, before: before.s.S, after: after.s.S, delta: +(after.s.S - before.s.S).toFixed(2), explain: after.s.explain, changed, added: added.slice(0, 30), removed: removed.slice(0, 30), render, text, prop };
+  return { id: p.id, layer: prop.layer, why: prop.why, delta_unit: before.s.consts.delta, errors, before: before.s.S, after: after.s.S, delta: +(after.s.S - before.s.S).toFixed(2), explain: after.s.explain, changed, added: opts.all ? added : added.slice(0, 30), removed: opts.all ? removed : removed.slice(0, 30), render, text, prop };
 }
 
 const near = (a, b, tol) => Math.abs(a - b) <= tol + 0.005 * Math.abs(a);
@@ -231,6 +235,17 @@ export const COMMANDS = {
       return { expr, errors: r.errors.filter((e) => /__select/.test(e.message) || !e.file), members: c?.members ?? [] };
     },
   },
+  errors: {
+    desc: '一个物体的误差落在哪里：它表面上离源模型最远的采样点（重建 → 源）、它附近的源表面上离重建最远的采样点（源 → 重建，带最近的重建物体），距离按米、超过 δ 的才列；用来定位“残差还剩一些，但不知道在哪”',
+    args: { paths: '物体路径', top: '每个方向列几个（默认 10）', delta: '可选：按这个 δ（米）' },
+    async run(P, a) {
+      const path = [].concat(a.paths ?? a._ ?? [])[0];
+      if (!path) throw new Error('给一个物体路径');
+      const res = pointErrors({ result: P.compile(), sourceParts: await P.sourceParts(), path, consts: P.consts(a.delta ? { delta: +a.delta } : {}), top: +(a.top ?? 10) });
+      if (!res) throw new Error(`没有物体 ${path}（或它没有几何）`);
+      return { path, ...res };
+    },
+  },
   fit: {
     desc: '拟合一个源部件：按每种基本体（box / cyl / cone / sphere / wedge）分别拟合，给出语句与拟合误差（~err 是相对误差，越小越贴）；可以直接用在提议里（over 物体 : 种类 …）',
     args: { source: '源部件名（score 的 worstSources、inspect --source 里的名字）', kinds: '可选：只试这几种，逗号分隔' },
@@ -298,7 +313,7 @@ export const COMMANDS = {
   },
   render: {
     desc: '离屏渲染成 PNG：view=iso|iso2|top|front|back|left|right，mode=color|id|labels|error（按 score.json 的误差从绿到红上色）；focus=路径或 selection（只标注、并且不被遮挡）；source 渲染源模型；box 指定取景（返回值里的 box 可原样传回，源与重建取景一致）；ortho 正交相机',
-    args: { view: '视角（默认 iso）', mode: '模式（默认 labels）', focus: '可选：路径（或源部件名），或 selection', size: '边长像素（默认 1024）', out: '输出文件（默认 renders/<view>-<mode>.png）', source: '可选：渲染源模型而不是重建结果', box: '可选：取景范围 x0,y0,z0,x1,y1,z1', ortho: '可选：正交相机', cut: '可选：水平剖切高度（切掉高于它的部分，配合 --view=top 看某一层的平面）' },
+    args: { view: '视角（默认 iso）', mode: '模式（默认 labels）', focus: '可选：路径（或源部件名），或 selection', size: '边长像素（默认 1024）', out: '输出文件（默认 renders/<view>-<mode>.png）', source: '可选：渲染源模型而不是重建结果', box: '可选：取景范围 x0,y0,z0,x1,y1,z1', ortho: '可选：正交相机', cut: '可选：水平剖切高度（切掉高于它的部分，剖面画成轮廓线；配合 --view=top 看某一层的平面）', elev: '可选：俯仰角（度），--view=front --elev=0 --ortho 是真正的立面' },
     async run(P, a) {
       const parts = await P.sourceParts();
       let objs;
@@ -319,7 +334,7 @@ export const COMMANDS = {
       if (bx && (bx.length !== 6 || bx.some((v) => !Number.isFinite(v)))) throw new Error('box 写成 x0,y0,z0,x1,y1,z1');
       if (!VIEWS[view]) throw new Error(`没有视角 ${view}（可用：${Object.keys(VIEWS).join(' ')}）`);
       const focus = a.focus === 'selection' ? P.selection().paths : a.focus ? [].concat(a.focus) : null;
-      const res = rasterize(objs, { view, mode, size: +(a.size ?? 1024), focus: focus?.length ? focus : null, box: bx && { min: bx.slice(0, 3), max: bx.slice(3) }, ortho: !!a.ortho, cut: a.cut != null ? +a.cut : null });
+      const res = rasterize(objs, { view, mode, size: +(a.size ?? 1024), focus: focus?.length ? focus : null, box: bx && { min: bx.slice(0, 3), max: bx.slice(3) }, ortho: !!a.ortho, cut: a.cut != null ? +a.cut : null, elev: a.elev != null ? +a.elev : null });
       const out = a.out ?? `renders/${a.source ? 'source-' : ''}${view}-${mode}${focus ? '-focus' : ''}.png`;
       P.write(out, res.png);
       return { file: P.path(out), view, mode, focus, box: [...res.box.min, ...res.box.max].join(','), legend: res.legend };
@@ -349,8 +364,8 @@ export const COMMANDS = {
   },
   preview: {
     desc: '预览一条提议：叠加编译，报告新出现的错误、分数变化、受影响的物体（不改任何文件）',
-    args: { id: '提议编号', render: '可选：渲染应用提议之后的场景（聚焦在变化的物体上）', view: '可选：渲染视角' },
-    async run(P, a) { const { text, prop, ...pv } = await previewProposal(P, findProposal(P, a.id ?? a._?.[0]), { render: !!a.render, view: a.view, delta: a.delta ? +a.delta : null }); return pv; },
+    args: { id: '提议编号', render: '可选：渲染应用提议之后的场景（聚焦在变化的物体上）', view: '可选：渲染视角', all: '可选：列出全部变化的物体（默认只列变化 ≥ 0.5 的前 20 个）；每个物体的 desc 是描述的变化、res 是残差的变化', delta: '可选：按这个 δ（米）评分' },
+    async run(P, a) { const { text, prop, ...pv } = await previewProposal(P, findProposal(P, a.id ?? a._?.[0]), { render: !!a.render, view: a.view, delta: a.delta ? +a.delta : null, all: !!a.all }); return pv; },
   },
   accept: {
     desc: '接受一条提议：追加进目标层（有新的编译错误时拒绝接受，除非 --force），提议移到 proposals/accepted/',

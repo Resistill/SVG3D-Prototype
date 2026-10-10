@@ -401,6 +401,11 @@ test('fit / detect：按指定形状拟合一个源部件；对一部分物体�
   const det = await runCommand('detect', proj, { paths: posts });
   assert.equal(det.parts, 6);
   assert.ok(det.arrays.length >= 1 && /^repeat /m.test(det.text), JSON.stringify(det));
+  // errors：拟合得好的物体没有超过 δ 的点；结构正确
+  const er = await runCommand('errors', proj, { paths: ['shed'] });
+  assert.equal(er.path, 'shed');
+  assert.ok(Array.isArray(er.reconToSource.worst) && Array.isArray(er.sourceToRecon.worst));
+  assert.ok(er.reconToSource.over < 20, JSON.stringify(er.reconToSource));
 });
 
 test('计价规则：同一个网格只付一次；换了形的基础层语句只计名字与定位；残差归给 ~src 指向的物体', () => {

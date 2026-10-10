@@ -423,3 +423,29 @@ export function neighborhoodScorer({ parts, near, others, reconColors, consts = 
     return { S: r3(L + Rsrc + Rrecon), L: r3(L), R_src: r3(Rsrc), R_recon: r3(Rrecon), meanErr: +((own?.mean ?? 0) * k0.unit).toFixed(4), maxErr: +((own?.max ?? 0) * k0.unit).toFixed(4) };
   };
 }
+
+// 一个物体的误差落在哪里：它表面上离源模型最远的采样点（重建 → 源），以及它附近的源表面上离重建最远的采样点（源 → 重建）。
+// 与评分同一套距离（同材质优先、多计 δ、封顶 dMax）；坐标是场景坐标，距离按米。用来定位“残差还剩一些，但不知道在哪”
+export function pointErrors({ result, sourceParts, path, consts = {}, top = 10 }) {
+  const k0 = { ...SCORE_DEFAULTS, ...consts }, k = inScene(k0), u = k0.unit;
+  const recon = sceneObjects(result, { sourceParts }).filter((o) => o.pos.length);
+  const mine = recon.filter((o) => o.path === path || o.path.startsWith(path + '.'));
+  if (!mine.length) return null;
+  const src = sourceParts.map((p, i) => ({ i, name: p.uid ?? p.name ?? p.from ?? `part_${i}`, tris: p.tris, pos: trisToArray(p.tris), color: p.material?.color }));
+  const fix = (p) => p.map((x) => +x.toFixed(3));
+  const fwd = nearest(surfaces(src), k), out1 = [];
+  for (const o of mine) { const f = fwd(o.color); for (const p of samplePoints(triList(o.pos), k.samples, seedOf(o.path))) { const [d] = f(p); if (d > k.delta) out1.push({ at: fix(p), err: +(d * u).toFixed(4), object: o.path }); } }
+  // 源 → 重建：只看这个物体附近（包络外扩 dMax）的源部件
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (const o of mine) for (let i = 0; i < o.pos.length; i += 3) for (let j = 0; j < 3; j++) { lo[j] = Math.min(lo[j], o.pos[i + j]); hi[j] = Math.max(hi[j], o.pos[i + j]); }
+  const inside = (p) => [0, 1, 2].every((j) => p[j] >= lo[j] - k.dMax && p[j] <= hi[j] + k.dMax);
+  const back = nearest(surfaces(recon), k), out2 = [];
+  for (const s of src) {
+    if (!s.tris.some((t) => t.some(inside))) continue;
+    const f = back(s.color);
+    for (const p of samplePoints(s.tris, k.samples, s.i + 1)) { if (!inside(p)) continue; const [d, owner] = f(p); if (d > k.delta) out2.push({ at: fix(p), err: +(d * u).toFixed(4), source: s.name, nearest: owner >= 0 ? recon[owner].path : null }); }
+  }
+  const pick = (xs) => xs.sort((a, b) => b.err - a.err).slice(0, top);
+  return { delta: k0.delta, reconToSource: { over: out1.length, worst: pick(out1) }, sourceToRecon: { over: out2.length, worst: pick(out2) } };
+}
+

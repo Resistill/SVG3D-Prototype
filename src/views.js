@@ -8,8 +8,10 @@ export const VIEWS = {
 const unit = (a) => { const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
 
 // 包围盒取景：与预览器的 frame 相同（整体 1.6 倍半径，聚焦 2.4 倍）；正交相机按包围球取景
-export function camera(box, view = 'iso', focus = false) {
-  const d = unit(VIEWS[view] ?? VIEWS.iso);
+// elev：俯仰角（度），给了就沿这个视角的水平方向、按这个俯仰角重新定方向（elev=0 是真正的立面，量高度不用换算）
+export function camera(box, view = 'iso', focus = false, elev = null) {
+  const v = VIEWS[view] ?? VIEWS.iso, hz = Math.hypot(v[0], v[2]);
+  const d = unit(elev != null && hz > 1e-3 ? [v[0] / hz, Math.tan((elev * Math.PI) / 180), v[2] / hz] : v);
   const c = [0, 1, 2].map((k) => (box.min[k] + box.max[k]) / 2);
   const r = Math.max(Math.hypot(box.max[0] - box.min[0], box.max[1] - box.min[1], box.max[2] - box.min[2]) / 2, 2);
   const eye = c.map((x, k) => x + d[k] * r * (focus ? 2.4 : 1.6));

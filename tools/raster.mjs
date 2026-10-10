@@ -23,8 +23,17 @@ export const heatColor = (t) => { t = Math.max(0, Math.min(1, t)); return t < 0.
 // box：指定取景范围（不指定就按聚焦的物体或整个场景）；返回值里的 box 可以原样传给下一次渲染，两张图取景完全一致
 // ortho：正交相机（尺寸不随深度变化，便于量）
 // cut：水平剖切高度——高于它的部分被切掉（三角形按平面裁剪），从上往下看就是这一层的平面布局（看室内）
-export function rasterize(objects, { view = 'iso', size = 1024, focus = null, mode = 'color', highlight = null, box: frameBox = null, ortho = false, cut = null } = {}) {
-  if (cut != null) objects = objects.map((o) => ({ ...o, pos: clipBelow(o.pos, cut) }));
+// elev：俯仰角（度，见 views.js 的 camera）
+export function rasterize(objects, { view = 'iso', size = 1024, focus = null, mode = 'color', highlight = null, box: frameBox = null, ortho = false, cut = null, elev = null } = {}) {
+  if (cut != null) {
+    // 剖面线的宽度：画面尺度的 1.5 个像素（剖面不封口，竖直的墙从上往下看只剩剖面线）
+    let ext = 0;
+    const lo = [Infinity, Infinity], hi = [-Infinity, -Infinity];
+    for (const o of objects) for (let i = 0; i < o.pos.length; i += 3) { lo[0] = Math.min(lo[0], o.pos[i]); hi[0] = Math.max(hi[0], o.pos[i]); lo[1] = Math.min(lo[1], o.pos[i + 2]); hi[1] = Math.max(hi[1], o.pos[i + 2]); }
+    ext = Math.max(hi[0] - lo[0], hi[1] - lo[1], 1e-6);
+    const fb = frameBox ? Math.max(frameBox.max[0] - frameBox.min[0], frameBox.max[2] - frameBox.min[2]) : ext;
+    objects = objects.map((o) => ({ ...o, pos: clipBelow(o.pos, cut, (1.5 * fb) / size) }));
+  }
   const W = size, H = size;
   let box = { min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity] };
   const grow = (b, p) => { for (let k = 0; k < 3; k++) { b.min[k] = Math.min(b.min[k], p[k]); b.max[k] = Math.max(b.max[k], p[k]); } };
@@ -33,7 +42,7 @@ export function rasterize(objects, { view = 'iso', size = 1024, focus = null, mo
   for (const o of objects) if (inFocus(o.path)) for (let i = 0; i < o.pos.length; i += 3) grow(box, [o.pos[i], o.pos[i + 1], o.pos[i + 2]]);
   if (!Number.isFinite(box.min[0])) box = { min: [-1, -1, -1], max: [1, 1, 1] };
   if (frameBox) box = frameBox;
-  const cam = camera(box, view, !!focus);
+  const cam = camera(box, view, !!focus, elev);
   const fwd = unit(sub(cam.target, cam.eye));
   const right = unit(cross(fwd, Math.abs(fwd[1]) > 0.999 ? [0, 0, -1] : [0, 1, 0]));
   const up = cross(right, fwd);
@@ -125,8 +134,9 @@ export function rasterize(objects, { view = 'iso', size = 1024, focus = null, mo
 }
 
 // 把三角形裁剪到 y ≤ h（Sutherland–Hodgman，结果再扇形三角化）
-function clipBelow(pos, h) {
-  const out = [];
+// w：剖面线的宽度（场景单位）——三角形与剖切面的交线画成剖切高度上的细长条，从上往下看墙就是轮廓线
+function clipBelow(pos, h, w = 0) {
+  const out = [], segs = [];
   for (let i = 0; i < pos.length; i += 9) {
     const P = [[pos[i], pos[i + 1], pos[i + 2]], [pos[i + 3], pos[i + 4], pos[i + 5]], [pos[i + 6], pos[i + 7], pos[i + 8]]];
     if (P.every((p) => p[1] <= h)) { out.push(...P.flat()); continue; }
@@ -138,6 +148,15 @@ function clipBelow(pos, h) {
       if (ain !== bin) { const t = (h - a[1]) / (b[1] - a[1]); poly.push([a[0] + t * (b[0] - a[0]), h, a[2] + t * (b[2] - a[2])]); }
     }
     for (let k = 1; k + 1 < poly.length; k++) out.push(...poly[0], ...poly[k], ...poly[k + 1]);
+    const xs = poly.filter((p) => p[1] === h);
+    if (xs.length === 2) segs.push(xs);
+  }
+  if (w > 0) for (const [a, b] of segs) {
+    const dx = b[0] - a[0], dz = b[2] - a[2], L = Math.hypot(dx, dz);
+    if (L < 1e-9) continue;
+    const nx = (-dz / L) * (w / 2), nz = (dx / L) * (w / 2), y = h - 1e-4;
+    const A = [a[0] + nx, y, a[2] + nz], B = [b[0] + nx, y, b[2] + nz], C = [b[0] - nx, y, b[2] - nz], D = [a[0] - nx, y, a[2] - nz];
+    out.push(...A, ...B, ...C, ...A, ...C, ...D, ...A, ...C, ...B, ...A, ...D, ...C);
   }
   return Float32Array.from(out);
 }

@@ -57,6 +57,7 @@ inspect <路径…> | --selection         源语句与行号、属性、包围�
 inspect --source <源部件…>           源模型的部件：包络、三角形数、表面积、主轴方向与沿主轴的尺寸、材质、分数，以及把它单独逆向得到的建议语句（量尺寸用这个，不要数像素）
 check [--text=…] [--layer=edits]      空跑：把语句临时叠加编译，报告新错误；语句没有任何效果时警告（不生成提议、不消耗预算）
 select "<集合表达式>"                 例如 "kind(cyl) where h > 5 and top > 30"、"on(ground) - #road"
+errors <路径> [--top=10]                   一个物体的误差落在哪里：离源模型最远的采样点（两个方向，带坐标、距离按米）
 fit --source=<源部件> [--kinds=box,cyl,…]   按每种基本体分别拟合一个源部件，给出语句与相对误差（从好到差）
 detect <路径…> | --source=a,b,… | --selection   对一部分物体单独跑带压缩的逆向，看能不能找出阵列、镜像、类型、台阶，返回语句
 similar <路径> [--tol=0.01]           全场景里同形同尺寸同材质的物体及其相对位置——类型（def）与阵列的候选
@@ -161,3 +162,11 @@ claude mcp add svg3d -- node --import ./bin/node-hooks.mjs bin/s3d-mcp.mjs --pro
 3. 决定动作：换形状、写成阵列 / 镜像 / 类型、改定位、保留为网格、删掉碎片。
 4. `propose` 提交修改，看 `delta`：分数下降、没有新错误才 `accept`，否则 `reject --why=…` 并换个做法。
 5. 人在界面里选中了东西、留了话：`inspect --selection`、`render --focus=selection`。
+
+## 几个容易踩的地方
+
+- `render --out=`、`propose --file=` 这类路径相对**工程目录**解析（写到工程外面用 `../../…`）。
+- `render --view=front --elev=0 --ortho` 才是真正的立面（预设视角都带一点俯角）；`--cut=高度` 的剖面画成轮廓线。
+- `preview --all` 列出全部变化的物体（默认只列变化 ≥ 0.5 的前 20 个），每个物体的 `desc` 是描述的变化、`res` 是残差的变化。
+- 撤回（`propose --retract=`）一条旧提议的全部语句时，它的注释头也一起删掉。
+
