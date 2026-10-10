@@ -543,7 +543,10 @@ function unifyBoxLabels(objs) {
 // ───────── 3 & 4. 关系与校验 ─────────
 export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail' } = {}) {
   setFidelity(fidelity);
+  // 计时：S3D_TIMING=1 时把各阶段耗时打到 stderr（实战里定位瓶颈用）
+  const T0 = performance.now(), lap = (what) => process.env.S3D_TIMING && console.error(`[reverse] ${what} ${Math.round(performance.now() - T0)}ms`);
   const fits = parts.map((p, i) => fitPart(p, i));
+  lap(`拟合 ${parts.length} 个部件`);
   // 名字：L0 用源节点名；没有名字时按形状编号
   const used = new Map(), counters = {};
   const objs = parts.map((p, i) => {
@@ -580,6 +583,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
 
   // 空间事实（全坐标版本）
   const r0 = compile(absSrc);
+  lap('全坐标版本编译');
   const byId = new Map(objs.map((o) => [o.id, o]));
   const onOf = new Map(), againstOf = new Map(), nearOf = new Map();
   const related = new Map();
@@ -598,7 +602,9 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   const unitOf = new Map(); // 物体 id → { unit, child, k }
   for (const u of units) u.children.forEach((c, ci) => c.members.forEach((o, k) => unitOf.set(o.id, { unit: u, child: c, k: instOf(u, k) })));
   // 镜像：成对的物体或阵列关于同一个竖直平面对称 → 一个写出来，另一个是它的镜像副本
+  lap(`阵列检测（${units.length} 组）`);
   const mirrors = compress ? detectMirrors(objs, units.filter((u) => !u.along), unitOf) : [];
+  lap(`镜像检测（${mirrors.length} 组）`);
   const ghostPath = new Map(); // 被镜像出来的物体 id → 它在副本里的路径
   for (const mi of mirrors) for (const [bid, path] of mi.paths) ghostPath.set(bid, path);
   const pathOf = (o) => {
@@ -858,7 +864,9 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   let out;
   for (let round = 0; round < 6; round++) {
     out = emit(dissolved, fallback);
+    lap(`第 ${round} 轮发射`);
     const r1 = compile(out.text);
+    lap(`第 ${round} 轮编译`);
     if (process.env.S3D_DUMP && round === 0) dumpText(process.env.S3D_DUMP, out.text);
     const byPath = new Map(r1.nodes.map((n) => [n.path, n]));
     let changed = false;
@@ -885,7 +893,9 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   const kept = units.filter((u) => !dissolved.has(u.id));
   // 语义命名：没有源名字的部件按识别出的概念改名（box46 → terrain，cyls_2 → columns）；
   // 给了上一次的结果（previous）时，对得上的物体沿用上一次的名字
+  lap('校验结束');
   const named = names ? semanticNames(out.text, { previous }) : { text: out.text, map: {}, renamed: 0 };
+  lap('语义命名');
   const nm = (id) => named.map[id] ?? id;
   const report = {
     source: srcFile, level, parts: parts.length,
