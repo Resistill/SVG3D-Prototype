@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 import { join, relative, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compile } from '../src/s3d.js';
-import { readParts, reverse } from './reverse.mjs';
+import { readParts, reverse, FIDELITY } from './reverse.mjs';
 import { SCORE_DEFAULTS } from './score.mjs';
 
 const LIB = resolve(dirname(fileURLToPath(import.meta.url)), '../lib/semantics.s3d');
@@ -54,13 +54,15 @@ export function openProject(dir) {
 }
 
 // 新建工程：记录源模型，跑一次逆向，生成各层文件
-export async function initProject(dir, source, { split = 'auto', copy = false } = {}) {
+export async function initProject(dir, source, { split = 'auto', copy = false, fidelity = 'structure' } = {}) {
+  if (!FIDELITY[fidelity]) throw new Error(`没有档位 ${fidelity}（可用：${Object.keys(FIDELITY).join(' / ')}）`);
   dir = resolve(dir);
   mkdirSync(dir, { recursive: true });
   if (existsSync(join(dir, 'project.json'))) throw new Error(`${dir} 已经是一个工程`);
   let src = resolve(source);
   if (copy) { mkdirSync(join(dir, 'source'), { recursive: true }); const to = join(dir, 'source', 'world.glb'); writeFileSync(to, readFileSync(src)); src = to; }
-  const cfg = { version: 1, source: relative(dir, src), sourceHash: sha1(src), split, score: { ...SCORE_DEFAULTS }, tolerance: { abs: 0.01, rel: 0.005 } };
+  // 档位：逆向不要求 100% 复原；它同时决定逆向的精度与分数的 δ（几何误差的单位）
+  const cfg = { version: 1, source: relative(dir, src), sourceHash: sha1(src), split, fidelity, score: { ...SCORE_DEFAULTS, delta: FIDELITY[fidelity].tau } };
   writeFileSync(join(dir, 'project.json'), JSON.stringify(cfg, null, 2) + '\n');
   writeFileSync(join(dir, 'scene.s3d'), '// 组合根：按顺序叠加各层（工具与界面只编译这个文件）\n' + LAYERS.map((f) => `import "${f}"`).join('\n') + '\n');
   for (const [f, h] of Object.entries(HEADERS)) if (!existsSync(join(dir, f))) writeFileSync(join(dir, f), typeof h === 'function' ? h(dir) : h);
@@ -71,13 +73,18 @@ export async function initProject(dir, source, { split = 'auto', copy = false } 
 }
 
 // 重跑逆向：上一次的 base.s3d 作为名字记忆（稳定命名），除非 fresh
-export async function runReverse(P, { fresh = false } = {}) {
+export async function runReverse(P, { fresh = false, fidelity = null } = {}) {
+  if (fidelity) {
+    if (!FIDELITY[fidelity]) throw new Error(`没有档位 ${fidelity}（可用：${Object.keys(FIDELITY).join(' / ')}）`);
+    P.cfg.fidelity = fidelity; P.cfg.score = { ...P.cfg.score, delta: FIDELITY[fidelity].tau };
+    writeFileSync(P.path('project.json'), JSON.stringify(P.cfg, null, 2) + '\n');
+  }
   const parts = await P.sourceParts();
   const previous = !fresh && P.exists('base.s3d') ? P.read('base.s3d') : null;
-  const out = reverse(parts, { srcFile: P.cfg.source, level: 'project', previous });
+  const out = reverse(parts, { srcFile: P.cfg.source, level: 'project', previous, fidelity: P.cfg.fidelity ?? 'detail' });
   P.write('base.s3d', out.src);
   P.write('base.report.json', JSON.stringify(out.report, null, 2) + '\n');
   const hash = sha1(P.sourcePath());
   if (hash !== P.cfg.sourceHash) { P.cfg.sourceHash = hash; writeFileSync(P.path('project.json'), JSON.stringify(P.cfg, null, 2) + '\n'); }
-  return { parts: parts.length, arrays: out.report.arrays.length, mirrors: out.report.mirrors.length, renamed: out.report.renamed };
+  return { fidelity: P.cfg.fidelity ?? 'detail', parts: parts.length, arrays: out.report.arrays.length, mirrors: out.report.mirrors.length, meshes: out.objs.filter((o) => o.kind === 'mesh').length, renamed: out.report.renamed };
 }

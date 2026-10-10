@@ -71,15 +71,15 @@ function signature(item) {
 
 export const COMMANDS = {
   init: {
-    desc: '从源模型（GLB）新建工程：记录源模型、跑一次逆向、生成各层文件',
-    args: { source: '源模型 .glb 的路径', copy: '可选：把源模型复制进工程（source/world.glb）' },
+    desc: '从源模型（GLB）新建工程：记录源模型、按档位跑一次逆向、生成各层文件。档位：semantic（只保留语义，一律用基本体当代理，最适合风格化）/ structure（默认）/ detail（尽量复原）',
+    args: { source: '源模型 .glb 的路径', fidelity: '档位：semantic / structure（默认）/ detail', copy: '可选：把源模型复制进工程（source/world.glb）' },
     noProject: true,
-    async run(dir, a) { return initProject(dir, a.source ?? a._?.[0], { copy: !!a.copy }); },
+    async run(dir, a) { return initProject(dir, a.source ?? a._?.[0], { copy: !!a.copy, fidelity: a.fidelity ?? 'structure' }); },
   },
   reverse: {
-    desc: '重跑逆向，重写 base.s3d（上一次的结果作为名字记忆，修改层的路径保持有效）',
-    args: { fresh: '可选：不沿用上一次的名字' },
-    async run(P, a) { return runReverse(P, { fresh: !!a.fresh }); },
+    desc: '重跑逆向，重写 base.s3d（上一次的结果作为名字记忆，修改层的路径保持有效）；可以换档位',
+    args: { fresh: '可选：不沿用上一次的名字', fidelity: '可选：换档位 semantic / structure / detail（同时改变分数的 δ）' },
+    async run(P, a) { return runReverse(P, { fresh: !!a.fresh, fidelity: a.fidelity ?? null }); },
   },
   outline: {
     desc: '分层概要：阵列与副本折叠成一行；每行给出类型、尺寸、实体数、主要关系、概念',

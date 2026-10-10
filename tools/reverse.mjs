@@ -25,7 +25,22 @@ const Ry = (deg) => { const a = (deg * Math.PI) / 180, c = Math.cos(a), s = Math
 const mulCols = (A, B) => B.map((b) => mvC(A, b)); // 两组列向量的复合
 // 定长格式化，并把 -0 归为 0（否则 “-0.000” 与 “0.000” 会被当成不同的键）
 const fx = (x, d = 3) => (Math.round(x * 10 ** d) / 10 ** d + 0).toFixed(d);
-const fmt = (x) => { const v = Math.round(x * 10000) / 10000; return Object.is(v, -0) ? '0' : String(v); };
+// 档位（逆向不要求 100% 复原，保留语义即可）：一个参数决定所有“要多精确”的旋钮
+//   tau     位置容差的单位（米）；所有与位置有关的容差按 S = tau / 5mm 缩放（精细档 S = 1，就是原来的数值）
+//   fitTol  拟合的相对误差超过它就退回网格引用；语义档一律用最接近的基本体当语义代理（如实写 ~err）
+//   digits  尺寸、坐标的小数位；angle 朝向取整的步长（度，0 表示不取整）
+export const FIDELITY = {
+  detail: { name: 'detail', tau: 0.005, fitTol: 0.02, digits: 4, angle: 0 },
+  structure: { name: 'structure', tau: 0.05, fitTol: 0.25, digits: 2, angle: 0.1 },
+  semantic: { name: 'semantic', tau: 0.25, fitTol: Infinity, digits: 1, angle: 1 },
+};
+let FID = FIDELITY.detail, S = 1;
+const setFidelity = (name) => { FID = FIDELITY[name] ?? FIDELITY.detail; S = FID.tau / 0.005; };
+const fmt = (x) => { const p = 10 ** FID.digits, v = Math.round(x * p) / p; return Object.is(v, -0) ? '0' : String(v); };
+const fmtA = (deg) => fmt6(FID.angle ? Math.round(deg / FID.angle) * FID.angle : deg); // 角度按档位取整
+// 阵列的步长会被乘以实例数：取整误差放大 n 倍，所以位数按“n × 0.5·10^−d ≤ 容差”单独取（至少是档位的位数）
+const fmtStep = (x, n) => { const d = Math.min(6, Math.max(FID.digits, Math.ceil(Math.log10((0.5 * Math.max(1, n)) / (1e-3 * S))))); const v = Math.round(x * 10 ** d) / 10 ** d; return Object.is(v, -0) ? '0' : String(v); };
+const angTol = () => Math.max(3e-3, (FID.angle * Math.PI / 180) * 1.5);
 const vec = (v) => v.map(fmt).join(',');
 const fmt6 = (x) => { const v = Math.round(x * 1e6) / 1e6; return Object.is(v, -0) ? '0' : String(v); };
 const vec6 = (v) => v.map(fmt6).join(',');
@@ -300,7 +315,7 @@ function vkey(v) { return v.map((x) => Math.round(x * 1e5) || 0).join(); }
 function primitiveOf(fit, part, srcFile) {
   const fitScore = Math.max(0, Math.min(1, 1 - fit.e / TOL));
   const F = fit.frame, h = F.h, [ex, ey, ez] = F.cols;
-  if (fit.e > TOL && part.name) {
+  if (fit.e > FID.fitTol && part.name) {
     // 拟合不了：引用源网格。外包络是世界包围盒，原点在其底面中心
     // （从合并网格里拆出来的部件在源文件里没有节点可引用，只能用最接近的基本体，并如实给出低拟合度）
     const { min, max } = fit.aabb;
@@ -376,7 +391,8 @@ function orientText(cols) {
   const R = toRows(cols);
   if (Math.abs(R[1][1] - 1) < 1e-6) {
     const yaw = (Math.atan2(R[0][2], R[0][0]) * 180) / Math.PI;
-    return Math.abs(yaw) < 1e-4 ? '' : `turn=${fmt(yaw)}`;
+    const yt = fmtA(yaw);
+    return Math.abs(+yt) < 1e-4 ? '' : `turn=${yt}`;
   }
   const tr = R[0][0] + R[1][1] + R[2][2];
   const ang = Math.acos(Math.max(-1, Math.min(1, (tr - 1) / 2)));
@@ -384,7 +400,8 @@ function orientText(cols) {
   if (Math.abs(Math.sin(ang)) > 1e-6) axis = [R[2][1] - R[1][2], R[0][2] - R[2][0], R[1][0] - R[0][1]];
   else { const i = [0, 1, 2].reduce((b, k) => (R[k][k] > R[b][b] ? k : b), 0); axis = [0, 1, 2].map((k) => R[k][i] + (k === i ? 1 : 0)); }
   // 方向用 6 位小数：长物体或远离支点的成员，方向的微小误差会被放大成毫米级的位置误差
-  return `rot=(${vec6(unit(axis))},${fmt6((ang * 180) / Math.PI)})`;
+  const ax = unit(axis);
+  return `rot=(${FID.angle ? ax.map((v) => String(Math.round(v * 1000) / 1000 || 0)).join(',') : vec6(ax)},${fmtA((ang * 180) / Math.PI)})`;
 }
 const relCols = (B, A) => A.map((a) => mvT(B, a)); // A 的轴在 B 坐标系里的表示
 const det3c = (c) => dot(c[0], cross(c[1], c[2]));
@@ -410,7 +427,7 @@ function rotAbout(u, deg, c, p) {
 // 倾斜的成员改用该组多数成员的标注；直立的成员不动（它们的 y 就是站立方向，on 关系依赖它）
 function unifyBoxLabels(objs) {
   const sizes = (o) => o.props.size.split(',').map(Number);
-  const close = (a, b) => Math.abs(a - b) < 0.01 + 0.005 * Math.abs(a);
+  const close = (a, b) => Math.abs(a - b) < 0.01 * S + 0.005 * Math.abs(a);
   const groups = [];
   for (const o of objs) {
     if (o.kind !== 'box') continue;
@@ -447,7 +464,8 @@ function unifyBoxLabels(objs) {
 }
 
 // ───────── 3 & 4. 关系与校验 ─────────
-export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null } = {}) {
+export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail' } = {}) {
+  setFidelity(fidelity);
   const fits = parts.map((p, i) => fitPart(p, i));
   // 名字：L0 用源节点名；没有名字时按形状编号
   const used = new Map(), counters = {};
@@ -538,7 +556,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   };
   // 两种写法取短的：归一化锚点 B[u,v,w]，或者参照点加父坐标系里的米制偏移 B offset=…（描述长度按 score 的计价）
   const shorter = (...alts) => alts.reduce((a, b) => (lineCost(b) < lineCost(a) ? b : a));
-  const chooseFor = (A, p, cand, name0, tau = 0.005, frame = null) => {
+  const chooseFor = (A, p, cand, name0, tau = 0.005 * S, frame = null) => {
     const name = (B) => name0(B);
     // 世界向量 → 父坐标系（顶层是世界；阵列里是实例的坐标系）
     const toParent = (v) => (frame ? mvT(frame, v) : v);
@@ -565,7 +583,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     }
     const near0 = (nearOf.get(A.id) ?? []).map((id) => byId.get(id)).filter(cand).sort((x, y) => y.vol - x.vol)[0];
     if (near0) {
-      const near = poseOf(near0), t2 = Math.min(tau, 5e-4);
+      const near = poseOf(near0), t2 = Math.min(tau, 5e-4 * S);
       const ctr = add(near.at, mvC(near.cols, scl(add(near.box.min, near.box.max), 0.5)));
       const place = shorter(`at=${name(near)}[${anchorTxt(near, norm(near, toB(near, p)), t2)}]`, `at=${name(near)} offset=${offsetTxt(toParent(sub(p, ctr)), t2)}`);
       return { place, ref: null, kind: 'at' };
@@ -607,7 +625,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       setPose(o, o.cols);
       const c = fallback.has(o.id) ? null : chooseFor(o, o.at, isPlaced, nameOf);
       if (c) stats[c.kind]++; else stats.coord++;
-      targets.push({ o, path: o.id, tol: c && c.kind !== 'at' ? 0.025 : 2e-3, kind: c?.kind ?? 'coord' });
+      targets.push({ o, path: o.id, tol: (c && c.kind !== 'at' ? 0.025 : 2e-3) * S, kind: c?.kind ?? 'coord' });
       return c ? line(o, c.place, orientRel(o, c.ref)) : absLine(o);
     };
     const emitMirror = (x) => {
@@ -615,7 +633,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       if (!mi || droppedMirrors.has(mi.B.id)) return;
       lines.push(`mirror ${mi.B.id} of=${x.id} across=${mi.across}`);
       for (const [bid, path] of mi.paths) {
-        placed.add(bid); targets.push({ o: byId.get(bid), path, tol: 2e-3, mirror: mi.B.id, kind: 'mirror' });
+        placed.add(bid); targets.push({ o: byId.get(bid), path, tol: 2e-3 * S, mirror: mi.B.id, kind: 'mirror' });
         const src = byId.get(mi.srcOf.get(bid)), es = E.get(src.id) ?? { cols: src.cols, box: src.box };
         setPose(byId.get(bid), es.cols.map((c) => reflectDirN(c, mi.plane.n)), es.box);
       }
@@ -641,7 +659,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
           const lp = mvT(poses[0].M, sub(u.top(o), poses[0].q));
           lines.push(`  span ${ch.id} from=(${vecS(lp)}) drop=${nameOf(byId.get(u.drop.support))} r=${u.drop.r} mat=${o.mat} ~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`);
           for (const [k, m] of ch.members.entries()) {
-            targets.push({ o: m, path: `${u.id}.${k}.${ch.id}`, tol: 2e-3, unit: u.id, kind: 'along', rod: true });
+            targets.push({ o: m, path: `${u.id}.${k}.${ch.id}`, tol: 2e-3 * S, unit: u.id, kind: 'along', rod: true });
             setPose(m, m.cols, m.box);
             placed.add(m.id);
           }
@@ -656,7 +674,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
           const orient = o.symY && Math.abs(colsL[1][1] - 1) < 1e-6 ? '' : orientText(colsL);
           lines.push('  ' + [o.kind, ch.id, props, `at=${vecS(lp)}`, orient, `mat=${o.mat}`, `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' '));
           for (const [k, m] of ch.members.entries()) {
-            targets.push({ o: m, path: `${u.id}.${k}.${ch.id}`, tol: 2e-3, unit: u.id, kind: 'along' });
+            targets.push({ o: m, path: `${u.id}.${k}.${ch.id}`, tol: 2e-3 * S, unit: u.id, kind: 'along' });
             setPose(m, colsL.map((c) => mvC(poses[k].M, c)), o.box);
             placed.add(m.id);
           }
@@ -667,7 +685,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       if (u.rotate) {
         // rotate 容器：坐标系就是父坐标系，第一个成员照常用关系定位；其余成员由旋转生成
         const { u: ax, deg, c } = u.rotate;
-        const onAxis = objs.filter((o) => isPlaced(o) && !inUnit(o) && o.kind !== 'mesh' && len(cross(sub(centerOf(o), c), ax)) < 5e-4).sort((p2, q2) => q2.vol - p2.vol)[0];
+        const onAxis = objs.filter((o) => isPlaced(o) && !inUnit(o) && o.kind !== 'mesh' && len(cross(sub(centerOf(o), c), ax)) < 5e-4 * S).sort((p2, q2) => q2.vol - p2.vol)[0];
         let aboutTxt;
         if (onAxis) aboutTxt = nameOf(onAxis);
         else { aboutTxt = `(${vec6(c)})`; stats.coord++; }
@@ -678,13 +696,13 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
           const o = ch.members[0];
           const cand = (B) => (isPlaced(B) && !inUnit(B)) || (sib.has(B.id) && B !== o);
           // 阵列成员的校验更严（2 mm），数字精度也要跟上
-          const cc = chooseFor(o, o.at, cand, (B) => (sib.has(B.id) ? unitOf.get(B.id).child.id : nameOf(B)), 5e-4);
+          const cc = chooseFor(o, o.at, cand, (B) => (sib.has(B.id) ? unitOf.get(B.id).child.id : nameOf(B)), 5e-4 * S);
           const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
           lines.push('  ' + [o.kind, ch.id, props, cc ? cc.place : `at=${vec(o.at)}`, cc ? orientRel(o, cc.ref) : orientText(o.cols), `mat=${o.mat}`, `~fit=${fmt(Math.min(...ch.members.map((mm) => mm.fit)))}`].filter(Boolean).join(' '));
           if (cc) stats[cc.kind]++; else stats.coord++;
           sib.add(o.id);
           for (const [k, mm] of ch.members.entries()) {
-            targets.push({ o: mm, path: k === 0 ? `${u.id}.${ch.id}` : `${u.id}.r${k}.${ch.id}`, tol: cc && cc.kind !== 'at' ? 0.025 : 2e-3, unit: u.id, kind: 'rotate' });
+            targets.push({ o: mm, path: k === 0 ? `${u.id}.${ch.id}` : `${u.id}.r${k}.${ch.id}`, tol: (cc && cc.kind !== 'at' ? 0.025 : 2e-3) * S, unit: u.id, kind: 'rotate' });
             setPose(mm, o.cols.map((c) => rotAbout(ax, deg * k, [0, 0, 0], c)), o.box);
           }
         }
@@ -701,7 +719,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const origin = anchorCh === anchor ? u.origin : a1.at;
       const kids = [anchorCh, ...u.children.filter((ch) => ch !== anchorCh)];
       let place = null, ref = null;
-      const c = fallback.has(u.id) ? null : chooseFor(a1, origin, (B) => isPlaced(B) && !inUnit(B), nameOf, 5e-4);
+      const c = fallback.has(u.id) ? null : chooseFor(a1, origin, (B) => isPlaced(B) && !inUnit(B), nameOf, 5e-4 * S);
       // 网格写成 n=(a,1,b)：两个方向必须是阵列坐标系的 x 与 z。on / against 会继承参照物的朝向，
       // 参照物转过一个角度时就对不上——改用 at=参照物[u,v,w]：落点相同，但不继承朝向
       const gridOk = (R) => !u.grid || (Math.abs(Math.abs(dot(R[0], unit(u.step))) - 1) < 1e-9 && Math.abs(Math.abs(R[2][2]) - 1) < 1e-9);
@@ -711,7 +729,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
         const rel = [...(onOf.get(a1.id) ?? []), ...(againstOf.get(a1.id) ?? []).map((x) => x.b), ...(nearOf.get(a1.id) ?? [])]
           .map((id) => byId.get(id)).filter((B) => B && isPlaced(B) && !inUnit(B)).sort((x, y) => y.vol - x.vol);
         const B = poseOf(rel[0]);
-        c.place = `at=${nameOf(B)}[${anchorTxt(B, norm(B, toB(B, origin)), 5e-4)}]`; c.kind = 'at'; c.ref = B;
+        c.place = `at=${nameOf(B)}[${anchorTxt(B, norm(B, toB(B, origin)), 5e-4 * S)}]`; c.kind = 'at'; c.ref = B;
       }
       if (c && (c.kind !== 'on' || Math.abs(c.ref.cols[1][1] - 1) < 1e-9)) { place = `${c.place} pin=origin`; ref = c.ref; stats[c.kind]++; }
       else { place = `at=${vec(origin)} pin=origin`; stats.coord++; }
@@ -720,14 +738,16 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const local = (p) => mvT(RF, sub(p, origin));
       const stepL = mvT(RF, u.step);
       const dims = u.grid ? `n=(${u.n[0]},1,${u.n[1]})` : `n=${u.n}`;
-      const stepTxt = u.grid ? `step=${vec([stepL[0], 0, u.step2Local ?? 0])}` : `step=${vec(stepL)}`;
-      lines.push(`repeat ${u.id} ${dims} ${stepTxt}${u.turn ? ` turn=${fmt(u.turn)}` : ''} ${place} {`);
+      const nMax = u.grid ? Math.max(...u.n) : u.n;
+      const stepTxt = u.grid ? `step=${[stepL[0], 0, u.step2Local ?? 0].map((v) => fmtStep(v, nMax)).join(',')}` : `step=${stepL.map((v) => fmtStep(v, nMax)).join(',')}`;
+      // 螺旋的转角同样会累积：按最远成员离轴的距离换算成位置误差
+      lines.push(`repeat ${u.id} ${dims} ${stepTxt}${u.turn ? ` turn=${fmtStep(u.turn, nMax * Math.max(1, (Math.PI / 180) * Math.max(...u.children.flatMap((c) => c.members.map((m) => len(sub(centerOf(m), u.origin)))))))}` : ''} ${place} {`);
       // 实例里的成员：锚定成员放在原点附近；其余成员优先相对同一实例里的兄弟定位
       const sib = new Set();
       for (const ch of kids) {
         const o = ch.members[0];
         const cand = (B) => sib.has(B.id) && B !== o;
-        const cc = ch === anchorCh ? null : chooseFor(o, o.at, cand, (B) => unitOf.get(B.id).child.id, 5e-4, RF);
+        const cc = ch === anchorCh ? null : chooseFor(o, o.at, cand, (B) => unitOf.get(B.id).child.id, 5e-4 * S, RF);
         const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
         const lp = local(o.at);
         const placeTxt = cc ? cc.place : lp.every((v) => Math.abs(v) < 1e-6) ? '' : `at=${vec(lp)}`;
@@ -737,7 +757,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
         sib.add(o.id);
         for (const [i, m] of ch.members.entries()) {
           const k = instOf(u, i);
-          targets.push({ o: m, path: `${u.id}.${k}.${ch.id}`, tol: 2e-3, unit: u.id, kind: 'repeat' });
+          targets.push({ o: m, path: `${u.id}.${k}.${ch.id}`, tol: 2e-3 * S, unit: u.id, kind: 'repeat' });
           setPose(m, u.turn ? o.cols.map((c) => mvC(Ry(u.turn * k), c)) : o.cols, o.box);
         }
       }
@@ -769,7 +789,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const n = byPath.get(t.path);
       // 位置：一般比较原点（底面中心）；绕自身轴对称的形状比较几何中心——它们的“原点”是包围盒底面中心，
       // 离轴有一个半径，旋转副本会把这个偏移一起转走，而拟合时每个副本的坐标系是按世界“上”规范选的
-      const tolP = t.unit || t.mirror ? 2e-3 * Math.max(1, len(t.o.at) / 50) : t.tol;
+      const tolP = t.unit || t.mirror ? 2e-3 * S * Math.max(1, len(t.o.at) / 50) : t.tol;
       // 一律比较几何中心：中心与表示无关；加上考虑对称的朝向比较，位姿就完全确定了
       const posOk = () => len(sub(scl(add(n.box.min, n.box.max), 0.5), centerOf(t.o))) < tolP;
       // span 的杆轴是局部 x：比较杆轴与圆柱轴线
@@ -815,10 +835,10 @@ const centerOf = (o) => add(o.at, mvC(o.cols, scl(add(o.box.min, o.box.max), 0.5
 // 朝向是否一致（考虑形状自身的对称）：球与竖直圆柱只看竖直轴；横放的圆柱只看轴线；盒子转 180° 一样
 function sameOrientation(o, Rw, mirrored = false) {
   const col = (k) => [Rw[0][k], Rw[1][k], Rw[2][k]];
-  const near = (u, v) => len(sub(u, v)) < 3e-3;
+  const near = (u, v) => len(sub(u, v)) < angTol();
   if (o.kind === 'mesh') return mirrored || [0, 1, 2].every((k) => near(col(k), o.cols[k]));
   // 绕自身 y 轴对称（球、y 轴圆柱 / 圆锥，可以是倾斜的）：只比较这条轴的方向；球怎么转都一样
-  if (o.symY) return o.kind === 'sphere' || Math.abs(dot(col(1), o.cols[1])) > 1 - 2e-3;
+  if (o.symY) return o.kind === 'sphere' || Math.abs(dot(col(1), o.cols[1])) > 1 - Math.max(2e-3, angTol() ** 2);
   if (o.axisSym) return near(col(0), o.cols[0]) || ((o.sym180 || mirrored) && near(col(0), scl(o.cols[0], -1)));
   // 盒子关于自己的三个中面都对称：镜像副本里任意轴取反都是同一个盒子
   const signs = mirrored && o.kind === 'box' ? [[1, 1, 1], [-1, 1, 1], [1, -1, 1], [1, 1, -1], [-1, -1, 1], [-1, 1, -1], [1, -1, -1], [-1, -1, -1]]
@@ -843,7 +863,7 @@ function detectMirrors(objs, units, unitOf) {
   // 一个成员反射后是否与另一个物体重合（位置；朝向考虑形状自身的对称）
   const matches = (a, b, n, d) => {
     const pa = reflect(centerOf(a), n, d);
-    if (len(sub(pa, centerOf(b))) > 0.004 + 1e-4 * len(sub(a.box.max, a.box.min))) return false;
+    if (len(sub(pa, centerOf(b))) > 0.004 * S + 1e-4 * len(sub(a.box.max, a.box.min))) return false;
     if (a.kind === 'mesh') return true;
     const rc = a.cols.map((c) => reflectDir(c, n));
     return sameOrientation(b, toRows(rc), true);
@@ -940,7 +960,7 @@ function memberNames(members, unit, child) {
 function detectCurveArrays(objs, units, onOf) {
   const inUnit = new Set(units.flatMap((u) => u.children.flatMap((c) => c.members.map((o) => o.id))));
   const nums = (o) => Object.entries(o.props).filter(([k]) => !['src', 'pivot', 'axis'].includes(k)).flatMap(([, v]) => String(v).split(',').map(Number));
-  const sameSize = (a, b) => { const x = nums(a), y = nums(b); return x.length === y.length && x.every((v, i) => Math.abs(v - y[i]) < 0.01 + 0.005 * Math.abs(v)); };
+  const sameSize = (a, b) => { const x = nums(a), y = nums(b); return x.length === y.length && x.every((v, i) => Math.abs(v - y[i]) < 0.01 * S + 0.005 * Math.abs(v)); };
   const groups = [];
   for (const o of objs) {
     if (o.kind === 'mesh' || inUnit.has(o.id)) continue;
@@ -954,9 +974,9 @@ function detectCurveArrays(objs, units, onOf) {
     if (g.length < 8) continue;
     for (const ch of chainsOf(g.map(centerOf))) {
       let members = ch.order.map((i) => g[i]);
-      let f = fitAlong(members.map(centerOf), { closed: ch.closed });
+      let f = fitAlong(members.map(centerOf), { closed: ch.closed, tol: 5e-4 * S });
       // 不闭合的链两个方向都试（第 0 个实例在哪一头）；闭合的链由 fitAlong 自己处理方向
-      if (!f && !ch.closed) { members = [...members].reverse(); f = fitAlong(members.map(centerOf), { closed: false }); }
+      if (!f && !ch.closed) { members = [...members].reverse(); f = fitAlong(members.map(centerOf), { closed: false, tol: 5e-4 * S }); }
       if (!f) continue;
       if (f.reversed) members = [members[0], ...members.slice(1).reverse()];
       if (f.start) members = [...members.slice(f.start), ...members.slice(0, f.start)];
@@ -1007,8 +1027,8 @@ function detectCurveArrays(objs, units, onOf) {
     for (const ch of chainsOf(g.map(topOf))) {
       let members = ch.order.map((i) => g[i]);
       // drop 的方向是实例坐标系的“下”，只有 yaw（保持竖直）时才是世界的下
-      let f = fitAlong(members.map(topOf), { closed: ch.closed, modes: ['yaw'] });
-      if (!f && !ch.closed) { members = [...members].reverse(); f = fitAlong(members.map(topOf), { closed: false, modes: ['yaw'] }); }
+      let f = fitAlong(members.map(topOf), { closed: ch.closed, modes: ['yaw'], tol: 5e-4 * S });
+      if (!f && !ch.closed) { members = [...members].reverse(); f = fitAlong(members.map(topOf), { closed: false, modes: ['yaw'], tol: 5e-4 * S }); }
       if (!f) continue;
       if (f.reversed) members = [members[0], ...members.slice(1).reverse()];
       if (f.start) members = [...members.slice(f.start), ...members.slice(0, f.start)];
@@ -1023,7 +1043,7 @@ function detectCurveArrays(objs, units, onOf) {
           for (const ms of f.closed ? [members, [members[0], ...members.slice(1).reverse()]] : [members, [...members].reverse()]) {
             const poses = alongPoses(hc, h.along.closed, ms.length, 'yaw');
             const off = mvT(poses[0].M, sub(topOf(ms[0]), poses[0].q));
-            if (ms.every((o, k) => len(sub(add(poses[k].q, mvC(poses[k].M, off)), topOf(o))) < 5e-4)) { curve = { ...h.along, mode: 'yaw', shared: true }; members = ms; break; }
+            if (ms.every((o, k) => len(sub(add(poses[k].q, mvC(poses[k].M, off)), topOf(o))) < 5e-4 * S)) { curve = { ...h.along, mode: 'yaw', shared: true }; members = ms; break; }
           }
           if (curve.shared) { ci--; break; }
         }
@@ -1054,7 +1074,7 @@ function detectArrays(objs, related) {
   const nums = (o) => Object.entries(o.props).filter(([k]) => !['src', 'pivot', 'axis'].includes(k)).flatMap(([, v]) => String(v).split(',').map(Number));
   // 朝向不进签名：一般轴的旋转会改变物体相对竖直方向的姿态；每一对的运动在下面单独核对
   const head = (o) => [o.kind, o.props.axis ?? '', o.mat].join('|');
-  const sameSize = (a, b) => { const x = nums(a), y = nums(b); return x.length === y.length && x.every((v, i) => Math.abs(v - y[i]) < 0.01 + 0.005 * Math.abs(v)); };
+  const sameSize = (a, b) => { const x = nums(a), y = nums(b); return x.length === y.length && x.every((v, i) => Math.abs(v - y[i]) < 0.01 * S + 0.005 * Math.abs(v)); };
   const groupList = [];
   for (const o of objs) {
     if (o.kind === 'mesh') continue;
@@ -1069,7 +1089,7 @@ function detectArrays(objs, related) {
     const used = new Set();
     const rawStart = raw.length;
     const scale = Math.max(...g.map((o) => len(sub(o.box.max, o.box.min)))) || 1;
-    const tol = 0.004 + 1e-4 * scale;
+    const tol = (0.004 + 1e-4 * scale) * S;
     const close = (a, b) => len(sub(a, b)) < tol;
     // 每一对给出一个候选运动，按容差聚类
     const clusters = [];
@@ -1293,7 +1313,7 @@ function detectArrays(objs, related) {
   // 合并：同一运动、同样形状的阵列，第 k 个成员之间相对位姿固定，且第 0 个实例里彼此有空间关系
   const relPose = (a, b) => ({ a, b, t: mvT(a.cols, sub(centerOf(b), centerOf(a))) });
   // 相对位姿一致：中心的相对位置相同，且 b 相对 a 的朝向相同（考虑 b 自身的对称）
-  const samePose = (p, q) => len(sub(p.t, q.t)) < 2e-3 && sameOrientation(p.b, toRows(q.b.cols.map((c) => mvC(p.a.cols, mvT(q.a.cols, c)))));
+  const samePose = (p, q) => len(sub(p.t, q.t)) < 2e-3 * S && sameOrientation(p.b, toRows(q.b.cols.map((c) => mvC(p.a.cols, mvT(q.a.cols, c)))));
   const keyOf = (x) => JSON.stringify(x.motion.rot
     ? ['R', fx(x.motion.deg, 2), x.motion.u.map((v) => fx(v, 3)), x.motion.c.map((v) => fx(v, 1)), x.members.length]
     : [fx(x.motion.delta, 2), (x.motion.step ?? [x.motion.center[0], x.motion.dy, x.motion.center[2]]).map((v) => fx(v, 2)), x.members.length, x.grid ?? null, x.ks ?? null]);

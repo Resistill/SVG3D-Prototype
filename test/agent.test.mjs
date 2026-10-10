@@ -29,7 +29,7 @@ const SCENE = `
   box shed size=6,3,4 on=ground[0.5,1,0.5]
   wedge roof size=6,1.5,4 on=shed
 `;
-const scored = (text, parts) => score({ result: compile(text), files: [{ file: null, text }], sourceParts: parts });
+const scored = (text, parts, delta) => score({ result: compile(text), files: [{ file: null, text }], sourceParts: parts, consts: delta ? { delta } : {} });
 
 test('自评分数：压缩得越好分数越低；删掉物体、凭空加物体、全写成网格引用都更差', () => {
   const parts = partsOfDocument(sceneToGLB(SCENE, { level: 'L0' }).doc);
@@ -131,4 +131,21 @@ test('提议：propose → preview → accept 写进修改层；有编译错误�
   assert.ok(msgs.find((m) => m.id === 1).result.tools.some((t) => t.name === 's3d_score'));
   assert.ok(msgs.find((m) => m.id === 2).result.content.some((c) => c.type === 'image'));
   input.end();
+});
+
+test('档位：semantic 一律用基本体当语义代理、数字更短，阵列照样保留；每个档位在自己的 δ 下更好', async () => {
+  const src = SCENE + `
+    revolve vase profile=[(0,0); (1.2,0.3); (0.6,1.5); (0.9,2.6); (0,2.7)] smooth=true on=ground[0.3,1,-0.4]
+    repeat lamps n=5 step=0,0,4.3137 on=ground[-0.4,1,-0.3] { cyl pole r=0.12 h=3.1 }
+  `;
+  const parts = partsOfDocument(sceneToGLB(src, { level: 'L0' }).doc);
+  const out = Object.fromEntries(['detail', 'structure', 'semantic'].map((f) => [f, reverse(parts, { srcFile: 'x.glb', fidelity: f })]));
+  assert.match(out.detail.src, /^mesh vase /m, '精细档：花瓶保留为网格引用');
+  assert.match(out.semantic.src, /^(cyl|cone|box|sphere|wedge) vase /m, '语义档：花瓶用基本体代替');
+  for (const f of Object.keys(out)) assert.ok(out[f].report.arrays.length >= 2, `${f} 保留阵列：${JSON.stringify(out[f].report.arrays)}`);
+  const at = (f, delta) => scored(out[f].src, parts, delta);
+  const L = (f) => at(f, 0.005).L_stmt;
+  assert.ok(L('semantic') < L('detail'), `语义档更短：${L('semantic')} < ${L('detail')}`);
+  assert.ok(at('semantic', 0.25).S < at('detail', 0.25).S, '粗的 δ 下语义档更好');
+  assert.ok(at('detail', 0.005).S < at('semantic', 0.005).S, '细的 δ 下精细档更好');
 });
