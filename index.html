@@ -22,7 +22,8 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.5 -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; }
-  body { display: grid; grid-template-rows: auto 1fr; }
+  body { display: flex; flex-direction: column; }
+  body > main { flex: 1; }
   header { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
   header h1 { margin: 0; font-size: 15px; letter-spacing: .5px; }
   header h1 span { color: var(--accent); }
@@ -33,7 +34,28 @@
   button:hover, select:hover { border-color: #3b4450; }
   button.on { border-color: #1f5fd6; color: #9cc0ff; }
   main { display: grid; grid-template-columns: minmax(340px, 42%) 1fr; min-height: 0; }
-  #left { display: grid; grid-template-rows: auto 1fr auto; min-height: 0; border-right: 1px solid var(--line); }
+  #left { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); }
+  #left > .editor { flex: 1; }
+  #conflict { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 10px; background: #3a2c12; color: #ffe0a8; border-bottom: 1px solid #5a4a20; font-size: 12.5px; }
+  #conflict[hidden] { display: none; }
+  #conflict b { color: #ffcb6b; }
+  .editor.ro #src { color: #8a93a3; }
+  .editor.ro::before { content: '只读：基础层由逆向生成（重跑 reverse 会重写），修改写在 edits.s3d'; grid-column: 1 / -1; padding: 3px 12px; font-size: 11.5px; color: #8a93a3; background: #1f242b; border-bottom: 1px solid var(--line); }
+  .editor.ro { grid-template-rows: auto 1fr; }
+  /* 工程栏：档位、单位、分数、最差物体、视图模式 */
+  #projbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 4px 14px; border-bottom: 1px solid var(--line); background: #181c21; font-size: 12px; }
+  #projbar[hidden] { display: none; }
+  #projbar .pname { color: var(--ref); font-family: var(--mono); }
+  #projbar .mute { color: var(--mute); }
+  #projbar .num { font-family: var(--mono); color: var(--text); }
+  #projbar .bar { display: inline-block; width: 80px; height: 6px; background: #2a3038; border-radius: 3px; vertical-align: middle; overflow: hidden; }
+  #projbar .bar i { display: block; height: 100%; background: #6fbf73; }
+  #projbar .worst { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+  #projbar label { color: var(--mute); margin-left: auto; }
+  #projbar select, #projbar button { padding: 2px 8px; font-size: 12px; }
+  #heatlegend { display: inline-flex; align-items: center; gap: 4px; color: var(--mute); font-family: var(--mono); }
+  #heatlegend[hidden] { display: none; }
+  #heatlegend i { display: inline-block; width: 70px; height: 8px; border-radius: 2px; background: linear-gradient(90deg, rgb(60,190,70), rgb(255,190,70), rgb(235,40,60)); }
   #filebar { display: flex; gap: 6px; align-items: center; padding: 5px 8px; border-bottom: 1px solid var(--line); background: var(--panel, #161a20); }
   #filebar[hidden] { display: none; }
   #filebar select { flex: 1; min-width: 0; font: 12.5px var(--mono); }
@@ -106,6 +128,53 @@
   #cheat code { font-family: var(--mono); color: var(--ref); }
   #cheat td { padding: 2px 14px 2px 0; vertical-align: top; }
   #cheat td:first-child { white-space: nowrap; }
+  .badge { color: var(--accent); font-size: 11px; }
+  /* 选中面板 */
+  #inspect { padding: 4px 0 12px; }
+  #inspect .empty, #pane-msg { color: var(--mute); padding: 8px 12px; margin: 0; }
+  .ins { padding: 6px 12px 8px; border-bottom: 1px solid #1f242b; }
+  .ins .ih { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .ins .ih .nm { font-family: var(--mono); font-weight: 600; cursor: pointer; }
+  .ins .loc { color: #7fa8ff; font: 11.5px var(--mono); cursor: pointer; margin-left: auto; }
+  .ins .loc:hover { text-decoration: underline; }
+  .ins .stmt { display: block; margin: 3px 0; padding: 3px 6px; background: #1a1e24; border-radius: 4px; font: 11.5px var(--mono); color: #aeb6c2; white-space: pre-wrap; word-break: break-all; max-height: 4.8em; overflow: auto; }
+  .ins .row { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; margin-top: 3px; font-size: 12px; }
+  .ins .row > .k { color: var(--mute); min-width: 4em; }
+  .ins .chip.grp { color: #ffcb6b; }
+  .ins .chip.typ { color: #e0a8ff; }
+  .ins ul.rel { padding: 0; margin: 2px 0 0; }
+  .ins ul.rel li { padding: 1px 0 1px 8px; cursor: pointer; font: 11.5px var(--mono); border-left: 2px solid #2a3038; }
+  .ins ul.rel li:hover { border-left-color: var(--accent); background: #1f242b; }
+  .ins .kw { color: var(--kw); } .ins .ref { color: var(--ref); } .ins .gap { color: #566170; }
+  .ins .sc { font: 11.5px var(--mono); color: #c8ced6; }
+  .ins .src { color: #566170; font-size: 11px; margin-left: 6px; }
+  /* 提议与留言 */
+  #prop-pane { padding: 6px 0 12px; }
+  .ask { display: flex; gap: 6px; padding: 4px 12px 8px; align-items: stretch; }
+  .ask textarea { flex: 1; min-height: 44px; resize: vertical; background: #1a1e24; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font: 12.5px/1.5 inherit; }
+  .ask .side { display: flex; flex-direction: column; gap: 4px; }
+  .ask .side small { color: var(--mute); font-size: 11px; }
+  #prop-pane h4 { margin: 8px 12px 4px; font-size: 11.5px; color: var(--mute); font-weight: 500; display: flex; gap: 8px; align-items: center; }
+  #prop-pane h4 button { padding: 0 8px; font-size: 11px; }
+  .prop { display: flex; gap: 8px; align-items: baseline; padding: 3px 12px; cursor: pointer; font-size: 12px; }
+  .prop:hover { background: #1f242b; }
+  .prop.on { background: #2a2418; }
+  .prop .pid { font-family: var(--mono); color: var(--accent); }
+  .prop .ply { font: 11px var(--mono); color: var(--kw); }
+  .prop .pwhy { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .prop .pn { color: var(--mute); font-size: 11px; }
+  #pdetail { margin: 4px 12px; }
+  #pdetail:empty { display: none; }
+  #pdetail .box { border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; background: #181c21; }
+  #pdetail pre { margin: 4px 0; max-height: 9em; overflow: auto; background: #1a1e24; padding: 4px 6px; border-radius: 4px; font: 11.5px var(--mono); color: #aeb6c2; white-space: pre-wrap; word-break: break-all; }
+  #pdetail .delta { font: 13px var(--mono); }
+  #pdetail .good { color: #8fd18f; } #pdetail .bad { color: var(--err); }
+  #pdetail .acts { display: flex; gap: 6px; margin-top: 6px; align-items: center; flex-wrap: wrap; }
+  #pdetail .acts input { flex: 1; min-width: 120px; background: #1a1e24; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font: inherit; }
+  #pdetail .err { color: #ffc9c9; font: 11.5px var(--mono); }
+  .inbox-item { padding: 2px 12px; font-size: 12px; color: #aeb6c2; }
+  .inbox-item .t { color: #566170; font: 11px var(--mono); margin-right: 6px; }
+  .inbox-item .kind { color: var(--kw); font-size: 11px; margin-right: 4px; }
   @media (max-width: 860px) {
     main { grid-template-columns: 1fr; grid-template-rows: 50vh auto; }
     #left { border-right: 0; border-bottom: 1px solid var(--line); }
@@ -125,9 +194,23 @@
   <button id="export">导出 GLB</button>
   <span id="status"></span>
 </header>
+<div id="projbar" hidden>
+  <span class="pname" id="pname" title="工程目录"></span>
+  <span class="mute" id="pmeta"></span>
+  <span id="pscore" title="score.json：S 越低越好；解释率 = 1 − S / 全部写成网格引用的分数"></span>
+  <span class="worst" id="pworst"></span>
+  <button id="rescore" hidden title="运行 score，刷新分数与热力图（第一次是全量评分，之后是增量）">评分</button>
+  <label>视图 <select id="viewmode" aria-label="视图模式">
+    <option value="solid">实体</option>
+    <option value="heat">误差热力</option>
+    <option value="overlay">源模型叠加</option>
+  </select></label>
+  <span id="heatlegend" hidden title="每个物体的平均误差（score.json 的 meanErr），满刻度 4δ；灰色是没有分数的物体">0 <i></i> <span id="heatmax"></span></span>
+</div>
 <main>
   <section id="left">
     <div id="filebar" hidden><span class="lbl">文件</span><select id="file" aria-label="工程里的文件" title="组合根及其 import 的各层；点击物体会自动切到它所在的文件"></select><button id="save" hidden title="把修改写回磁盘（Ctrl/⌘+S）">保存</button></div>
+    <div id="conflict" hidden></div>
     <div class="editor">
       <div id="gutter"></div>
       <textarea id="src" spellcheck="false" autocomplete="off" aria-label="SVG3D 源码"></textarea>
@@ -135,15 +218,29 @@
     <div id="errors" hidden></div>
   </section>
   <section id="right">
-    <div id="view"><div id="tip" hidden></div><div class="hint">拖动旋转 · 右键平移 · 滚轮缩放 · 点击物体定位到源码（Alt+点击：类型的 def）</div></div>
+    <div id="view"><div id="tip" hidden></div><div class="hint">拖动旋转 · 右键平移 · 滚轮缩放 · 点击物体定位到源码（Shift+点击：多选 · Alt+点击：类型的 def）</div></div>
     <div id="panel">
       <div class="tabs">
         <button class="on" data-pane="objects-pane">对象</button>
+        <button data-pane="inspect-pane" id="inspect-tab">选中 <span class="badge" id="sel-badge"></span></button>
+        <button data-pane="prop-pane" id="prop-tab" hidden>提议 <span class="badge" id="prop-badge"></span></button>
         <button data-pane="sem-pane">语义 <span id="sem-badge"></span></button>
         <button data-pane="facts-pane">空间事实</button>
         <button data-pane="cheat">速查</button>
       </div>
       <div class="pane" id="objects-pane"><ul id="objects"></ul></div>
+      <div class="pane" id="inspect-pane" hidden><div id="inspect"><p class="empty">点击物体查看：所属阵列 / 镜像 / 类型、关系、来源、分数（Shift+点击多选）</p></div></div>
+      <div class="pane" id="prop-pane" hidden>
+        <div class="ask">
+          <textarea id="note" placeholder="交给 AI：哪里不对、想要什么（附上当前选中的物体，写进收件箱 inbox.jsonl）"></textarea>
+          <div class="side"><button id="send-note">交给 AI</button><small id="note-sel"></small></div>
+        </div>
+        <h4>待处理的提议 <button id="prop-refresh" title="重新读取 proposals/">刷新</button></h4>
+        <div id="proposals"></div>
+        <div id="pdetail"></div>
+        <h4>收件箱</h4>
+        <div id="inbox"></div>
+      </div>
       <div class="pane" id="sem-pane" hidden>
         <p class="note">概念由 <code>concept 名字 = 集合表达式</code> 定义，求解后按几何与空间事实识别。点击高亮成员。</p>
         <div id="sem"></div>

@@ -17,7 +17,7 @@ const noApi = argv.includes('--no-api');
 const port = +(argv.find((a) => /^\d+$/.test(a)) ?? process.env.PORT ?? 5178);
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.json': 'application/json', '.jsonl': 'text/plain; charset=utf-8', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json', '.bin': 'application/octet-stream', '.s3d': 'text/plain; charset=utf-8', '.md': 'text/plain; charset=utf-8' };
 
-// .s3d 的版本号：内容的哈希。GET 时放在 ETag 里，保存时界面带 If-Match，磁盘上的文件被别处（工具、另一个窗口）改过就返回 409
+// .s3d（与 .json）的版本号：内容的哈希。GET 时放在 ETag 里，保存时界面带 If-Match，磁盘上的文件被别处（工具、另一个窗口）改过就返回 409
 const etag = (buf) => `"${createHash('sha1').update(buf).digest('hex')}"`;
 
 // 工程的基础层（base.s3d 与 base/ 下的分区文件）由逆向生成，只读
@@ -67,7 +67,7 @@ createServer(async (req, res) => {
     if (!(await stat(file)).isFile()) throw new Error('not a file');
     // 页面本身附带 Clear-Site-Data：清掉浏览器以前按启发式规则缓存的旧模块（别的服务器留下的）
     const ext = extname(file), html = ext === '.html', buf = await readFile(file);
-    res.writeHead(200, { 'Content-Type': TYPES[ext] ?? 'application/octet-stream', 'Cache-Control': 'no-store', ...(html ? { 'Clear-Site-Data': '"cache"' } : {}), ...(ext === '.s3d' ? { ETag: etag(buf) } : {}) });
+    res.writeHead(200, { 'Content-Type': TYPES[ext] ?? 'application/octet-stream', 'Cache-Control': 'no-store', ...(html ? { 'Clear-Site-Data': '"cache"' } : {}), ...(ext === '.s3d' || ext === '.json' ? { ETag: etag(buf) } : {}) });
     res.end(buf);
   } catch { if (!res.headersSent) res.writeHead(404, { 'Cache-Control': 'no-store' }).end('not found'); }
 }).on('error', (e) => {

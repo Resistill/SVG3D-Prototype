@@ -1,6 +1,7 @@
-// 预览器界面：编辑器 ⇄ 编译 ⇄ 3D 视图 ⇄ 对象树 / 空间事实
-import { compile } from './s3d.js';
+// 预览器界面：编辑器 ⇄ 编译 ⇄ 3D 视图 ⇄ 对象树 / 空间事实；工程模式下还有选中面板、工程栏、提议（src/collab.js）
+import { compile, FACT_EPS } from './s3d.js';
 import { Viewer } from './render.js';
+import { createCollab, detectApi, esc } from './collab.js';
 
 const $ = (s) => document.querySelector(s);
 const src = $('#src'), gutter = $('#gutter'), errorsEl = $('#errors'), statusEl = $('#status');
@@ -18,58 +19,87 @@ const store = {
   del: (k) => { try { localStorage.removeItem(k); } catch { /* ignore */ } },
 };
 
+// 行数：数换行符（不 split，大文件每次按键也不分配上千个字符串）
+const countLines = (t) => { let n = 1; for (let i = t.indexOf('\n'); i >= 0; i = t.indexOf('\n', i + 1)) n++; return n; };
+
 // ── 编辑器 ──
+// 行号栏只在行数或出错的行变了时重建（大文件里每次按键都重建几千个 div 会卡）
+let gutterKey = '';
 function renderGutter() {
   errLines = new Set((last?.errors ?? []).filter((e) => (e.file || rootFile()) === active).map((e) => e.line).filter(Boolean));
-  const n = src.value.split('\n').length;
-  let html = '';
-  for (let i = 1; i <= n; i++) html += `<div class="${errLines.has(i) ? 'err' : ''}">${i}</div>`;
-  gutter.innerHTML = html;
+  const n = countLines(src.value), key = `${active}|${n}|${[...errLines].join(',')}`;
+  if (key !== gutterKey) {
+    gutterKey = key;
+    const parts = new Array(n);
+    for (let i = 1; i <= n; i++) parts[i - 1] = errLines.has(i) ? `<div class="err">${i}</div>` : `<div>${i}</div>`;
+    gutter.innerHTML = parts.join('');
+  }
   gutter.scrollTop = src.scrollTop;
 }
 src.addEventListener('scroll', () => { gutter.scrollTop = src.scrollTop; });
 src.addEventListener('keydown', (e) => {
-  if (e.key === 'Tab') {
+  if (e.key === 'Tab' && !src.readOnly) {
     e.preventDefault();
     const s = src.selectionStart;
     src.setRangeText('  ', s, src.selectionEnd, 'end');
-    schedule();
+    src.dispatchEvent(new Event('input'));
   }
 });
 function gotoLine(line) {
   if (!line) return;
-  const lines = src.value.split('\n');
+  const t = src.value;
   let pos = 0;
-  for (let i = 0; i < line - 1 && i < lines.length; i++) pos += lines[i].length + 1;
+  for (let i = 0; i < line - 1 && pos >= 0; i++) { const k = t.indexOf('\n', pos); pos = k < 0 ? t.length : k + 1; }
+  const end = t.indexOf('\n', pos);
   src.focus({ preventScroll: true });
-  src.setSelectionRange(pos, pos + (lines[line - 1] || '').length);
+  src.setSelectionRange(pos, end < 0 ? t.length : end);
   const lh = parseFloat(getComputedStyle(src).lineHeight);
   src.scrollTop = Math.max(0, (line - 6) * lh);
 }
 
 // ── 编译 ──
-let timer = 0;
-function schedule() { clearTimeout(timer); timer = setTimeout(run, 350); renderGutter(); }
+// 停止输入多久之后重新编译：大场景编译一次要几百毫秒，按上一次的耗时放宽，免得连续打字时每停一下就卡一次
+let timer = 0, lastCost = 0;
+function schedule() { clearTimeout(timer); timer = setTimeout(run, Math.max(350, Math.min(2000, lastCost * 1.5))); renderGutter(); }
 src.addEventListener('input', () => {
-  files.set(active, src.value);
+  if (src.readOnly) return;
+  setFile(active, src.value);
+  const wasDirty = dirty.has(active);
   if (fileParam) dirty.add(active); else if (active === rootFile()) store.set('s3d:' + current, src.value);
-  renderFileList();
+  // 文件列表只在“未保存”标记或行数变了时重建
+  const n = lineCounts.get(active);
+  if (!wasDirty || n !== shownCounts.get(active)) renderFileList();
   schedule();
 });
 
-// 打开任意文件：index.html?file=work/xxx/scene.s3d（路径相对于服务根目录；工程的组合根会顺带加载各层）
-const fileParam = new URLSearchParams(location.search).get('file');
+// 打开任意文件：index.html?file=work/xxx/scene.s3d（路径相对于服务根目录；工程的组合根会顺带加载各层）；?project=work/xxx 等价于打开它的 scene.s3d
+const params = new URLSearchParams(location.search);
+const fileParam = params.get('file') ?? (params.get('project') ? params.get('project').replace(/\/*$/, '/scene.s3d') : null);
 const rootFile = () => fileParam ?? `examples/${current}.s3d`;
 // 多文件：总是编译组合根；编辑器显示其中一个文件（active），被 import 的文件也能看、能改
-const files = new Map(), dirty = new Set();
+const files = new Map(), dirty = new Set(), etags = new Map(), lineCounts = new Map(), shownCounts = new Map();
 let active = null;
+const setFile = (path, text) => { files.set(path, text); lineCounts.set(path, countLines(text)); };
+
+// 工程模式：组合根所在目录有 project.json（docs/PLAN2.md 2.2）。按场景单位换算空间事实的容差，基础层只读
+let project = null, api = false;
+const isReadonly = (path) => !!project && (path === project.dir + 'base.s3d' || path.startsWith(project.dir + 'base/'));
+
+// 取文件并记下版本（ETag）：保存时带 If-Match，磁盘上的文件被别处改过就会冲突，而不是悄悄覆盖
+async function fetchText(path) {
+  const r = await fetch(path, { cache: 'no-store' });
+  if (!r.ok) throw new Error(`${r.status} ${path}`);
+  const t = await r.text();
+  etags.set(path, r.headers.get('ETag'));
+  return t;
+}
 
 // import 的文件要先取回来（编译本身是同步的纯函数）
 const importsOf = (text, file) => [...text.matchAll(/^\s*import\s+"([^"]+)"/gm)].map((m) => new URL(m[1], new URL(file, location.href)).pathname.replace(/^\//, ''));
 async function preload(text, file) {
   for (const path of importsOf(text, file)) {
     if (files.has(path)) continue;
-    try { const t = await (await fetch(path)).text(); files.set(path, t); await preload(t, path); } catch { /* 编译时会报“找不到文件” */ }
+    try { const t = await fetchText(path); setFile(path, t); await preload(t, path); } catch { /* 编译时会报“找不到文件” */ }
   }
 }
 // 组合根及其 import 的文件，按 import 顺序深度优先
@@ -87,8 +117,12 @@ const fileSel = $('#file');
 function renderFileList() {
   const tree = fileTree(), base = rootFile().replace(/[^/]*$/, '');
   $('#filebar').hidden = tree.length < 2;
-  const count = (p) => { const t = files.get(p); let n = 1; for (let i = 0; i < t.length; i++) if (t.charCodeAt(i) === 10) n++; return n; };
-  fileSel.innerHTML = tree.map(({ path, depth }) => `<option value="${esc(path)}">${'\u3000'.repeat(depth)}${esc(path.startsWith(base) ? path.slice(base.length) : path)}${dirty.has(path) ? ' ●' : ''} · ${count(path)} 行</option>`).join('');
+  fileSel.innerHTML = tree.map(({ path, depth }) => {
+    const n = lineCounts.get(path) ?? countLines(files.get(path));
+    shownCounts.set(path, n);
+    const ro = isReadonly(path);
+    return `<option value="${esc(path)}"${ro ? ' style="color:#7d8694"' : ''}>${'　'.repeat(depth)}${esc(path.startsWith(base) ? path.slice(base.length) : path)}${dirty.has(path) ? ' ●' : ''} · ${n} 行${ro ? ' · 只读' : ''}</option>`;
+  }).join('');
   fileSel.value = active;
   $('#save').hidden = !fileParam || !dirty.size;
 }
@@ -99,37 +133,109 @@ function openFile(path, line) {
     active = path;
     src.value = files.get(path);
     fileSel.value = path;
+    const ro = isReadonly(path);
+    src.readOnly = ro;
+    $('.editor').classList.toggle('ro', ro);
     renderGutter();
   }
   if (line) gotoLine(line);
 }
 fileSel.addEventListener('change', () => { openFile(fileSel.value); src.scrollTop = 0; });
-async function save() {
+
+// ── 保存（B3：冲突检测） ──
+// 带上读取时的 ETag（If-Match）；服务端发现磁盘上的版本不同返回 409，这里提示“重新加载 / 覆盖”
+const conflictEl = $('#conflict');
+let conflicts = [];
+async function save({ force = false, only = null } = {}) {
   if (!fileParam || !dirty.size) return;
-  const bad = [];
-  for (const p of [...dirty]) {
+  const bad = [], clash = [];
+  for (const p of only ?? [...dirty]) {
+    if (isReadonly(p)) { bad.push(`${p}：基础层只读`); continue; }
     try {
-      const r = await fetch(p, { method: 'PUT', body: files.get(p), headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+      const tag = etags.get(p);
+      const r = await fetch(p, { method: 'PUT', body: files.get(p), headers: { 'Content-Type': 'text/plain; charset=utf-8', ...(tag && !force ? { 'If-Match': tag } : {}) } });
+      if (r.status === 409) { clash.push(p); continue; }
       if (!r.ok) throw new Error(await r.text());
+      etags.set(p, r.headers.get('ETag'));
       dirty.delete(p);
     } catch (e) { bad.push(`${p}：${e.message}`); }
   }
   renderFileList();
-  statusEl.textContent = bad.length ? `保存失败 ${bad.join('；')}` : '已保存';
+  showConflicts(clash);
+  statusEl.textContent = bad.length ? `保存失败 ${bad.join('；')}` : clash.length ? '有文件已被别处修改，没有保存' : '已保存';
+  if (!bad.length && !clash.length) collab?.markStale();
 }
-$('#save').addEventListener('click', save);
+function showConflicts(list) {
+  conflicts = list;
+  conflictEl.hidden = !list.length;
+  if (!list.length) return;
+  const base = rootFile().replace(/[^/]*$/, '');
+  conflictEl.innerHTML = `<span><b>${list.map((p) => esc(p.startsWith(base) ? p.slice(base.length) : p)).join('、')}</b> 已被别处修改（工具、AI 或另一个窗口）：</span>
+    <button data-c="reload" title="丢掉这里没保存的修改，读取磁盘上的版本">重新加载</button>
+    <button data-c="overwrite" title="用这里的版本覆盖磁盘上的">覆盖</button>
+    <button data-c="cancel">先不管</button>`;
+}
+conflictEl.addEventListener('click', async (e) => {
+  const c = e.target.closest('[data-c]')?.dataset.c;
+  if (!c) return;
+  const list = conflicts;
+  showConflicts([]);
+  if (c === 'overwrite') await save({ force: true, only: list });
+  else if (c === 'reload') {
+    for (const p of list) { dirty.delete(p); try { setFile(p, await fetchText(p)); } catch { /* 文件没了 */ } }
+    if (list.includes(active)) { const keep = src.scrollTop; src.value = files.get(active); src.scrollTop = keep; }
+    renderFileList();
+    run();
+  }
+});
+$('#save').addEventListener('click', () => save());
 document.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 's' && fileParam) { e.preventDefault(); save(); } });
+
+// 磁盘上的文件被工具改过（接受了提议、细化、重跑逆向）：没改动的文件直接换成新版本；有没保存修改的文件留到保存时按冲突处理
+let refreshing = null;
+function refreshFromDisk() {
+  if (!fileParam) return Promise.resolve(false);
+  return (refreshing ??= (async () => {
+    let changed = false;
+    for (const p of [...files.keys()]) {
+      if (dirty.has(p)) continue;
+      try {
+        const r = await fetch(p, { method: 'HEAD', cache: 'no-store' });
+        const tag = r.headers.get('ETag');
+        if (r.ok && tag && tag === etags.get(p)) continue;
+        const t = await fetchText(p);
+        if (t === files.get(p)) continue;
+        setFile(p, t);
+        changed = true;
+        if (p === active) { const keep = src.scrollTop; src.value = t; src.scrollTop = keep; }
+      } catch { /* 文件没了：编译时会报错 */ }
+    }
+    if (changed) { collab?.markStale(); renderFileList(); await run(); }
+    await collab?.loadScore();
+    return changed;
+  })().finally(() => { refreshing = null; }));
+}
+// 切回这个窗口时看一眼磁盘（AI 可能刚改过文件、评过分、提交了提议）
+let lastFocus = 0;
+window.addEventListener('focus', () => {
+  if (!fileParam || Date.now() - lastFocus < 1500) return;
+  lastFocus = Date.now();
+  refreshFromDisk();
+  if (!$('#prop-pane').hidden) { collab?.loadProposals(); collab?.loadInbox(); }
+});
 
 async function run() {
   await preload(files.get(rootFile()), rootFile());
   renderFileList();
   const t0 = performance.now();
-  const r = compile(files.get(rootFile()), { file: rootFile(), resolve: (p) => files.get(p) });
+  // 工程的场景单位不是米时，空间事实的容差（FACT_EPS，按米）换算成场景单位——与工具（tools/project.mjs）一致
+  const r = compile(files.get(rootFile()), { file: rootFile(), resolve: (p) => files.get(p), ...(project ? { factEps: FACT_EPS / project.unit } : {}) });
   const t1 = performance.now();
   // 网格引用的 src 相对组合根所在的目录（工程目录；与工具的约定一致）
   viewer.srcBase = new URL(rootFile(), location.href).href;
   const warn = viewer.setScene(r);
   const t2 = performance.now();
+  lastCost = t2 - t0;
   last = r;
   renderGutter();
   errorsEl.innerHTML = [...r.errors.map((e) => `<div class="e" data-file="${esc(e.file ?? '')}" data-line="${e.line ?? ''}"><b>${e.file && e.file !== rootFile() ? esc(e.file) + ' ' : ''}第 ${e.line ?? '?'} 行</b>${esc(e.message)}</div>`),
@@ -142,10 +248,11 @@ async function run() {
   renderObjects(r);
   renderSemantics(r);
   renderFacts(r);
+  // 热力图按路径上色：场景重建之后重新套一遍（setScene 里的 paint 已经按当前模式上色，这里只刷新图例与叠加层）
+  collab?.applyMode();
 }
 errorsEl.addEventListener('click', (e) => { const d = e.target.closest('[data-line]'); if (d) openFile(d.dataset.file, +d.dataset.line); });
 
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const fmt = (v) => v.map((x) => (Math.abs(x) < 0.005 ? 0 : x).toFixed(1)).join(', ');
 
 function renderObjects(r) {
@@ -209,23 +316,41 @@ function renderFacts(r) {
 }
 
 // ── 选择与高亮 ──
+// selected：选中的物体（写进 state/selection.json，选中面板显示它们）；highlightOnly 只改 3D 视图里的高亮（看同类、看关系、看提议改了什么）
 let selected = null;
-function select(paths, { line, file, focus } = {}) {
-  selected = paths;
-  const box = viewer.highlight(paths);
+function select(paths, { line, file, focus, silent } = {}) {
+  selected = paths == null ? null : [].concat(paths);
+  if (selected && !selected.length) selected = null;
+  const box = viewer.highlight(selected);
   if (focus && box) viewer.frame(box);
   if (line) openFile(file, line);
   markSelected();
+  collab?.inspect(selected);
+  if (!silent) collab?.saveSelection(selected ?? []);
 }
-function markSelected() {
-  const set = new Set(selected ? [].concat(selected) : []);
-  for (const li of objList.children) li.classList.toggle('sel', set.has(li.dataset.path));
-  const el = [...objList.children].find((li) => set.has(li.dataset.path));
-  if (el) el.scrollIntoView({ block: 'nearest' });
+function highlightOnly(paths, { focus } = {}) {
+  const box = viewer.highlight(paths);
+  if (focus && box) viewer.frame(box);
+  markSelected(paths);
+}
+// Shift+点击：加入 / 移出选中
+function toggle(path, opts) {
+  const cur = selected ? [...selected] : [];
+  const i = cur.indexOf(path);
+  if (i >= 0) cur.splice(i, 1); else cur.push(path);
+  select(cur, opts);
+}
+function markSelected(paths = selected) {
+  const set = new Set(paths ? [].concat(paths) : []);
+  let first = null;
+  for (const li of objList.children) { const on = set.has(li.dataset.path); li.classList.toggle('sel', on); if (on && !first) first = li; }
+  if (first) first.scrollIntoView({ block: 'nearest' });
 }
 objList.addEventListener('click', (e) => {
   const li = e.target.closest('li');
-  if (li) select(li.dataset.path, { line: +li.dataset.line, file: li.dataset.file });
+  if (!li) return;
+  if (e.shiftKey) return toggle(li.dataset.path);
+  select(li.dataset.path, { line: +li.dataset.line, file: li.dataset.file });
 });
 objList.addEventListener('dblclick', (e) => {
   const li = e.target.closest('li');
@@ -245,9 +370,12 @@ function locate(path, toDef) {
   return byPath(path);
 }
 viewer.clickCb = (hit, e) => {
-  if (!hit) return select(null);
+  if (!hit) return e?.shiftKey ? undefined : select(null);
   const n = locate(hit.path, e && e.altKey);
-  select(hit.path, { line: n && n.line, file: n && n.file });
+  if (e?.shiftKey) toggle(hit.path);
+  else select(hit.path, { line: n && n.line, file: n && n.file });
+  // 工程模式：点 3D 视图里的物体时切到“选中”面板
+  if (project && $('#objects-pane').hidden === false) showPane('inspect-pane');
 };
 viewer.hoverCb = (hit, e) => {
   if (!hit) { tip.hidden = true; return; }
@@ -259,12 +387,12 @@ viewer.hoverCb = (hit, e) => {
 };
 
 // ── 面板切换 ──
-for (const b of document.querySelectorAll('.tabs button')) {
-  b.addEventListener('click', () => {
-    document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('on', x === b));
-    document.querySelectorAll('.pane').forEach((p) => { p.hidden = p.id !== b.dataset.pane; });
-  });
+function showPane(id) {
+  document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('on', x.dataset.pane === id));
+  document.querySelectorAll('.pane').forEach((p) => { p.hidden = p.id !== id; });
+  if (id === 'prop-pane') { collab?.loadProposals(); collab?.loadInbox(); }
 }
+for (const b of document.querySelectorAll('.tabs button')) b.addEventListener('click', () => showPane(b.dataset.pane));
 
 // ── 示例与按钮 ──
 const sel = $('#example');
@@ -275,14 +403,14 @@ async function load(name, { reset } = {}) {
   if (reset) store.del('s3d:' + name);
   const saved = fileParam ? null : store.get('s3d:' + name);
   // ?file= 打开的文件总是从磁盘读（它可能刚被工具改过），不用浏览器里的缓存
-  files.clear(); dirty.clear();
-  files.set(rootFile(), saved ?? await (await fetch(rootFile())).text());
+  files.clear(); dirty.clear(); etags.clear(); lineCounts.clear(); showConflicts([]);
+  try { setFile(rootFile(), saved ?? await fetchText(rootFile())); } catch (e) { setFile(rootFile(), ''); statusEl.textContent = `读取失败：${e.message}`; }
   active = null;
   openFile(rootFile());
   $('#reset').hidden = saved == null;
   viewer.firstFrame = true;
-  select(null);
-  run();
+  select(null, { silent: true });
+  await run();
 }
 sel.addEventListener('change', () => load(sel.value));
 $('#reset').addEventListener('click', () => load(current, { reset: true }));
@@ -301,14 +429,42 @@ $('#curves').addEventListener('click', (e) => {
 });
 $('#export').addEventListener('click', () => viewer.exportGLB(current));
 
+// 工程：project.json 是静态文件，没有接口也能读（单位、档位、源模型）；有接口时再取待处理提议数
+async function openProjectFor(file) {
+  const dir = file.replace(/[^/]*$/, '');
+  try {
+    const r = await fetch(dir + 'project.json', { cache: 'no-store' });
+    if (!r.ok) return null;
+    const cfg = await r.json();
+    return { dir, apiDir: dir.replace(/\/$/, '') || '.', cfg, unit: cfg.unit ?? 1, score: null };
+  } catch { return null; }
+}
+
+let collab = null;
 if (fileParam) {
   // 文件模式：示例下拉框藏起来（文件列表在编辑器上方），编辑不写进浏览器缓存，Ctrl/⌘+S 写回磁盘
   sel.hidden = true;
   $('#reset').title = '丢弃没保存的修改，从磁盘重新读取';
   current = 'file:' + fileParam;
+  [project, api] = await Promise.all([openProjectFor(fileParam), detectApi()]);
+}
+collab = createCollab({
+  viewer, files, dirty, rootFile, locate, openFile, select, highlightOnly, refreshFromDisk,
+  get project() { return project; }, get api() { return api; },
+  last: () => last, selected: () => selected ?? [],
+  status: (m) => { statusEl.textContent = m; },
+});
+if (project) {
+  $('#prop-tab').hidden = !api;
+  collab.renderBar();
+  document.title = `${project.apiDir} · SVG3D`;
 }
 window.addEventListener('beforeunload', (e) => { if (dirty.size) e.preventDefault(); });
-load(current);
+await load(current);
+if (project) {
+  await collab.loadScore();
+  if (api) { collab.restoreSelection(); collab.loadProposals(); }
+}
 
 // 调试入口：在控制台里用 s3d.viewer / s3d.last / s3d.compile(源码)
-window.s3d = { viewer, compile, get last() { return last; } };
+window.s3d = { viewer, compile, get last() { return last; }, get project() { return project; } };
