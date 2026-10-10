@@ -403,8 +403,29 @@ function minRot(u) {
 // 覆盖率低于它（基本体的表面大部分不贴着网格）就退回网格引用，各档位都一样
 const COVER_MIN = 0.3;
 
-// 节点名里的路径前缀（类别/子关卡/…）与 SM_ 一类的资产前缀不进名字
-const cleanName = (n) => String(n).split('/').pop().replace(/^SM_/, '');
+// 名字清理（不认具体的资产库，只用统计与通用的写法）：
+//   节点名里的路径前缀（类别/子关卡/…）、SM_ 一类的资产前缀、开头的单字母类别（H_、I_）、贴图尺寸（1024x768）不进名字；
+//   场景里大多数名字都带的词（资产库的主题、类别，如 FutureTech）没有区分度，去掉（至少留一个词）；连续重复的词只留一个；
+//   Cube / Plane / Object 这类建模软件的默认名当作没有名字，交给语义命名（按识别出的概念起名）
+const GENERIC = /^(cube|plane|cylinder|sphere|box|object|mesh|node|group|default|material|geometry|polysurface|p?cube|p?plane|untitled)(_?\d+)*$/i;
+const nameTokens = (n) => String(n).split('/').pop().replace(/^SM_/i, '').split(/[_\s.\-()]+/).filter(Boolean);
+function nameCleaner(names) {
+  const uniq = [...new Set(names.filter(Boolean).map((n) => String(n).split('/').pop()))];
+  const freq = new Map();
+  for (const n of uniq) for (const t of new Set(nameTokens(n))) freq.set(t, (freq.get(t) ?? 0) + 1);
+  const common = (t) => uniq.length >= 20 && freq.get(t) >= 0.3 * uniq.length && !/^\d+$/.test(t);
+  return (n) => {
+    if (n == null) return null;
+    let ts = nameTokens(n).filter((t) => !/^\d+x\d+$/i.test(t));
+    if (ts.length > 1 && /^[A-Za-z]$/.test(ts[0])) ts = ts.slice(1);
+    const kept = ts.filter((t) => !common(t));
+    if (kept.some((t) => /\p{L}{3,}/u.test(t))) ts = kept;
+    ts = ts.filter((t, i) => i === 0 || t.toLowerCase() !== ts[i - 1].toLowerCase());
+    const out = ts.join('_');
+    return !out || GENERIC.test(out) ? null : out;
+  };
+}
+let cleanName = (n) => (n == null ? null : String(n).split('/').pop().replace(/^SM_/, ''));
 // 类型名不能和语言里的形状、容器同名
 const KINDS_RESERVED = new Set(['box', 'cyl', 'cone', 'sphere', 'wedge', 'mesh', 'revolve', 'span', 'sweep', 'pipe', 'group', 'union', 'subtract', 'intersect', 'repeat', 'mirror', 'rotate', 'copy', 'line', 'bezier', 'spline', 'arc', 'helix', 'def', 'over', 'drop', 'let', 'material', 'concept', 'pattern', 'check', 'style', 'variant', 'import']);
 
@@ -571,6 +592,7 @@ function unifyBoxLabels(objs) {
 // ───────── 3 & 4. 关系与校验 ─────────
 export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true } = {}) {
   setFidelity(fidelity, sceneUnit);
+  cleanName = nameCleaner(parts.map((p) => p.name));
   // 计时：S3D_TIMING=1 时把各阶段耗时打到 stderr（实战里定位瓶颈用）
   const T0 = performance.now(), lap = (what) => process.env.S3D_TIMING && console.error(`[reverse] ${what} ${Math.round(performance.now() - T0)}ms`);
   // ── 享元：同一个网格（加同样的缩放、同样的镜像）被多个节点用到 → 一个类型（def），只拟合一次 ──
@@ -602,8 +624,9 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const corners = [0, 1, 2, 3, 4, 5, 6, 7].map((b) => add(prim.at, mvC(prim.cols, [0, 1, 2].map((k) => ((b >> k) & 1 ? prim.box.max[k] : prim.box.min[k])))));
       const lo = [0, 1, 2].map((k) => Math.min(...corners.map((c) => c[k]))), hi = [0, 1, 2].map((k) => Math.max(...corners.map((c) => c[k])));
       const c0 = [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2];
-      let name = sanitize(cleanName(rep.name ?? `type_${types.length + 1}`)), k2 = 2;
-      while (typeNames.has(name) || KINDS_RESERVED.has(name)) name = `${sanitize(cleanName(rep.name ?? 'type'))}_v${k2++}`;
+      const base = cleanName(rep.name) ?? `type_${types.length + 1}`;
+      let name = sanitize(base), k2 = 2;
+      while (typeNames.has(name) || KINDS_RESERVED.has(name)) name = `${sanitize(base)}_v${k2++}`;
       typeNames.add(name);
       const T = { name, prim, c0, box: { min: sub(lo, c0), max: sub(hi, c0) }, fit, count: ms.length };
       types.push(T);
@@ -620,11 +643,12 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     if (ty) {
       // 类型的实例：位姿就是节点的刚体变换
       const { T, R, t } = ty, b = T.box;
-      return { id: uniqueId(sanitize(cleanName(p.name ?? T.name))), src: p.uid ?? p.name ?? null, material: p.material, kind: T.name, props: {}, cols: R, at: add(t, mvC(R, T.c0)), box: b,
+      return { id: uniqueId(sanitize(cleanName(p.name) ?? T.name)), src: p.uid ?? p.name ?? null, material: p.material, kind: T.name, props: {}, cols: R, at: add(t, mvC(R, T.c0)), box: b,
         fit: Math.max(0, Math.min(1, 1 - T.fit.e / TOL)), err: T.fit.e, vol: (b.max[0] - b.min[0]) * (b.max[1] - b.min[1]) * (b.max[2] - b.min[2]), symY: false, instance: true };
     }
     const prim = primitiveOf(fits[i], p, srcFile);
-    const id = uniqueId(p.name && !/^part_\d+$|^merged_/.test(p.name) ? sanitize(cleanName(p.name)) : `${prim.kind}${(counters[prim.kind] = (counters[prim.kind] ?? 0) + 1)}`);
+    const nm = p.name && !/^part_\d+$|^merged_/.test(p.name) ? cleanName(p.name) : null;
+    const id = uniqueId(nm ? sanitize(nm) : `${prim.kind}${(counters[prim.kind] = (counters[prim.kind] ?? 0) + 1)}`);
     const vol = (prim.box.max[0] - prim.box.min[0]) * (prim.box.max[1] - prim.box.min[1]) * (prim.box.max[2] - prim.box.min[2]);
     const symY = prim.kind === 'sphere' || (['cyl', 'cone'].includes(prim.kind) && !prim.props.axis);
     if (symY && Math.abs(prim.cols[1][1] - 1) < 1e-6) prim.cols = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
