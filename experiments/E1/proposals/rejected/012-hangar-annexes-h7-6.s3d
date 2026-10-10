@@ -1,0 +1,4 @@
+// layer=edits why=back 视角源渲染：附楼与主厅背面共面，同一平面上量得 附楼高/主厅高 = 103/300 → 7.6 m（011 用 8 m 已持平，10 m 时 +40，趋势指向更低）
+over volume_1 size=34,22,26
+box annex size=12.3,7.6,13.8 against=volume_1.left align=bottom,back mat=concrete
+mirror annex_2 of=annex across=volume_1 axis=x

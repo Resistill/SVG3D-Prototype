@@ -1,0 +1,4 @@
+// layer=edits why=left 视角源渲染重测：附楼落地、高约 7.6~8 m（东侧台阶 props_1 顶端 y≈8 正通到附楼屋面），009 的 10 m 偏高；仍用 against+align 贴主厅
+over volume_1 size=34,22,26
+box annex size=12.3,8,13.8 against=volume_1.left align=bottom,back mat=concrete
+mirror annex_2 of=annex across=volume_1 axis=x

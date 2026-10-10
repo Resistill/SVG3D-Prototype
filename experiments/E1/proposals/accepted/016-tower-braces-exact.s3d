@@ -1,0 +1,6 @@
+// layer=edits why=塔架 16 根斜撑各有 2.7mm 系统误差（rot 轴取整 (0.35,0.937) 致 0.05° 偏角）；由包络反推端点恰为立柱中心 (37.1,2.4)→(31.1,7.6)，改用 span 精确连两点，阵列+镜像保持结构
+drop slabs_1.*.member
+repeat braces n=8 step=0,6,0 {
+  span brace from=(37.1,2.4,-6.1) to=(31.1,7.6,-6.1) r=0.15 mat=steel
+}
+mirror braces_2 of=braces across=platform_1 axis=x

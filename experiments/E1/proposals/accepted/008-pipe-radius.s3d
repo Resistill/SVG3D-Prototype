@@ -1,0 +1,9 @@
+// layer=edits why=right 视角 id 聚焦对照：源管截面厚 36 行、重建 30 行，高度剖面一致 → 管半径应为 0.35（中心高度相应改为 1.35~2.4）；坐标顺便取一位小数
+// retract 22
+// retract 23
+// retract 25
+// retract 26
+bezier feed_1_path path=[(21.1,2.4,13.1);(21.1,2.4,25);(20,1.35,31.5);(20,1.35,51.5)]
+sweep feed_1 path=feed_1_path profile=circle r=0.35 mat=steel
+bezier feed_2_path path=[(29.1,2.4,13.1);(29.1,2.4,27);(40,1.35,29.5);(40,1.35,51.5)]
+sweep feed_2 path=feed_2_path profile=circle r=0.35 mat=steel

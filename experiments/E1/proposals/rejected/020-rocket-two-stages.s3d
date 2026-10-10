@@ -1,0 +1,8 @@
+// layer=edits why=火箭 maxErr=1.996≈上段半径2：源网格在 y=29.2 处有一张内部圆盘（下段顶盖/上段底盖），单个 revolve 只有环形台阶；拆成下段 cyl r2.4 h27.2 + 上段 revolve(on=下段)，色环 slab_1 直接 on=rocket，slab_2 按新中心换算 offset
+// retract 4
+// retract 5
+// retract 6
+cyl rocket r=2.4 h=27.2 on=platform_1 mat=white
+revolve rocket_top profile=[(2,0);(2,15.3);(1.9,17.3);(1.6,19.3);(1.1,20.8);(0.6,21.5);(0,21.8)] on=rocket mat=white
+over slab_1 on=rocket
+over slab_2 at=rocket offset=-3.35,22.39,-3.35

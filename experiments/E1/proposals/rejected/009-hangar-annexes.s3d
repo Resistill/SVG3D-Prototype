@@ -1,0 +1,4 @@
+// layer=edits why=volume_1 的源网格是主厅(34宽)+两侧低矮附楼（top/iso2 源渲染）；58×22×26 的包络盒把两翼前方的空地也填满了。主厅缩为 34×22×26，两侧附楼用 against+align 贴主厅、mirror 成对
+over volume_1 size=34,22,26
+box annex size=12.3,10,13.8 against=volume_1.left align=bottom,back mat=concrete
+mirror annex_2 of=annex across=volume_1 axis=x

@@ -1,0 +1,59 @@
+// 由逆向管线从 ../../out/spaceport.L2.glb 生成（project）。~fit 是拟合度，~err 是相对误差；mesh 是拟合不了、直接引用源网格的部件
+
+material ground color=#59604f metal=0.05 rough=1
+material concrete color=#b8b4aa metal=0.05 rough=0.78
+material white color=#eceef0 metal=0.05 rough=0.78
+material hazard color=#e0a92e metal=0.05 rough=0.78
+material steel color=#7f8b96 metal=0.6 rough=0.4
+material asphalt color=#3b3d40 metal=0.05 rough=1
+material earth color=#8a7a58 metal=0.05 rough=1
+
+box terrain size=200,1,200 at=0,-1,0 mat=ground ~fit=1 ~src="merged_0#0"
+cyl tank_1 r=2.4 h=20 axis=x on=terrain[-0.45,1,-0.2] mat=white ~fit=0.92 ~src="merged_2#5"
+box volume_1 size=58,22,26 on=terrain[-0.45,1,-0.2] mat=concrete ~fit=0 ~src="merged_1#1"
+repeat tanks n=3 step=10,0,0 on=terrain[0.2,1,0.55] pin=origin {
+  cyl tank r=3.5 h=12.5 mat=white ~fit=0
+  cyl slab r=3.6 h=0.6 at=tank[0,-0.04,0] mat=hazard ~fit=0.82
+}
+box platform_1 size=26,2,26 on=terrain[0.25,1,0] mat=concrete ~fit=1 ~src="merged_1#0"
+box volume_2 size=14,5,10 on=terrain[-0.05,1,0.55] turn=30 mat=concrete ~fit=1 ~src="merged_1#2"
+wedge volume_3 size=7,5,10 on=terrain offset=-14.1,0,60.2 turn=30 mat=earth ~fit=1 ~src="merged_6#0"
+repeat columns_1 n=(2,1,2) step=40,0,40 on=terrain[0.05,1,-0.2] pin=origin {
+  cyl column r=0.4 h=30 mat=steel ~fit=0.91
+  box prop size=2.4,1.2,2.4 on=column mat=white ~fit=1
+}
+wedge platform_2 size=18.61,0.08,56.64 on=terrain offset=-18.9,0,7.3 turn=-87.2 mat=asphalt ~fit=0 ~src="merged_5#0"
+repeat steps n=24 step=0,0.2713,0 turn=15.6521 on=terrain[-0.1799,1,0.5] pin=origin {
+  box step size=2,0.12,0.7 at=1.2,0,0 mat=steel ~fit=1
+}
+cyl column_1 r=0.35 h=6.5 on=steps.0.step[-1.2,1,0] mat=steel ~fit=0.91 ~src="merged_4#122"
+repeat props_1 n=16 step=0,0.5,-0.75 at=volume_1 offset=23,-10.75,12.63 pin=origin {
+  box prop size=2.4,0.25,0.75 mat=steel ~fit=1
+}
+mirror props_2 of=props_1 across=volume_1 axis=x
+wedge beam_1 size=40.23,1.75,3.07 at=platform_1 offset=10.11,0,32.06 turn=-72.5 mat=steel ~fit=0 ~src="merged_4#120"
+wedge beam_2 size=0.93,1.75,38.53 at=platform_1 offset=-4.56,0,32.25 turn=-1.6 mat=steel ~fit=0 ~src="merged_4#119"
+wedge volume_4 size=4.3,6.33,4.3 at=column_1[0,-0.706,0] turn=-38 mat=steel ~fit=0 ~src="merged_4#147"
+cyl tank_2 r=2.4 h=49 on=platform_1 mat=white ~fit=0 ~src="merged_2#0"
+repeat columns_2 n=(2,1,2) step=6,0,6 on=platform_1 offset=6.1,0,-12.1 pin=origin {
+  box column size=0.6,48,0.6 mat=steel ~fit=1
+}
+mirror columns_3 of=columns_2 across=platform_1 axis=x
+rotate walls n=3 angle=90 about=platform_1 {
+  wedge wall size=3.5,6,0.4 on=platform_1[0.3192,1,0] turn=180 mat=hazard ~fit=1
+}
+repeat slabs_1 n=8 step=0,6,0 at=columns_2.3.column offset=-3,-18.4,-3 pin=origin {
+  box slab size=7.2,0.4,7.2 mat=steel ~fit=1
+  cyl member r=0.15 h=7.94 axis=x at=slab offset=-0.1,-2.91,3 rot=(0.35,0.937,0,180) mat=steel ~fit=0.17
+}
+mirror slabs_2 of=slabs_1 across=platform_1 axis=x
+cyl column_2 r=0.25 h=7 on=volume_2[0.6,1,0] mat=steel ~fit=0.91 ~src="merged_4#121"
+repeat props_3 n=20 step=0.55,0.74,-0.001 at=volume_1 offset=-28.72,-2.46,-6 pin=origin {
+  box prop size=2,0.2,0.55 turn=-89.9 mat=steel ~fit=1
+}
+mirror props_4 of=props_3 across=volume_1 axis=x
+sphere volume_5 r=1.6 on=column_2 mat=white ~fit=0.93 ~src="merged_2#9"
+box platform_3 size=36,0.8,28 on=volume_1 mat=steel ~fit=1 ~src="merged_4#46"
+cyl slab_1 r=2.45 h=0.8 at=tank_2 offset=0,2.7,0 mat=hazard ~fit=0.88 ~src="merged_3#0"
+box slab_2 size=6.08,0.3,1.6 at=tank_2 offset=-3.35,11.49,-3.35 rot=(0.002,-1,-0.004,45) mat=steel ~fit=1 ~src="merged_4#20"
+mirror slab_3 of=slab_2 across=platform_1 axis=x

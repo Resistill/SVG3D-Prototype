@@ -1,0 +1,3 @@
+// layer=edits why=front 视角 id 聚焦对照：扶手中心线（左右极值列）与源吻合，但斜段截面宽度重建比源大约 18% → 管半径 0.06 改 0.05
+// retract 18
+sweep rail path=rail_path profile=circle r=0.05 mat=steel

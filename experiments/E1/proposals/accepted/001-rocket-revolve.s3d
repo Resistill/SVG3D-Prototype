@@ -1,0 +1,5 @@
+// layer=edits why=源火箭是下段r2.4至y29.2、上段r2.0、顶部椭球鼻锥（front id 渲染逐行测宽得出），单一圆柱r2.4误差0.43m
+drop tank_2
+revolve rocket profile=[(2.4,0);(2.4,27.2);(2,27.2);(2,42.5);(1.9,44.5);(1.6,46.5);(1.1,48);(0.6,48.7);(0,49)] on=platform_1 mat=white
+over slab_1 at=rocket offset=0,2.7,0
+over slab_2 at=rocket offset=-3.35,11.49,-3.35

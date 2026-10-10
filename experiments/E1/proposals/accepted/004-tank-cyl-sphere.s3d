@@ -1,0 +1,10 @@
+// layer=edits why=储罐 revolve 后仍 maxErr=2、meanErr≈0.13：推测源网格是圆柱+整球（球的下半在圆柱内部），改写为 cyl h9 + sphere r3.5，描述也更短
+// retract 9
+// retract 10
+// retract 11
+// retract 12
+repeat tank_row n=3 step=10,0,0 on=terrain[0.2,1,0.55] pin=origin {
+  cyl tank r=3.5 h=9 mat=white
+  sphere dome r=3.5 at=tank.top offset=0,-3.5,0 mat=white
+  cyl slab r=3.6 h=0.6 at=tank offset=0,1.5,0 mat=hazard
+}

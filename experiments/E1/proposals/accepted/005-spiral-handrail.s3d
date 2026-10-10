@@ -1,0 +1,4 @@
+// layer=edits why=volume_4 源部件是螺旋楼梯的扶手（source 聚焦图），被拟合成楔形；改为沿螺旋线扫掠的圆管，半径/高度取自原包络与台阶阵列(每圈6.24m)
+drop volume_4
+helix rail_path r=2.1 pitch=6.24 turns=1 at=column_1.bottom+(0,1,0)
+sweep rail path=rail_path profile=circle r=0.06 mat=steel

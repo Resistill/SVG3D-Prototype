@@ -1,0 +1,3 @@
+// layer=edits why=props_3/4 的 maxErr 随 x 偏移线性变化：-28.72→5.1mm、-28.723→2.1mm，外推 -28.725 处为 0（首级中心 x=-73.725）
+// retract 41
+over props_3 at=volume_1 offset=-28.725,-2.46,-6

@@ -1,0 +1,4 @@
+// layer=edits why=改用整数尺寸 12×8×14：34+2×12=58 恰为原包络宽、14 与测得 13.8 吻合、8 与台阶顶 y=8 吻合；10/8/7.6 的试验表明分数在真值附近很陡
+over volume_1 size=34,22,26
+box annex size=12,8,14 against=volume_1.left align=bottom,back mat=concrete
+mirror annex_2 of=annex across=volume_1 axis=x
