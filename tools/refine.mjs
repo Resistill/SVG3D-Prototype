@@ -104,7 +104,7 @@ export function toLocal(tris, world) {
 // ── 生成细化的提议 ──
 import { fitPart, orientText, setFidelity, FIDELITY, digitsFor, splitComponents, reverse as reverseParts } from './reverse.mjs';
 import { sceneObjects } from './worldtris.mjs';
-import { localScore } from './score.mjs';
+import { neighborhoodScorer, SCORE_DEFAULTS } from './score.mjs';
 import { compile, FACT_EPS } from '../src/s3d.js';
 
 const mvT = (cols, v) => [dot(cols[0], v), dot(cols[1], v), dot(cols[2], v)];
@@ -153,7 +153,7 @@ function nestedLines(comps, { to, unit, digits, voxel, substitute = true }) {
 }
 
 // 一个物体（编译结果里的节点路径）→ 细化提议 { target, kind: 'type' | 'object', text, boxes, candidates, current, local }；拆不了返回 { error }
-// 候选：全部分量 / 按面积只留大块（99%、97%、90%）/ 整体体素（几种粒度）。用只看这个物体的局部分数挑最好的（按目标档位的 δ）：
+// 候选：全部分量 / 按面积只留大块（99%、97%、90%）/ 整体体素（几种粒度）。用邻域评分（全场分数在这个物体附近的变化，按目标档位的 δ）挑最好的：
 // 窗框、饰条这种小构件在粗档位下“写出来的代价 > 省掉的残差”，自然被舍弃。unit：场景单位（每个单位多少米），档位的数值按米、随之换算
 export function refineProposal(result, parts, path, { to = 'structure', unit = 1 } = {}) {
   const byPath = new Map(result.nodes.map((n) => [n.path, n]));
@@ -180,10 +180,23 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
   const F = FIDELITY[to] ?? FIDELITY.structure;
   const consts = { delta: F.tau, unit };
   const local = toLocal(part.tris, n.world);
-  // 现在的几何（物体坐标系里）：局部分数的基准；它的包围盒写成名义外包络 envelope——
+  // 现在的几何（物体坐标系里）：它的包围盒写成名义外包络 envelope——
   // 关系、锚点、定位点都按它算，拆成多少块，挂在它上面的物体都不动（保住第一遍的骨架）
   const cur = localObjects(result, n, parts);
   const env = boxOf(cur);
+  // 邻域评分的基准：现在的几何（世界坐标）；候选在物体坐标系里写成，评分前换回世界坐标，路径按写进场景之后的样子取（采样种子取自路径）
+  const hood = neighborhood(result, parts, n, part, consts);
+  const { R, t } = n.world;
+  // 没写材质的部件在场景里继承原物体的材质（over … : group 保留原来的 mat）：按原物体的颜色计价
+  const inherited = hood.cur[0]?.color;
+  const toWorld = (r, prefix) => {
+    const own = new Set(r.items.filter((i) => i.material?.name).map((i) => i.path));
+    return sceneObjects(r).map((o) => {
+      const pos = new Float32Array(o.pos.length);
+      for (let i = 0; i < o.pos.length; i += 3) for (let j = 0; j < 3; j++) pos[i + j] = R[j][0] * o.pos[i] + R[j][1] * o.pos[i + 1] + R[j][2] * o.pos[i + 2] + t[j];
+      return { ...o, pos, path: `${prefix}.${o.path}`, color: own.has(o.path) ? o.color : inherited ?? o.color };
+    });
+  };
   const envTxt = env ? ` envelope=${[...env.min, ...env.max].map((x) => fmt(x, 4)).join(',')}` : '';
   const wrap = (body) => (n.types
     ? { path: n.path, target: n.types[0], kind: 'type', envelope: env, text: `def ${n.types[0]} : ${n.types[0]} {\n  drop body\n  group body${envTxt} {\n${body.map((l) => '    ' + l).join('\n')}\n  }\n}` }
@@ -191,7 +204,7 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
   // 类型：改 def 会让所有实例一起变好（享元），残差的变化按实例数计；描述只写一次
   const N = n.types ? Math.max(1, result.nodes.filter((m) => m.types?.[0] === n.types[0] && !m.path.includes('.') === !n.path.includes('.')).length) : 1;
   const total = (x) => +(x.L + N * (x.R_src + x.R_recon)).toFixed(2);
-  const current = localScore({ objs: cur, srcTris: local, consts });
+  const current = hood.scorer(hood.cur);
   current.S = total(current);
   const cands = [];
   const seen = new Set();
@@ -203,7 +216,7 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
     const r = compile([...(c.materials ?? []), ...c.lines].join('\n'), { factEps: FACT_EPS / unit });
     if (r.errors.length) { cands.push({ name, error: r.errors[0].message }); return; }
     const w = wrap(c.lines);
-    const ls = localScore({ lines: w.text.split('\n'), objs: sceneObjects(r), srcTris: local, consts });
+    const ls = hood.scorer(toWorld(r, n.types ? `${n.path}.body` : n.path), w.text.split('\n'));
     ls.S = total(ls);
     cands.push({ name, ...w, boxes: c.boxes, parts: c.parts, arrays: c.arrays, voxel: c.voxel, local: ls });
   };
@@ -235,6 +248,26 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
   return {
     ...best, current, instances: N, gain: +(best.local.S - current.S).toFixed(2),
     candidates: cands.map((c) => ({ name: c.name, ...(c.error ? { error: c.error } : { boxes: c.boxes, S: c.local.S, L: c.local.L, R: +(c.local.R_src + c.local.R_recon).toFixed(2) }) })),
+  };
+}
+// 邻域：这个物体的源部件 + 离它不超过 dMax 的其他源部件；附近其他的重建物体（世界坐标）。
+// 同一个编译结果、同一组源部件反复细化（--auto）时，整个场景的几何与源部件的包围盒只算一次
+const WORLD = new WeakMap(), BOXES = new WeakMap();
+const boxMeet = (a, b, pad) => [0, 1, 2].every((j) => a.min[j] - pad <= b.max[j] && b.min[j] <= a.max[j] + pad);
+function neighborhood(result, parts, n, part, consts) {
+  const k = { ...SCORE_DEFAULTS, ...consts }, pad = k.dMax / k.unit;
+  let boxes = BOXES.get(parts);
+  if (!boxes) BOXES.set(parts, (boxes = parts.map((p) => boxOf([{ pos: p.tris.flat(2) }]))));
+  const own = parts.indexOf(part);
+  const near = [own, ...parts.map((_, i) => i).filter((i) => i !== own && boxMeet(boxes[i], boxes[own], pad))];
+  const U = near.reduce((u, i) => ({ min: u.min.map((x, j) => Math.min(x, boxes[i].min[j])), max: u.max.map((x, j) => Math.max(x, boxes[i].max[j])) }), { min: [...boxes[own].min], max: [...boxes[own].max] });
+  let world = WORLD.get(result);
+  if (!world) WORLD.set(result, (world = sceneObjects(result, { sourceParts: parts }).filter((o) => o.pos.length).map((o) => ({ ...o, box: boxOf([o]) }))));
+  const mine = (p) => p === n.path || p.startsWith(n.path + '.');
+  const rest = world.filter((o) => !mine(o.path));
+  return {
+    cur: world.filter((o) => mine(o.path)),
+    scorer: neighborhoodScorer({ parts, near, others: rest.filter((o) => boxMeet(o.box, U, pad)), reconColors: new Set(rest.map((o) => String(o.color ?? '').toLowerCase())), consts }),
   };
 }
 // 物体（及其内部各部件）现在的几何，变换到物体自己的坐标系

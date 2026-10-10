@@ -73,6 +73,8 @@ function bvhOf(objs, ids = objs.map((_, k) => k)) {
 
 // 按材质颜色分组的表面集合：{ byColor: Map(颜色 → BVH), all: BVH }
 const colorKey = (c) => String(c ?? '').toLowerCase();
+// 重建物体的采样种子取自路径（不取序号）：语句挪了位置、换了文件，分数不变
+const seedOf = (s) => { let h = 2166136261; for (let j = 0; j < s.length; j++) h = Math.imul(h ^ s.charCodeAt(j), 16777619); return 1000 + ((h >>> 0) % 1000003); };
 function surfaces(objs) {
   const groups = new Map();
   objs.forEach((o, k) => { const c = colorKey(o.color); if (!groups.has(c)) groups.set(c, []); groups.get(c).push(k); });
@@ -265,8 +267,6 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   // R_recon：重建物体 → 源。权重以顶层语句为单位：一个物体被细化成很多块、一个类型实例里的各个部件，
   // 共享一个权重、内部按面积分摊——拆分不会因为“块数多”而受罚；凭空多出来的语句照样各算一份
   const triArea = (t) => len3(cross3(sub3(t[1], t[0]), sub3(t[2], t[0]))) / 2;
-  // 采样种子取自路径（不取序号）：语句挪了位置、换了文件，分数不变
-  const seedOf = (s) => { let h = 2166136261; for (let j = 0; j < s.length; j++) h = Math.imul(h ^ s.charCodeAt(j), 16777619); return 1000 + ((h >>> 0) % 1000003); };
   let fresh = 0;
   const reconRes = new Map();
   const rec = recon.map((o, j) => {
@@ -314,20 +314,58 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   };
 }
 
-// 局部分数：只看一个物体——它的源网格 srcTris 与一组重建物体 objs（[{pos}]，同一坐标系），lines 是描述它的语句。
-// 与全场景分数同一套计价（δ、面积权重、铰链残差；重建侧整组共享一个权重），但不分材质、只和这一块源网格比，
-// 用来在细化的几个候选之间挑一个，不必每个候选都编译、评分整个场景
-export function localScore({ lines = [], objs, srcTris, consts = {}, samples = 2000 }) {
+// 邻域评分：全场分数在一个物体附近的变化量，用来在细化的几个候选之间挑一个，不必每个候选都编译、评分整个场景。
+// 与全场评分同一套计价，并且尽量逐项复现它（以前的“局部分数”只和这个物体自己的源网格比、不分材质，18 次里有 2 次与全场方向相反）：
+//   源侧：这个物体的源部件，加上离它不超过 dMax 的其他源部件（候选几何可能去解释、或者挡住邻居）；采样方式、种子与全场评分相同；
+//   重建侧：目标表面 = 候选几何 + 附近其他的重建物体；同材质规则按全场的颜色集合判断（某种颜色在场景里有没有重建物体），没有时多计一个 δ；
+//   候选物体到源的残差（R_recon）同全场：采样种子取自路径，一个顶层语句共享一个面积权重。
+// 邻居源点到“其余物体”的距离只算一次；每个候选只算它到候选几何的距离，取两者中小的。坐标一律是世界坐标。
+//   parts：全部源部件；near：邻域里源部件的序号（第一个是这个物体自己的）；others：附近其他重建物体 [{pos, color}]；
+//   reconColors：场景里其他重建物体的颜色（colorKey）；返回 (objs:[{pos, color, path}], lines) → 分数
+export function neighborhoodScorer({ parts, near, others, reconColors, consts = {} }) {
   const k0 = { ...SCORE_DEFAULTS, ...consts }, k = inScene(k0);
-  const L = lines.reduce((s, l) => s + lineCost(l), 0);
-  const recon = objs.filter((o) => o.pos.length);
-  const reconBVH = surfaces(recon.map((o) => ({ ...o, color: null })));
-  const srcBVH = surfaces([{ pos: trisToArray(srcTris), color: null }]);
-  const resS = residual(samplePoints(srcTris, samples, 7), reconBVH, k);
-  const Rsrc = k.cRes * Math.log2(1 + areaOf(srcTris) / (k.delta * k.delta)) * resS.r;
-  const parts = recon.map((o, i) => { const tris = triList(o.pos); return { area: areaOf(tris), res: residual(samplePoints(tris, Math.max(50, Math.round(samples / recon.length)), 11 + i), srcBVH, k) }; });
-  const A = parts.reduce((s, x) => s + x.area, 0);
-  const Rrecon = A > 0 ? k.cRes * Math.log2(1 + A / (k.delta * k.delta)) * parts.reduce((s, x) => s + (x.area / A) * x.res.r, 0) : 0;
-  const r3 = (x) => +x.toFixed(2);
-  return { S: r3(L + Rsrc + Rrecon), L: r3(L), R_src: r3(Rsrc), R_recon: r3(Rrecon), meanErr: +(resS.mean * k0.unit).toFixed(4), maxErr: +(resS.max * k0.unit).toFixed(4) };
+  const srcColors = new Set(parts.map((p) => colorKey(p.material?.color)));
+  const ents = near.map((i) => {
+    const p = parts[i], color = p.material?.color;
+    return { i, color, c: colorKey(color), pts: samplePoints(p.tris, k.samples, i + 1), w: k.cRes * Math.log2(1 + areaOf(p.tris) / (k.delta * k.delta)), rest: new Map() };
+  });
+  const otherSurf = others.length ? surfaces(others) : null;
+  const srcSurf = surfaces(near.map((i) => ({ pos: trisToArray(parts[i].tris), color: parts[i].material?.color })));
+  const v = new THREE.Vector3(), hit = {};
+  // 到一组表面里某种颜色（same）或全部表面的距离，封顶 limit
+  const dist = (surf, c, same, pen, p, limit) => {
+    const g = surf && (same ? surf.byColor.get(c) : surf.all);
+    if (!g || limit - pen <= 0) return limit;
+    const res = g.bvh.closestPointToPoint(v.set(p[0], p[1], p[2]), hit, 0, limit - pen);
+    return res ? Math.min(res.distance + pen, limit) : limit;
+  };
+  return (objs, lines = []) => {
+    const recon = objs.filter((o) => o.pos.length);
+    const colorsNow = new Set([...reconColors, ...recon.map((o) => colorKey(o.color))]);
+    const candSurf = recon.length ? surfaces(recon) : null;
+    // R_src：邻域里的每个源部件
+    let Rsrc = 0, own = null;
+    for (const e of ents) {
+      const same = e.color != null && colorsNow.has(e.c), pen = !same && e.color != null ? k.delta : 0, mode = same ? 'same' : 'all';
+      if (!e.rest.has(mode)) e.rest.set(mode, Float64Array.from(e.pts, (p) => dist(otherSurf, e.c, same, pen, p, k.dMax)));
+      const rest = e.rest.get(mode), d = new Float64Array(e.pts.length);
+      e.pts.forEach((p, j) => { d[j] = dist(candSurf, e.c, same, pen, p, rest[j]); });
+      const res = aggregate(d, k);
+      Rsrc += e.w * res.r;
+      own ??= res;
+    }
+    // R_recon：候选物体 → 邻域里的源部件（离它更远的源部件在 dMax 之外，不影响距离）
+    let A = 0, acc = 0;
+    for (const o of recon) {
+      const tris = triList(o.pos), area = areaOf(tris), c = colorKey(o.color);
+      const same = o.color != null && srcColors.has(c), pen = !same && o.color != null ? k.delta : 0;
+      const pts = samplePoints(tris, k.samples, seedOf(o.path ?? ''));
+      const res = aggregate(Float64Array.from(pts, (p) => dist(srcSurf, c, same, pen, p, k.dMax)), k);
+      A += area; acc += area * res.r;
+    }
+    const Rrecon = A > 0 ? k.cRes * Math.log2(1 + A / (k.delta * k.delta)) * (acc / A) : 0;
+    const L = lines.reduce((s, l) => s + lineCost(l), 0);
+    const r3 = (x) => +x.toFixed(2);
+    return { S: r3(L + Rsrc + Rrecon), L: r3(L), R_src: r3(Rsrc), R_recon: r3(Rrecon), meanErr: +((own?.mean ?? 0) * k0.unit).toFixed(4), maxErr: +((own?.max ?? 0) * k0.unit).toFixed(4) };
+  };
 }
