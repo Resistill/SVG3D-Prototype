@@ -143,7 +143,7 @@ function uprightFrame(pts) {
   return frameFrom(pts, Ry(yaw), yaw);
 }
 // 主成分坐标系
-function pcaFrame(pts) {
+export function pcaFrame(pts) {
   const c = scl(pts.reduce((s, p) => add(s, p), [0, 0, 0]), 1 / pts.length);
   const C = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
   for (const p of pts) { const d = sub(p, c); for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) C[i][j] += d[i] * d[j]; }

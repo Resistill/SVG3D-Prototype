@@ -5,6 +5,7 @@ import { score } from './score.mjs';
 import { sceneObjects } from './worldtris.mjs';
 import { rasterize, VIEWS } from './raster.mjs';
 import { initProject, openProject, runReverse } from './project.mjs';
+import { reverse as reverseParts, samplePoints, pcaFrame } from './reverse.mjs';
 import { readdirSync, renameSync, mkdirSync, appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -43,16 +44,28 @@ async function scoreWith(P, overrides = {}) {
   const s = score({ result: r, files: P.geometryFiles(overrides), sourceParts: await P.sourceParts(), consts: P.cfg.score });
   return { r, s };
 }
-async function previewProposal(P, p) {
+async function previewProposal(P, p, opts = {}) {
   const prop = parseProposal(P.read(join('proposals', p.file)));
   const text = applyProposal(P, p.id, prop);
   const before = await scoreWith(P);
   const after = await scoreWith(P, { [prop.layer]: text });
   const known = new Set(before.r.errors.map((e) => `${e.file}:${e.message}`));
   const errors = after.r.errors.filter((e) => !known.has(`${e.file}:${e.message}`));
-  const changed = after.s.objects.filter((o) => { const b = before.s.objects.find((x) => x.path === o.path); return !b || Math.abs(b.total - o.total) > 0.01; }).map((o) => o.path);
-  const gone = before.s.objects.filter((o) => !after.s.objects.some((x) => x.path === o.path)).map((o) => o.path);
-  return { id: p.id, layer: prop.layer, why: prop.why, errors, before: before.s.S, after: after.s.S, delta: +(after.s.S - before.s.S).toFixed(2), explain: after.s.explain, changed: changed.slice(0, 30), removed: gone.slice(0, 30), text, prop };
+  // 逐物体的分数变化：只列变化明显的（≥ 0.5），按幅度排序
+  const bmap = new Map(before.s.objects.map((o) => [o.path, o])), amap = new Map(after.s.objects.map((o) => [o.path, o]));
+  const changed = [...amap.values()].filter((o) => bmap.has(o.path)).map((o) => ({ path: o.path, before: bmap.get(o.path).total, after: o.total, delta: +(o.total - bmap.get(o.path).total).toFixed(2) }))
+    .filter((x) => Math.abs(x.delta) >= 0.5).sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta)).slice(0, 20);
+  const added = [...amap.values()].filter((o) => !bmap.has(o.path)).map((o) => ({ path: o.path, cost: o.total }));
+  const removed = [...bmap.values()].filter((o) => !amap.has(o.path)).map((o) => ({ path: o.path, cost: o.total }));
+  let render = null;
+  if (opts.render) {
+    const focus = [...added.map((x) => x.path), ...changed.map((x) => x.path)].slice(0, 12);
+    const res = rasterize(sceneObjects(after.r, { sourceParts: await P.sourceParts() }), { view: opts.view ?? 'iso', size: 768, mode: 'labels', focus: focus.length ? focus : null });
+    const out = `renders/proposal-${p.id}.png`;
+    P.write(out, res.png);
+    render = { file: P.path(out), legend: res.legend };
+  }
+  return { id: p.id, layer: prop.layer, why: prop.why, errors, before: before.s.S, after: after.s.S, delta: +(after.s.S - before.s.S).toFixed(2), explain: after.s.explain, changed, added: added.slice(0, 30), removed: removed.slice(0, 30), render, text, prop };
 }
 
 const near = (a, b, tol) => Math.abs(a - b) <= tol + 0.005 * Math.abs(a);
@@ -67,6 +80,31 @@ function signature(item) {
   const dims = g.type === 'box' || g.type === 'wedge' ? [g.w, g.h, g.d].sort((a, b) => a - b)
     : g.type === 'cyl' ? [g.r1, g.r2, g.h] : g.type === 'sphere' ? [g.r] : g.type === 'mesh' ? [g.w, g.h, g.d].sort((a, b) => a - b) : null;
   return dims && { type: g.type === 'mesh' ? `mesh:${String(g.src).split('#').pop()}` : g.type, dims, mat: item.material?.name ?? item.material?.color };
+}
+
+// 源模型的部件：几何量（包络、主轴尺寸）+ 分数里的情况 + 把它单独逆向得到的建议语句
+async function inspectSource(P, names) {
+  const parts = await P.sourceParts();
+  let sc = null;
+  try { sc = JSON.parse(P.read('score.json')); } catch { /* 还没评过分 */ }
+  const r4 = (v) => v.map((x) => +x.toFixed(4));
+  return names.map((name) => {
+    const i = parts.findIndex((p) => (p.name ?? p.from) === name);
+    if (i < 0) return { name, error: '源模型里没有这个部件（名字见 score 的 worstSources / sources）' };
+    const p = parts[i], vs = p.tris.flat();
+    const lo = [0, 1, 2].map((k) => Math.min(...vs.map((v) => v[k]))), hi = [0, 1, 2].map((k) => Math.max(...vs.map((v) => v[k])));
+    const area = p.tris.reduce((s, [A, B, C]) => { const u = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], w = [C[0] - A[0], C[1] - A[1], C[2] - A[2]]; return s + Math.hypot(u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]) / 2; }, 0);
+    const F = pcaFrame(samplePoints(p.tris, 800, i + 1));
+    let suggestion = null;
+    try { suggestion = reverseParts([p], { srcFile: P.cfg.source, compress: false, names: false, fidelity: P.cfg.fidelity ?? 'detail' }).src.split('\n').find((l) => /^(box|cyl|cone|sphere|wedge|mesh) /.test(l))?.replace(/ ~src=.*$/, '') ?? null; } catch { /* 单独逆向失败 */ }
+    return {
+      name, tris: p.tris.length, material: p.material, area: +area.toFixed(3),
+      box: { min: r4(lo), max: r4(hi), size: r4(hi.map((v, k) => v - lo[k])), center: r4(hi.map((v, k) => (v + lo[k]) / 2)) },
+      axes: F.cols.map((c, k) => ({ dir: r4(c), extent: +(2 * F.h[k]).toFixed(4) })),
+      score: sc?.sources?.find((x) => x.name === name) ?? null,
+      suggestion,
+    };
+  });
 }
 
 export const COMMANDS = {
@@ -91,9 +129,10 @@ export const COMMANDS = {
     },
   },
   inspect: {
-    desc: '查看物体：源语句、属性、世界包围盒、空间事实、所属阵列 / 镜像 / 类型与同类数量、副本来源、概念、元数据、逐物体分数',
-    args: { paths: '一个或多个路径', selection: '可选：查看界面里当前选中的物体（state/selection.json）' },
+    desc: '查看物体：源语句、属性、世界包围盒、空间事实、所属阵列 / 镜像 / 类型与同类数量、副本来源、概念、元数据、逐物体分数。--source 时查看源模型的部件：包络、三角形数、面积、主轴与沿主轴的尺寸、材质、分数，以及把它单独逆向得到的建议语句',
+    args: { paths: '一个或多个路径（--source 时是源部件名，例如 merged_4#120）', selection: '可选：查看界面里当前选中的物体（state/selection.json）', source: '可选：查看源模型的部件' },
     async run(P, a) {
+      if (a.source) return inspectSource(P, pathsArg(P, a));
       const r = P.compile();
       const byPath = new Map(r.nodes.map((n) => [n.path, n]));
       const items = new Map(r.items.map((i) => [i.path, i]));
@@ -149,8 +188,8 @@ export const COMMANDS = {
     },
   },
   render: {
-    desc: '离屏渲染成 PNG：view=iso|iso2|top|front|back|left|right，mode=color|id|labels；focus=路径或 selection（只标注、并且不被遮挡）；source 渲染源模型',
-    args: { view: '视角（默认 iso）', mode: '模式（默认 labels）', focus: '可选：路径，或 selection', size: '边长像素（默认 1024）', out: '输出文件（默认 renders/<view>-<mode>.png）', source: '可选：渲染源模型而不是重建结果' },
+    desc: '离屏渲染成 PNG：view=iso|iso2|top|front|back|left|right，mode=color|id|labels|error（按 score.json 的误差从绿到红上色）；focus=路径或 selection（只标注、并且不被遮挡）；source 渲染源模型；box 指定取景（返回值里的 box 可原样传回，源与重建取景一致）；ortho 正交相机',
+    args: { view: '视角（默认 iso）', mode: '模式（默认 labels）', focus: '可选：路径（或源部件名），或 selection', size: '边长像素（默认 1024）', out: '输出文件（默认 renders/<view>-<mode>.png）', source: '可选：渲染源模型而不是重建结果', box: '可选：取景范围 x0,y0,z0,x1,y1,z1', ortho: '可选：正交相机' },
     async run(P, a) {
       const parts = await P.sourceParts();
       let objs;
@@ -159,17 +198,27 @@ export const COMMANDS = {
         objs = parts.map((p, i) => ({ path: p.name ?? p.from ?? `part_${i}`, pos: trisToArray(p.tris), color: p.material?.color ?? '#c9c9c9' }));
       } else objs = sceneObjects(P.compile(), { sourceParts: parts });
       const view = a.view ?? 'iso', mode = a.mode ?? 'labels';
+      if (mode === 'error') {
+        // 误差热图：每个物体（或源部件）的平均误差，以 4δ 为满刻度
+        let sc = null;
+        try { sc = JSON.parse(P.read('score.json')); } catch { throw new Error('先运行 score'); }
+        const full = 4 * (sc.consts?.delta ?? 0.05);
+        const err = new Map((a.source ? sc.sources.map((x) => [x.name, x.meanErr]) : sc.objects.map((x) => [x.path, x.meanErr])));
+        for (const o of objs) { const e = err.get(o.path); if (e != null) o.heat = e / full; }
+      }
+      const bx = a.box ? String(a.box).split(',').map(Number) : null;
+      if (bx && (bx.length !== 6 || bx.some((v) => !Number.isFinite(v)))) throw new Error('box 写成 x0,y0,z0,x1,y1,z1');
       if (!VIEWS[view]) throw new Error(`没有视角 ${view}（可用：${Object.keys(VIEWS).join(' ')}）`);
       const focus = a.focus === 'selection' ? P.selection().paths : a.focus ? [].concat(a.focus) : null;
-      const res = rasterize(objs, { view, mode, size: +(a.size ?? 1024), focus: focus?.length ? focus : null });
+      const res = rasterize(objs, { view, mode, size: +(a.size ?? 1024), focus: focus?.length ? focus : null, box: bx && { min: bx.slice(0, 3), max: bx.slice(3) }, ortho: !!a.ortho });
       const out = a.out ?? `renders/${a.source ? 'source-' : ''}${view}-${mode}${focus ? '-focus' : ''}.png`;
       P.write(out, res.png);
-      return { file: P.path(out), view, mode, focus, legend: res.legend };
+      return { file: P.path(out), view, mode, focus, box: [...res.box.min, ...res.box.max].join(','), legend: res.legend };
     },
   },
   propose: {
     desc: '提交一条提议（AI 的修改不直接写进层文件）：追加到某一层的语句，可撤销该层的某几行；返回编号、新出现的编译错误与分数变化',
-    args: { text: '语句（多行用 \\n 分隔），或用 --file=路径', layer: '目标层：edits（默认）/ semantics / style / decisions', why: '理由（一句话，人会看到）', title: '可选：短标题（用作文件名）', retract: '可选：要撤销的目标层行号，逗号分隔' },
+    args: { render: '可选：同时渲染应用提议之后的场景', text: '语句（多行用 \\n 分隔），或用 --file=路径', layer: '目标层：edits（默认）/ semantics / style / decisions', why: '理由（一句话，人会看到）', title: '可选：短标题（用作文件名）', retract: '可选：要撤销的目标层行号，逗号分隔' },
     async run(P, a) {
       const body = a.file ? readFileSync(a.file, 'utf8') : String(a.text ?? '').replace(/\\n/g, '\n');
       if (!body.trim() && !a.retract) throw new Error('提议是空的：用 --text=… 或 --file=…');
@@ -180,7 +229,7 @@ export const COMMANDS = {
       const retract = a.retract ? String(a.retract).split(',').map((n) => `// retract ${n.trim()}`).join('\n') + '\n' : '';
       const file = `${id}-${slug}.s3d`;
       P.write(join('proposals', file), `// layer=${layer} why=${String(a.why ?? '').replace(/\n/g, ' ')}\n${retract}${body.trim()}\n`);
-      const { text, prop, ...pv } = await previewProposal(P, { id, file });
+      const { text, prop, ...pv } = await previewProposal(P, { id, file }, { render: !!a.render });
       return { ...pv, file: P.path(join('proposals', file)) };
     },
   },
@@ -191,8 +240,8 @@ export const COMMANDS = {
   },
   preview: {
     desc: '预览一条提议：叠加编译，报告新出现的错误、分数变化、受影响的物体（不改任何文件）',
-    args: { id: '提议编号' },
-    async run(P, a) { const { text, prop, ...pv } = await previewProposal(P, findProposal(P, a.id ?? a._?.[0])); return pv; },
+    args: { id: '提议编号', render: '可选：渲染应用提议之后的场景（聚焦在变化的物体上）', view: '可选：渲染视角' },
+    async run(P, a) { const { text, prop, ...pv } = await previewProposal(P, findProposal(P, a.id ?? a._?.[0]), { render: !!a.render, view: a.view }); return pv; },
   },
   accept: {
     desc: '接受一条提议：追加进目标层（有新的编译错误时拒绝接受，除非 --force），提议移到 proposals/accepted/',
@@ -235,6 +284,27 @@ export const COMMANDS = {
     async run(P, a) {
       if (!P.exists('inbox.jsonl')) return [];
       return P.read('inbox.jsonl').split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((e) => !a.since || e.t > a.since);
+    },
+  },
+  check: {
+    desc: '空跑：把一段语句临时叠加到某一层上编译（不生成提议、不改文件），报告新出现的编译错误；语句对场景没有任何效果时给出警告。不带 text 时检查整个工程',
+    args: { text: '可选：要试的语句（多行用 \\n 分隔）', layer: '叠加到哪一层（默认 edits）' },
+    async run(P, a) {
+      const layer = (a.layer ?? 'edits').replace(/\.s3d$/, '') + '.s3d';
+      const before = P.compile();
+      if (!a.text) return { errors: before.errors, objects: before.items.length };
+      const body = String(a.text).replace(/\\n/g, '\n');
+      const after = P.compile('', { [layer]: (P.exists(layer) ? P.read(layer) : '') + '\n' + body + '\n' });
+      const known = new Set(before.errors.map((e) => `${e.file}:${e.message}`));
+      const errors = after.errors.filter((e) => !known.has(`${e.file}:${e.message}`));
+      // 有没有效果：比较每个几何条目的种类、形状参数、位姿、材质
+      const sig = (r) => new Map(r.items.map((i) => [i.path, JSON.stringify([i.kind, i.geom, i.world && [i.world.R.flat().map((v) => +v.toFixed(5)), i.world.t.map((v) => +v.toFixed(5))], i.material])]));
+      const A = sig(before), B = sig(after);
+      const added = [...B.keys()].filter((k) => !A.has(k)), removed = [...A.keys()].filter((k) => !B.has(k));
+      const modified = [...B.keys()].filter((k) => A.has(k) && A.get(k) !== B.get(k));
+      const warnings = [];
+      if (!errors.length && !added.length && !removed.length && !modified.length) warnings.push('这段语句对场景没有任何效果（几何、位置、材质都没变）——检查路径和写法');
+      return { errors, warnings, added: added.slice(0, 30), removed: removed.slice(0, 30), modified: modified.slice(0, 30) };
     },
   },
   score: {

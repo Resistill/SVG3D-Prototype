@@ -15,17 +15,23 @@ const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a
 const unit = (a) => { const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
 const hexRGB = (h) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(h)); const n = m ? parseInt(m[1], 16) : 0xc9c9c9; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 
-// 包围盒取景：与预览器相同（整体 1.6 倍半径，聚焦 2.4 倍）
+// 包围盒取景：与预览器相同（整体 1.6 倍半径，聚焦 2.4 倍）；正交相机按包围球取景
 export function camera(box, view = 'iso', focus = false) {
   const d = unit(VIEWS[view] ?? VIEWS.iso);
   const c = [0, 1, 2].map((k) => (box.min[k] + box.max[k]) / 2);
   const r = Math.max(Math.hypot(...sub(box.max, box.min)) / 2, 2);
   const eye = c.map((x, k) => x + d[k] * r * (focus ? 2.4 : 1.6));
-  return { eye, target: c, fov: 45, near: 0.1 };
+  return { eye, target: c, fov: 45, near: 0.1, r };
 }
 
+// 误差 → 颜色（0 绿 → 0.5 黄 → 1 红）
+export const heatColor = (t) => { t = Math.max(0, Math.min(1, t)); return t < 0.5 ? [Math.round(60 + 390 * t), 190, 70] : [235, Math.round(190 - 300 * (t - 0.5)), 60]; };
+
 // objects：[{ path, pos: Float32Array（每 9 个数一个三角形，世界坐标）, color }]
-export function rasterize(objects, { view = 'iso', size = 1024, focus = null, mode = 'color', highlight = null } = {}) {
+// objects 可以带 heat（0..1），mode=error 时按它上色（没有 heat 的物体画成浅灰）
+// box：指定取景范围（不指定就按聚焦的物体或整个场景）；返回值里的 box 可以原样传给下一次渲染，两张图取景完全一致
+// ortho：正交相机（尺寸不随深度变化，便于量）
+export function rasterize(objects, { view = 'iso', size = 1024, focus = null, mode = 'color', highlight = null, box: frameBox = null, ortho = false } = {}) {
   const W = size, H = size;
   let box = { min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity] };
   const grow = (b, p) => { for (let k = 0; k < 3; k++) { b.min[k] = Math.min(b.min[k], p[k]); b.max[k] = Math.max(b.max[k], p[k]); } };
@@ -33,6 +39,7 @@ export function rasterize(objects, { view = 'iso', size = 1024, focus = null, mo
   const inFocus = (path) => !focusSet || [...focusSet].some((f) => path === f || path.startsWith(f + '.'));
   for (const o of objects) if (inFocus(o.path)) for (let i = 0; i < o.pos.length; i += 3) grow(box, [o.pos[i], o.pos[i + 1], o.pos[i + 2]]);
   if (!Number.isFinite(box.min[0])) box = { min: [-1, -1, -1], max: [1, 1, 1] };
+  if (frameBox) box = frameBox;
   const cam = camera(box, view, !!focus);
   const fwd = unit(sub(cam.target, cam.eye));
   const right = unit(cross(fwd, Math.abs(fwd[1]) > 0.999 ? [0, 0, -1] : [0, 1, 0]));
@@ -46,10 +53,10 @@ export function rasterize(objects, { view = 'iso', size = 1024, focus = null, mo
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const g = 236 - Math.round((18 * y) / H); rgb.set([g, g, g + 3], (y * W + x) * 3); }
   const hl = highlight ? new Set([].concat(highlight)) : null;
   const isHl = (path) => hl && [...hl].some((h) => path === h || path.startsWith(h + '.'));
-  const proj = (p) => {
-    const v = sub(p, cam.eye), z = dot(v, fwd);
-    return [W / 2 + (dot(v, right) * f * W) / (2 * z), H / 2 - (dot(v, up) * f * H) / (2 * z), z];
-  };
+  const half = cam.r * 1.08; // 正交相机的半视野
+  const proj = ortho
+    ? (p) => { const v = sub(p, cam.eye); return [W / 2 + (dot(v, right) / half) * (W / 2), H / 2 - (dot(v, up) / half) * (H / 2), dot(v, fwd)]; }
+    : (p) => { const v = sub(p, cam.eye), z = dot(v, fwd); return [W / 2 + (dot(v, right) * f * W) / (2 * z), H / 2 - (dot(v, up) * f * H) / (2 * z), z]; };
   // 聚焦时画两遍：先画背景（变淡），再用一个新的深度缓冲把被聚焦的物体画在最上面——不会被别的东西挡住
   const order = objects.map((o, id) => id);
   const passes = focusSet ? [order.filter((id) => !inFocus(objects[id].path)), order.filter((id) => inFocus(objects[id].path))] : [order];
@@ -57,7 +64,7 @@ export function rasterize(objects, { view = 'iso', size = 1024, focus = null, mo
   if (pi > 0) zbuf.fill(Infinity);
   for (const id of pass) {
     const o = objects[id];
-    const base = mode === 'id' ? idColor(id) : hexRGB(o.color);
+    const base = mode === 'id' ? idColor(id) : mode === 'error' ? (o.heat == null ? [205, 205, 205] : heatColor(o.heat)) : hexRGB(o.color);
     const dim = focusSet && !inFocus(o.path);
     for (let i = 0; i < o.pos.length; i += 9) {
       const a = [o.pos[i], o.pos[i + 1], o.pos[i + 2]], b = [o.pos[i + 3], o.pos[i + 4], o.pos[i + 5]], c = [o.pos[i + 6], o.pos[i + 7], o.pos[i + 8]];
@@ -73,15 +80,15 @@ export function rasterize(objects, { view = 'iso', size = 1024, focus = null, mo
       if (minX > maxX || minY > maxY) continue;
       const area = (P[1][0] - P[0][0]) * (P[2][1] - P[0][1]) - (P[2][0] - P[0][0]) * (P[1][1] - P[0][1]);
       if (Math.abs(area) < 1e-12) continue;
-      // 透视正确的深度：对 1/z 做重心插值
-      const iz = P.map((q) => 1 / q[2]);
+      // 透视正确的深度：对 1/z 做重心插值（正交相机直接插值 z）
+      const iz = P.map((q) => (ortho ? q[2] : 1 / q[2]));
       for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
         const px = x + 0.5, py = y + 0.5;
         const w0 = ((P[1][0] - px) * (P[2][1] - py) - (P[2][0] - px) * (P[1][1] - py)) / area;
         const w1 = ((P[2][0] - px) * (P[0][1] - py) - (P[0][0] - px) * (P[2][1] - py)) / area;
         const w2 = 1 - w0 - w1;
         if (w0 < 0 || w1 < 0 || w2 < 0) continue;
-        const z = 1 / (w0 * iz[0] + w1 * iz[1] + w2 * iz[2]);
+        const zi = w0 * iz[0] + w1 * iz[1] + w2 * iz[2], z = ortho ? zi : 1 / zi;
         const k = y * W + x;
         if (z >= zbuf[k]) continue;
         zbuf[k] = z; ids[k] = id; rgb.set(col, k * 3);
@@ -101,15 +108,27 @@ export function rasterize(objects, { view = 'iso', size = 1024, focus = null, mo
     const acc = new Map();
     // 聚焦时只标被聚焦的物体（背景只作参照）
     for (let k = 0; k < W * H; k++) if (ids[k] >= 0 && inFocus(objects[ids[k]].path)) { const a = acc.get(ids[k]) ?? [0, 0, 0]; a[0] += k % W; a[1] += Math.floor(k / W); a[2]++; acc.set(ids[k], a); }
+    // 标签去重叠：按可见面积从大到小放；和已放的标签重叠就在物体自己的像素里就近挪位，放不下就不标（图例里 labeled=false）
     let n = 0;
+    const placed = [];
+    const rectOf = (x, y, num) => { const w = String(num).length * 12 + 4, h = 18; return [x - w / 2 - 2, y - h / 2 - 2, x + w / 2 + 2, y + h / 2 + 2]; };
+    const overlaps = (r) => placed.some((q) => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]);
     for (const [id, [sx, sy, c]] of [...acc].sort((p, q) => q[1][2] - p[1][2])) {
       if (c < 40) continue;
       n++;
-      drawNumber(rgb, W, H, Math.round(sx / c), Math.round(sy / c), n);
-      legend.push({ n, path: objects[id].path, pixels: c });
+      const cx = Math.round(sx / c), cy = Math.round(sy / c);
+      let spot = null;
+      for (let rad = 0; rad <= 60 && !spot; rad += 6) for (let a = 0; a < (rad ? 16 : 1) && !spot; a++) {
+        const x = Math.round(cx + rad * Math.cos((a * Math.PI) / 8)), y = Math.round(cy + rad * Math.sin((a * Math.PI) / 8));
+        if (x < 0 || y < 0 || x >= W || y >= H || ids[y * W + x] !== id) continue;
+        const r = rectOf(x, y, n);
+        if (!overlaps(r)) spot = { x, y, r };
+      }
+      if (spot) { placed.push(spot.r); drawNumber(rgb, W, H, spot.x, spot.y, n); }
+      legend.push({ n, path: objects[id].path, pixels: c, ...(spot ? {} : { labeled: false }) });
     }
   }
-  return { png: encodePNG(rgb, W, H), legend, camera: cam };
+  return { png: encodePNG(rgb, W, H), legend, camera: cam, box: { min: box.min.map((v) => +v.toFixed(4)), max: box.max.map((v) => +v.toFixed(4)) } };
 }
 
 // 物体编号 → 互相区分度高的颜色（黄金角色相）

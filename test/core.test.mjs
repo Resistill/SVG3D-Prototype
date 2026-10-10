@@ -866,7 +866,7 @@ test('换类型：over 实例 : 派生类型；派生类型里可以改旋转副
 
 test('换类型与改副本的错误提示', () => {
   const msg = (extra) => compile(windfarm + extra).errors.map((e) => e.message).join(' | ');
-  assert.match(msg('over farm.1.t : nothing'), /类型 nothing 没有定义/);
+  assert.match(msg('over farm.1.t : nothing'), /没有这个类型或形状种类/);
   assert.match(msg('over farm.1.t.rotor.r1.blade : turbine'), /副本，不能单独换类型/);
   assert.match(msg('over farm.1.t.rotor.r9.blade mat=rust'), /没有/);
 });
@@ -881,4 +881,29 @@ test('变体（外观）里的 mirror / rotate 也会生成副本', () => {
   `);
   assert.deepEqual(r.errors, []);
   assert.equal(r.items.filter((i) => /\.fin$/.test(i.path)).length, 4);
+});
+
+test('保名换形：over 物体 : 种类 / 类型，名字与路径不变，引用它的关系照常成立；over 阵列 { … } 作用到每个实例', () => {
+  const r = compile(`
+    box ground size=40,1,40 pin=top
+    box hall size=10,6,8 on=ground
+    box sign size=1,1,0.1 against=hall.front
+    def shed(w=4) { box body size=w,3,w
+      wedge roof size=w,1,w on=body }
+    over hall : subtract { box outer size=10,6,8
+      box door size=4,4,2 at=0,0,4 }
+    over sign : cyl r=0.5 h=0.1
+    box hut size=4,3,4 on=ground[0.4,1,0.4]
+    over hut : shed w=5
+    repeat row n=3 step=4,0,0 on=ground[-0.4,1,-0.4] { box tank size=1,2,1 }
+    over row { drop tank
+      cyl tank r=0.5 h=3+idx }
+  `);
+  assert.deepEqual(r.errors, []);
+  const kinds = Object.fromEntries(r.items.map((i) => [i.path, i.kind === 'csg' ? 'csg' : i.geom.type]));
+  assert.equal(kinds.hall, 'csg');
+  assert.equal(kinds.sign, 'cyl');
+  near(box(r, 'sign').min[2], 4, '招牌仍然贴在厂房正面');
+  assert.deepEqual(r.nodes.find((n) => n.path === 'hut').types, ['shed']);
+  assert.deepEqual(['row.0.tank', 'row.1.tank', 'row.2.tank'].map((p) => r.items.find((i) => i.path === p).geom.h), [3, 4, 5]);
 });

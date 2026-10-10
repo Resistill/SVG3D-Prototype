@@ -1178,6 +1178,13 @@ function expandCopies(elab, S, errors, fail) {
   for (const job of queue) errors.push(new S3DError(`copy ${job.s.id} 的原对象无法确定（复制关系形成了循环？）`, job.s.line));
 }
 
+// 一个类型（沿派生链）的全部参数名
+function defParams(defs, name) {
+  const out = new Set();
+  for (let d = defs.get(name), n = 0; d && n < 33; d = d.baseDef ?? (d.base && d.base !== d.name ? defs.get(d.base) : null), n++) { for (const k of d.params.keys()) out.add(k); for (const k of d.overrides.keys()) out.add(k); }
+  return [...out];
+}
+
 // over / drop：在求解之前修改几何与结构。选择器只能与空间事实无关（路径、#标签、kind、按尺寸的 where）。
 // 写在模板体或块里的 over / drop 只作用于该实例或成员内部。后写的覆盖先写的。
 // 分两轮：第一轮在 mirror / rotate 生成副本之前（改原物体，副本随之改变）；
@@ -1229,13 +1236,22 @@ function applyOpinions(elab, S, errors, fail, queue = elab.opinions, pass = 1) {
         const paramKeys = m.params ? [...s.props.keys()].filter((k) => m.params.has(k))
           : m.kind === 'repeat' && m.stmt ? [...s.props.keys()].filter((k) => k === 'n') : [];
         if (s.retype) {
-          if (!elab.defs.has(s.retype)) throw new S3DError(`over ${s.src} : ${s.retype}：类型 ${s.retype} 没有定义`, s.line);
-          if (!m.stmt || !m.template) throw new S3DError(`${m.path} 不是模板的实例，不能换类型`, s.line);
+          if (!elab.defs.has(s.retype) && !KIND_PROPS[s.retype]) throw new S3DError(`over ${s.src} : ${s.retype}：没有这个类型或形状种类`, s.line);
+          if (!m.stmt) throw new S3DError(`${m.path} 不是由一条语句声明的物体，不能换类型`, s.line);
+          if (['repeat', 'mirror', 'rotate', 'copy'].includes(s.retype) || CURVES.has(s.retype)) throw new S3DError(`不能把物体换成 ${s.retype}`, s.line);
         }
         if (paramKeys.length || s.retype) {
           const P = m.parent, idx = P.children.indexOf(m);
-          const props = new Map(m.stmt.props);
+          let props = new Map(m.stmt.props);
           for (const k of paramKeys) props.set(k, { k: 'envd', env, ast: s.props.get(k) });
+          // 保名换形：基本体 / 容器之间、或基本体 ↔ 模板之间换，只保留定位与外观，新形状的参数在建节点时就从这条 over 里取；
+          // 名字与路径不变，所有引用它的 on= / at= / of= 都不用改。模板换（派生）模板则保留全部参数
+          if (s.retype && !(m.template && elab.defs.has(s.retype))) {
+            const keep = new Set([...PLACEMENT, 'mat', 'color']);
+            props = new Map([...props].filter(([k]) => keep.has(k)));
+            const allowed = new Set(KIND_PROPS[s.retype] ?? defParams(elab.defs, s.retype));
+            for (const [k, ast] of s.props) if (allowed.has(k)) { props.set(k, { k: 'envd', env, ast }); paramKeys.push(k); }
+          }
           mark(m); P.children.splice(idx, 1); dropped = true;
           elab.walk([{ ...m.stmt, kind: s.retype ?? m.stmt.kind, props }], P, m.srcEnv, depth);
           const fresh = P.children.pop();
@@ -1249,7 +1265,12 @@ function applyOpinions(elab, S, errors, fail, queue = elab.opinions, pass = 1) {
           if (REL_KEYS.includes(k)) for (const r of REL_KEYS) m.props.delete(r);
           m.props.set(k, { k: 'envd', env, ast });
         }
-        if (s.children.length) elab.walk(s.children, m, new Env(env, { it: mkRef(m) }), depth);
+        if (s.children.length) {
+          // over 阵列 { … }：改的是阵列的“模板”——块里的语句作用到每一个实例上（和写在 repeat 体里一样，可以用 i j k idx）
+          const insts = m.kind === 'repeat' ? m.children.filter((c) => c.inst) : null;
+          if (insts?.length) for (const c of insts) elab.walk(s.children, c, new Env(env, { it: mkRef(c), i: c.inst.index[0], j: c.inst.index[1], k: c.inst.index[2], idx: c.inst.flat }), depth);
+          else elab.walk(s.children, m, new Env(env, { it: mkRef(m) }), depth);
+        }
       }
     } catch (e) { errors.push(fail(e, { line: s.line })); }
   }

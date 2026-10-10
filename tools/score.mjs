@@ -2,7 +2,11 @@
 //   S = L_stmt + L_mesh + R_src + R_recon，越低越好
 //   L_stmt  描述长度：名字、关键字、引用各 1；数字 1 + 0.5 × (小数位 − 1)；注释与 ~元数据不计
 //   L_mesh  仍以源网格引用保留的部分：c_mesh × log2(1 + 三角形数)
-//   R_src   源模型的每个部件表面采样，到重建表面的距离 d → log2(1 + d/δ)，按部件复杂度 log2(1 + T) 加权
+//   R_src   源模型的每个部件表面采样，到重建表面的距离 d → log2(1 + max(0, d − δ)/δ)，按部件复杂度 log2(1 + T) 加权。
+//           δ 由档位决定；误差在 δ 以内不计代价（逆向只要求保留语义，不奖励“猜中作者的精确数值”）。
+//           距离优先量到**同材质**的重建表面：沥青路面只能由沥青的物体解释，不能拿底下的地面凑数；
+//           没有同材质的表面时量到全部表面，并多计一个 δ
+//   有效描述：基础层里声明的物体被删掉了，那一行不计长度（替换一个物体不应付两份钱）
 //   R_recon 重建的每个物体表面采样，到源表面的距离，同样计价（惩罚凭空多出来的东西）
 // 解释率 explain = 1 − S / S_mesh，S_mesh 是“全部写成 mesh 引用、世界坐标定位”的基线。
 import * as THREE from 'three';
@@ -45,11 +49,11 @@ const toGeom = (pos) => { const g = new THREE.BufferGeometry(); g.setAttribute('
 const triList = (pos) => { const out = []; for (let i = 0; i < pos.length; i += 9) out.push([[pos[i], pos[i + 1], pos[i + 2]], [pos[i + 3], pos[i + 4], pos[i + 5]], [pos[i + 6], pos[i + 7], pos[i + 8]]]); return out; };
 
 // 把若干物体合成一棵 BVH，记住每个三角形属于哪个物体
-function bvhOf(objs) {
+function bvhOf(objs, ids = objs.map((_, k) => k)) {
   const n = objs.reduce((s, o) => s + o.pos.length, 0);
   const pos = new Float32Array(n), owner = new Int32Array(n / 9);
   let off = 0;
-  objs.forEach((o, k) => { pos.set(o.pos, off); owner.fill(k, off / 9, (off + o.pos.length) / 9); off += o.pos.length; });
+  objs.forEach((o, k) => { pos.set(o.pos, off); owner.fill(ids[k], off / 9, (off + o.pos.length) / 9); off += o.pos.length; });
   if (!n) return null;
   const geom = toGeom(pos);
   const bvh = new MeshBVH(geom);
@@ -58,18 +62,30 @@ function bvhOf(objs) {
   return { bvh, owner, triOf: (fi) => Math.floor(index[3 * fi] / 3) };
 }
 
+// 按材质颜色分组的表面集合：{ byColor: Map(颜色 → BVH), all: BVH }
+const colorKey = (c) => String(c ?? '').toLowerCase();
+function surfaces(objs) {
+  const groups = new Map();
+  objs.forEach((o, k) => { const c = colorKey(o.color); if (!groups.has(c)) groups.set(c, []); groups.get(c).push(k); });
+  const byColor = new Map([...groups].map(([c, ids]) => [c, bvhOf(ids.map((k) => objs[k]), ids)]));
+  return { byColor, all: bvhOf(objs) };
+}
+
 // 点集到一组表面的距离；返回 { r（平均代价）, mean, max, owners（每个点最近的物体） }
-function residual(points, target, k) {
+function residual(points, target, k, color = null) {
   const v = new THREE.Vector3(), hit = {};
   let rs = 0, sum = 0, mx = 0;
   const owners = [];
+  const same = target && color != null ? target.byColor.get(colorKey(color)) : null;
+  const bvh = same ?? target?.all ?? null;
+  const penalty = target && color != null && !same ? k.delta : 0; // 没有同材质的表面：多计一个 δ
   for (const p of points) {
     let d = k.dMax, owner = -1;
-    if (target) {
-      const res = target.bvh.closestPointToPoint(v.set(p[0], p[1], p[2]), hit, 0, k.dMax);
-      if (res) { d = Math.min(res.distance, k.dMax); owner = target.owner[target.triOf(res.faceIndex)]; }
+    if (bvh) {
+      const res = bvh.bvh.closestPointToPoint(v.set(p[0], p[1], p[2]), hit, 0, k.dMax);
+      if (res) { d = Math.min(res.distance + penalty, k.dMax); owner = bvh.owner[bvh.triOf(res.faceIndex)]; }
     }
-    rs += Math.log2(1 + d / k.delta); sum += d; mx = Math.max(mx, d);
+    rs += Math.log2(1 + Math.max(0, d - k.delta) / k.delta); sum += d; mx = Math.max(mx, d);
     owners.push(owner);
   }
   const n = points.length || 1;
@@ -80,14 +96,21 @@ function residual(points, target, k) {
 export function score({ result, files, sourceParts, consts = {} }) {
   const k = { ...SCORE_DEFAULTS, ...consts };
   const recon = sceneObjects(result, { sourceParts }).filter((o) => o.pos.length);
-  const src = sourceParts.map((p, i) => ({ i, name: p.name ?? p.from ?? `part_${i}`, tris: p.tris, pos: trisToArray(p.tris) }));
-  const D = descriptionLength(files);
+  const src = sourceParts.map((p, i) => ({ i, name: p.name ?? p.from ?? `part_${i}`, tris: p.tris, pos: trisToArray(p.tris), color: p.material?.color }));
+  const D0 = descriptionLength(files);
+  // 有效描述：声明物体的行，物体还在才计
+  const declared = new Set(result.nodes.map((n) => `${n.file ?? ''}:${n.line}`));
+  const NOT_DECL = /^\s*(material|let|def|over|drop|copy|import|concept|pattern|check|style|variant|\})\b/;
+  const fileText = new Map(files.map((f) => [f.file ?? '', f.text.split('\n')]));
+  const keep = (x) => { const t = fileText.get(x.file ?? '')?.[x.line - 1] ?? ''; return NOT_DECL.test(t) || !/^\s*[\p{L}_][\p{L}\p{N}_]*\s+[\p{L}_]/u.test(t) || declared.has(`${x.file ?? ''}:${x.line}`); };
+  const lines = D0.lines.filter(keep);
+  const D = { total: lines.reduce((s, x) => s + x.cost, 0), lines, dropped: D0.lines.length - lines.length };
   // 每行的长度归到在这一行声明的物体（阵列、模板实例的那一行归到容器）
   const byLine = new Map(D.lines.map((x) => [`${x.file ?? ''}:${x.line}`, x.cost]));
   const stmtOf = new Map();
   for (const n of result.nodes) { const c = byLine.get(`${n.file ?? ''}:${n.line}`); if (c && !n.ghost && n.kind !== 'instance' && !stmtOf.has(`${n.file ?? ''}:${n.line}`)) stmtOf.set(`${n.file ?? ''}:${n.line}`, { path: n.path, cost: c }); }
 
-  const reconBVH = bvhOf(recon), srcBVH = bvhOf(src);
+  const reconBVH = surfaces(recon), srcBVH = surfaces(src);
   const per = new Map(recon.map((o) => [o.path, { path: o.path, stmt: 0, mesh: 0, rSrc: 0, rRecon: 0, meanErr: 0, maxErr: 0, src: [] }]));
   for (const { path, cost } of stmtOf.values()) { const p = per.get(path) ?? per.get([...per.keys()].find((q) => q.startsWith(path + '.')) ?? ''); if (p) p.stmt += cost; }
 
@@ -100,7 +123,7 @@ export function score({ result, files, sourceParts, consts = {} }) {
   const srcOut = [];
   for (const s of src) {
     const pts = samplePoints(s.tris, k.samples, s.i + 1);
-    const res = residual(pts, reconBVH, k);
+    const res = residual(pts, reconBVH, k, s.color);
     const c = k.cRes * Math.log2(1 + s.tris.length) * res.r;
     Rsrc += c;
     // 归到最近点最多落在其上的那个重建物体
@@ -116,7 +139,7 @@ export function score({ result, files, sourceParts, consts = {} }) {
   recon.forEach((o, i) => {
     const tris = triList(o.pos);
     const pts = samplePoints(tris, k.samples, 1000 + i);
-    const res = residual(pts, srcBVH, k);
+    const res = residual(pts, srcBVH, k, o.color);
     const c = k.cRes * Math.log2(1 + tris.length) * res.r;
     Rrecon += c;
     const p = per.get(o.path);
@@ -135,7 +158,7 @@ export function score({ result, files, sourceParts, consts = {} }) {
   const objects = [...per.values()].map((p) => ({ ...p, total: +(p.stmt + p.mesh + p.rSrc + p.rRecon).toFixed(3), stmt: +p.stmt.toFixed(2), mesh: +p.mesh.toFixed(2), rSrc: +p.rSrc.toFixed(3), rRecon: +p.rRecon.toFixed(3), meanErr: +p.meanErr.toFixed(5), maxErr: +p.maxErr.toFixed(5) }));
   const r3 = (x) => +x.toFixed(2);
   return {
-    S: r3(S), L_stmt: r3(D.total), L_mesh: r3(Lmesh), R_src: r3(Rsrc), R_recon: r3(Rrecon), S_mesh: r3(Smesh), explain: +(1 - S / Smesh).toFixed(4),
+    S: r3(S), L_stmt: r3(D.total), droppedLines: D.dropped, L_mesh: r3(Lmesh), R_src: r3(Rsrc), R_recon: r3(Rrecon), S_mesh: r3(Smesh), explain: +(1 - S / Smesh).toFixed(4),
     consts: k, objects, sources: srcOut,
     worst: [...objects].sort((a, b) => (b.mesh + b.rSrc + b.rRecon) - (a.mesh + a.rSrc + a.rRecon)).slice(0, 20).map((o) => ({ path: o.path, cost: +(o.mesh + o.rSrc + o.rRecon).toFixed(2), meanErr: o.meanErr, mesh: o.mesh > 0 })),
   };
