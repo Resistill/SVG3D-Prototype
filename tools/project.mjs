@@ -55,9 +55,9 @@ export function openProject(dir) {
       return compile(text, { file: main, factEps: FACT_EPS / (cfg.unit ?? 1), resolve: (p) => overrides[p] ?? readFileSync(resolve(dir, p), 'utf8') });
     },
     // 计入描述长度的文本
-    // 基础层可能拆成了多个文件（base.s3d 是索引），它 import 的文件一并计入
-    geometryFiles: (overrides = {}) => GEOMETRY_LAYERS.flatMap((f) => (f === 'base.s3d' ? importedFiles((x) => overrides[x] ?? P.read(x), f) : [f]))
-      .filter((f) => overrides[f] != null || P.exists(f)).map((f) => ({ file: f, text: overrides[f] ?? P.read(f) })),
+    // 基础层可能拆成了多个文件（base.s3d 是索引），修改层可能 import 细化结果（edits/refine-*.s3d），import 的文件一并计入
+    geometryFiles: (overrides = {}) => GEOMETRY_LAYERS.flatMap((f) => importedFiles((x) => overrides[x] ?? P.read(x), f))
+      .map((f) => ({ file: f, text: overrides[f] ?? P.read(f) })),
     _parts: null,
     async sourceParts() {
       if (P._parts) return P._parts;

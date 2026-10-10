@@ -10,6 +10,7 @@ import { refineProposal, finer } from './refine.mjs';
 import { FIDELITY } from './reverse.mjs';
 import { readdirSync, renameSync, mkdirSync, appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { safe } from './split.mjs';
 
 // ── 提议：AI 的修改先写成 proposals/NNN-标题.s3d，人（或按约定的 agent）预览后接受或否决 ──
 // 文件首行 // layer=edits why=…；可以有 // retract <行号>（撤销目标层的某一行）；其余是要追加到目标层的语句
@@ -68,14 +69,18 @@ async function refineAuto(P, parts, { to, budget, target }) {
       else { tried.add('T:' + x.target); if (x.gain < 0) pr = x; else log.push({ path: o.path, target: x.target, skipped: '局部分数没有变好', local: { current: x.current.S, best: x.local.S, chosen: x.name } }); }
     }
     if (!pr) break;
-    const edits = (P.exists('edits.s3d') ? P.read('edits.s3d') : '').replace(/\n*$/, '\n') + `// 细化到 ${to}：${pr.target}（${pr.name}，${pr.boxes} 个部件）\n${pr.text}\n`;
-    const next = await scoreWith(P, { 'edits.s3d': edits }, consts);
+    // 细化结果写进独立的文件 edits/refine-<目标>.s3d，修改层只追加一行 import（修改层不会被大段文本淹没）
+    let file = `edits/refine-${safe(pr.target)}.s3d`;
+    for (let k = 2; P.exists(file); k++) file = `edits/refine-${safe(pr.target)}-${k}.s3d`;
+    const body = `// 细化到 ${to}：${pr.target}（${pr.name}，${pr.boxes} 个部件）\n${pr.text}\n`;
+    const edits = (P.exists('edits.s3d') ? P.read('edits.s3d') : '').replace(/\n*$/, '\n') + `import "${file}"\n`;
+    const next = await scoreWith(P, { 'edits.s3d': edits, [file]: body }, consts);
     const known = new Set(cur.r.errors.map((e) => `${e.file}:${e.message}`));
     const errors = next.r.errors.filter((e) => !known.has(`${e.file}:${e.message}`));
     const delta = +(next.s.S - cur.s.S).toFixed(2);
     const ok = delta < 0 && !errors.length;
-    if (ok) { P.write('edits.s3d', edits); cur = next; done.add(pr.path); }
-    log.push({ path: pr.path, target: pr.target, kind: pr.kind, chosen: pr.name, boxes: pr.boxes, local: +pr.gain.toFixed(1), delta, accepted: ok, errors: errors.map((e) => e.message).slice(0, 3) });
+    if (ok) { P.write(file, body); P.write('edits.s3d', edits); cur = next; done.add(pr.path); }
+    log.push({ path: pr.path, target: pr.target, kind: pr.kind, chosen: pr.name, boxes: pr.boxes, local: +pr.gain.toFixed(1), delta, accepted: ok, ...(ok ? { file } : {}), errors: errors.map((e) => e.message).slice(0, 3) });
   }
   P.write('score.json', JSON.stringify(cur.s, null, 2) + '\n');
   return { to, start, end: cur.s.S, explain: cur.s.explain, accepted: log.filter((x) => x.accepted).length, log };

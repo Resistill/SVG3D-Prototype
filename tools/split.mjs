@@ -1,7 +1,8 @@
 // 文件拆分：把逆向生成的一整份大文本拆成若干小文件，便于人看、便于 AI 按区域读
 //   base.s3d            索引：只 import 下面这些文件
 //   base/types.s3d      材质与类型（def）
-//   base/NN-名字.s3d    物体，按水平位置做 k-d 分区，每个文件不超过 maxLines 行；名字取分区里最大的物体
+//   base/NN-名字.s3d    物体：先按挂靠关系聚成组（一栋楼和立在它上面、靠着它的东西），再按水平位置做 k-d 分区，
+//                       每个文件不超过 maxLines 行（一组太大时组内再按位置拆）；名字取分区里最大的物体
 // 引用是全局的（名字跨文件可见），拆分只改变语句所在的文件，不改变编译结果
 import { compile } from '../src/s3d.js';
 
@@ -29,7 +30,9 @@ export function units(text) {
   return out;
 }
 
-const safe = (s) => String(s).replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 48);
+export const safe = (s) => String(s).replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 48);
+// 支撑关系：立在它上面（on=）、靠着它（against=）。锚点（at=B[u,v,w]）只是就近取的参照，语义上弱，不用来聚组
+const REF = /\b(?:on|against)=([\p{L}_][\p{L}\p{N}_]*)/gu;
 
 // result 可选：compile(text) 的结果（取物体位置）；没给就自己编译一次
 export function splitSource(text, { maxLines = 400, dir = 'base', result = null } = {}) {
@@ -55,9 +58,29 @@ export function splitSource(text, { maxLines = 400, dir = 'base', result = null 
   // 没有位置的（例如被 drop 的）跟着前一个单元
   let prev = null;
   for (const u of objs) { if (!u.c) u.c = prev?.c ?? [0, 0]; prev = u; }
-  const weight = (g) => g.reduce((s, u) => s + u.lines.length, 0);
-  const leaves = [];
-  const kd = (g) => {
+  // 聚组：每个物体跟着支撑它的物体走（立在上面、靠着）；没有支撑关系的，跟着水平投影包含它中心、占地至少是它两倍的最大物体
+  // （楼栋的外壳、院墙）。连成的一棵树是一组（一栋楼和楼里、楼上的东西）。只往不比自己小的物体合并；
+  // 覆盖全场景四分之一以上的物体（地面、路面）不当组的根，否则所有东西都挂在地面下成了一组
+  const xz = [...top.values()].map((n) => n.box);
+  const sceneArea = xz.length ? (Math.max(...xz.map((b) => b.max[0])) - Math.min(...xz.map((b) => b.min[0]))) * (Math.max(...xz.map((b) => b.max[2])) - Math.min(...xz.map((b) => b.min[2]))) : 0;
+  const foot = (u) => { const b = top.get(u.name)?.box; return b ? (b.max[0] - b.min[0]) * (b.max[2] - b.min[2]) : Infinity; };
+  const tooBig = (u) => foot(u) > 0.25 * sceneArea;
+  const byName = new Map(objs.map((u) => [u.name, u]));
+  const parent = new Map();
+  for (const u of objs) {
+    const head = u.lines.find((l) => DECL.test(l)) ?? '';
+    for (const m of head.matchAll(REF)) { const p = byName.get(m[1]); if (p && p !== u && !tooBig(p) && foot(p) >= foot(u)) { parent.set(u, p); break; } }
+  }
+  const holders = objs.filter((u) => top.get(u.name)?.box && !tooBig(u)).sort((a, b) => foot(b) - foot(a));
+  const holds = (h, u) => { const b = top.get(h.name).box; return u.c[0] >= b.min[0] && u.c[0] <= b.max[0] && u.c[1] >= b.min[2] && u.c[1] <= b.max[2]; };
+  for (const u of objs) if (!parent.has(u)) { const h = holders.find((h) => h !== u && foot(h) >= 2 * foot(u) && holds(h, u)); if (h) parent.set(u, h); }
+  const rootOf = (u) => { const seen = new Set(); while (parent.has(u) && !seen.has(u)) { seen.add(u); u = parent.get(u); } return u; };
+  const groups = new Map();
+  for (const u of objs) { const r = rootOf(u); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(u); }
+  for (const u of objs) u.w = u.lines.length;
+  const zones = [...groups].map(([r, us]) => ({ c: r.c, w: us.reduce((s, u) => s + u.w, 0), units: us }));
+  const weight = (g) => g.reduce((s, u) => s + u.w, 0);
+  const kd = (g, leaves) => {
     if (g.length <= 1 || weight(g) <= maxLines) { leaves.push(g); return; }
     const ext = [0, 1].map((k) => Math.max(...g.map((u) => u.c[k])) - Math.min(...g.map((u) => u.c[k])));
     const k = ext[0] >= ext[1] ? 0 : 1;
@@ -65,10 +88,13 @@ export function splitSource(text, { maxLines = 400, dir = 'base', result = null 
     // 按行数取中位：两边行数大致相等
     let acc = 0, cut = 1;
     const half = weight(s) / 2;
-    for (let i = 0; i < s.length - 1; i++) { acc += s[i].lines.length; if (acc >= half) { cut = i + 1; break; } cut = i + 1; }
-    kd(s.slice(0, cut)); kd(s.slice(cut));
+    for (let i = 0; i < s.length - 1; i++) { acc += s[i].w; if (acc >= half) { cut = i + 1; break; } cut = i + 1; }
+    kd(s.slice(0, cut), leaves); kd(s.slice(cut), leaves);
   };
-  kd(objs);
+  // 先按位置打包整组；一组本身超过 maxLines 时组内再按位置拆
+  const packed = [];
+  kd(zones, packed);
+  const leaves = packed.flatMap((g) => { if (g.length === 1 && g[0].w > maxLines) { const sub = []; kd(g[0].units, sub); return sub; } return [g.flatMap((z) => z.units)]; });
   const files = {};
   const typesPath = `${dir}/types.s3d`;
   if (types.length) files[typesPath] = ['// 材质与类型（def）', '', ...types.flatMap((u) => u.lines)].join('\n').replace(/\n{3,}/g, '\n\n') + '\n';
@@ -81,10 +107,11 @@ export function splitSource(text, { maxLines = 400, dir = 'base', result = null 
     const r = (v) => Math.round(v);
     const path = `${dir}/${String(i + 1).padStart(2, '0')}-${safe(big.name)}.s3d`;
     names.push({ path, n: g.length, x: [r(Math.min(...xs)), r(Math.max(...xs))], z: [r(Math.min(...zs)), r(Math.max(...zs))] });
-    files[path] = [`// 分区 ${i + 1}/${leaves.length}：${g.length} 个物体，x ${r(Math.min(...xs))}…${r(Math.max(...xs))}，z ${r(Math.min(...zs))}…${r(Math.max(...zs))}`, '', ...g.flatMap((u) => u.lines)].join('\n') + '\n';
+    const gs = new Set(g.map(rootOf)).size;
+    files[path] = [`// 分区 ${i + 1}/${leaves.length}：${g.length} 个物体（${gs} 组），x ${r(Math.min(...xs))}…${r(Math.max(...xs))}，z ${r(Math.min(...zs))}…${r(Math.max(...zs))}`, '', ...g.flatMap((u) => u.lines)].join('\n') + '\n';
   });
   const index = [...header.filter((l, i, a) => l.trim() || (i > 0 && a[i - 1].trim())),
-    '', '// 拆分成多个文件：类型一个文件，物体按水平位置分区（名字跨文件可见；重跑逆向会整体重写这些文件）',
+    '', '// 拆分成多个文件：类型一个文件，物体按挂靠关系聚组、再按水平位置分区（名字跨文件可见；重跑逆向会整体重写这些文件）',
     ...Object.keys(files).map((p) => `import "${p}"`)].join('\n').replace(/^\n+/, '') + '\n';
   return { index, files, zones: names };
 }

@@ -11,6 +11,7 @@ import { score, scoreCache, lineCost, numberCost } from '../tools/score.mjs';
 import { sceneObjects } from '../tools/worldtris.mjs';
 import { rasterize } from '../tools/raster.mjs';
 import { runCommand } from '../tools/agent.mjs';
+import { splitSource } from '../tools/split.mjs';
 
 test('描述长度的计价：名字与关键字各 1，数字按小数位，注释与元数据不计', () => {
   assert.equal(numberCost('26'), 1);
@@ -188,6 +189,18 @@ test('细化：两柱一梁的类型被拆成部件（同名扩展 + 名义外�
   assert.deepEqual(after.errors, []);
   assert.deepEqual(after.nodes.find((n) => n.path === 'sign').box, before, '挂在门上的牌子不动（骨架保留）');
   assert.ok(after.items.filter((i) => i.path.startsWith(insts[2] + '.')).length >= 3, '所有实例一起变细');
+  // 自动细化：结果写进独立的文件 edits/refine-<目标>.s3d，修改层只多一行 import；分数照样计入
+  const proj2 = join(dir, 'p2');
+  await runCommand('init', proj2, { source: glb, fidelity: 'semantic' });
+  const auto = await runCommand('refine', proj2, { auto: true, budget: 2, to: 'structure' });
+  const acc = auto.log.filter((l) => l.accepted);
+  assert.ok(acc.length >= 1 && auto.end < auto.start, JSON.stringify(auto));
+  const edits2 = readFileSync(join(proj2, 'edits.s3d'), 'utf8');
+  for (const l of acc) {
+    assert.ok(edits2.includes(`import "${l.file}"`), edits2);
+    assert.match(readFileSync(join(proj2, l.file), 'utf8'), /^(def|over) /m);
+  }
+  assert.doesNotMatch(edits2, /^(def|over) /m, '修改层里只有 import');
 });
 
 const SPREAD = `
@@ -289,4 +302,30 @@ test('增量评分：连续改动（删除、换形、新材质、移动、恢�
   const r = compile(base);
   assert.equal(score({ result: r, files: [{ file: null, text: base }], sourceParts: parts, consts: { delta: 0.25 }, cache }).S,
     score({ result: r, files: [{ file: null, text: base }], sourceParts: parts, consts: { delta: 0.25 } }).S);
+});
+
+test('文件拆分按楼栋聚组：立在楼上、在楼里的物体与楼进同一个文件；地面这样的大面不当组的根', () => {
+  const lines = ['box ground size=400,1,400 pin=top'];
+  // 两栋楼隔得很远；每栋楼里摆几件东西（锚点定位，不写 on=），另有一件立在楼顶上
+  for (const [b, x] of [['hall', -120], ['depot', 120]]) {
+    lines.push(`box ${b} size=30,10,30 at=${x},0,0`);
+    for (let i = 0; i < 4; i++) lines.push(`box ${b}_crate_${i} size=1,1,1 at=${x - 10 + 6 * i},0,5`);
+    lines.push(`cyl ${b}_vent r=0.5 h=2 on=${b}`);
+  }
+  // 中间散放的东西：不属于哪栋楼
+  for (let i = 0; i < 6; i++) lines.push(`box rock_${i} size=2,2,2 at=${-15 + 6 * i},0,80`);
+  const text = lines.join('\n') + '\n';
+  const sp = splitSource(text, { maxLines: 8 });
+  assert.ok(sp, '超过行数上限，要拆');
+  const fileOf = (name) => Object.entries(sp.files).find(([, t]) => new RegExp(`^\\S+ ${name} `, 'm').test(t))?.[0];
+  for (const b of ['hall', 'depot']) {
+    const f = fileOf(b);
+    for (const m of [...[0, 1, 2, 3].map((i) => `${b}_crate_${i}`), `${b}_vent`]) assert.equal(fileOf(m), f, `${m} 与 ${b} 同一个文件`);
+  }
+  assert.notEqual(fileOf('hall'), fileOf('depot'));
+  // 拆分不改变编译结果
+  const files = { ...sp.files, 'base.s3d': sp.index };
+  const r = compile(sp.index, { file: 'base.s3d', resolve: (p) => files[p] });
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.nodes.length, compile(text).nodes.length);
 });
