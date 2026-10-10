@@ -402,3 +402,25 @@ test('fit / detect：按指定形状拟合一个源部件；对一部分物体�
   assert.equal(det.parts, 6);
   assert.ok(det.arrays.length >= 1 && /^repeat /m.test(det.text), JSON.stringify(det));
 });
+
+test('计价规则：同一个网格只付一次；换了形的基础层语句只计名字与定位；残差归给 ~src 指向的物体', () => {
+  const cube = (x) => { const c = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]].map(([a, b, d]) => [a + x, b, d]); return [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [3, 7, 6, 2], [0, 4, 7, 3], [1, 2, 6, 5]].flatMap(([a, b, c2, d]) => [[c[a], c[b], c[c2]], [c[a], c[c2], c[d]]]); };
+  const parts = [{ name: 'a', tris: cube(0), mesh: 'm1' }, { name: 'b', tris: cube(5), mesh: 'm1' }, { name: 'c', tris: cube(10), mesh: 'm2' }];
+  const mesh = (n, x) => `mesh ${n} src="x#${n}" size=1,1,1 pivot=${x + 0.5},0,0.5 at=${x + 0.5},0,0.5`;
+  const text = [mesh('a', 0), mesh('b', 5), mesh('c', 10)].join('\n');
+  const s1 = score({ result: compile(text), files: [{ file: null, text }], sourceParts: parts });
+  const one = 10 * Math.log2(1 + 12);
+  assert.ok(Math.abs(s1.L_mesh - 2 * one) < 0.01, `a、b 共用一个网格，只付一次：${s1.L_mesh}`);
+  // 换形：box a … + over a : cyl …，基础层那一行的 size 不再计
+  const base = 'box a size=1,1,1 at=0.5,0,0.5 mat=m ~src="a"', over = 'over a : cyl r=0.5 h=1';
+  const files = [{ file: 'base.s3d', text: 'material m color=#888888\n' + base }, { file: 'edits.s3d', text: over }];
+  const map = Object.fromEntries(files.map((f) => [f.file, f.text]));
+  const r = compile('import "base.s3d"\nimport "edits.s3d"', { file: 'scene.s3d', resolve: (p) => map[p] });
+  assert.deepEqual(r.errors, []);
+  const s2 = score({ result: r, files, sourceParts: parts.slice(0, 1) });
+  assert.equal(s2.L_stmt, lineCost('material m color=#888888') + lineCost('box a at=0.5,0,0.5 mat=m') + lineCost(over));
+  // 归属：源部件 a 的残差归给 ~src="a" 的物体，即使离它最近的是别的物体
+  const t3 = 'box a size=1,1,1 at=6,0,0.5 ~src="a"\nbox z size=1,1,1 at=0.5,0,0.5';
+  const s3 = score({ result: compile(t3), files: [{ file: null, text: t3 }], sourceParts: parts.slice(0, 1), objects: true });
+  assert.equal(s3.sources[0].explainedBy, 'a');
+});

@@ -104,7 +104,7 @@ export function toLocal(tris, world) {
 // ── 生成细化的提议 ──
 import { fitPart, orientText, setFidelity, FIDELITY, digitsFor, splitComponents, reverse as reverseParts } from './reverse.mjs';
 import { sceneObjects } from './worldtris.mjs';
-import { neighborhoodScorer, SCORE_DEFAULTS } from './score.mjs';
+import { neighborhoodScorer, SCORE_DEFAULTS, reshapeSaving } from './score.mjs';
 import { panelLines } from './panels.mjs';
 import { compile, FACT_EPS } from '../src/s3d.js';
 
@@ -174,7 +174,8 @@ function sourceOf(parts, src) {
 // 一个物体（编译结果里的节点路径，基本体或网格引用都可以）→ 细化提议 { target, kind: 'type' | 'object', text, boxes, candidates, current, local }；拆不了返回 { error }
 // 候选：全部分量 / 按面积只留大块（99%、97%、90%）/ 整体体素（几种粒度）。用邻域评分（全场分数在这个物体附近的变化，按目标档位的 δ）挑最好的：
 // 窗框、饰条这种小构件在粗档位下“写出来的代价 > 省掉的残差”，自然被舍弃。unit：场景单位（每个单位多少米），档位的数值按米、随之换算
-export function refineProposal(result, parts, path, { to = 'structure', unit = 1 } = {}) {
+// baseLineOf(路径)：基础层里声明这个顶层物体的那一行（还没被换过形时）；over X : group 让它的形状参数作废，邻域评分要把省下的算进去
+export function refineProposal(result, parts, path, { to = 'structure', unit = 1, baseLineOf = null } = {}) {
   const byPath = new Map(result.nodes.map((n) => [n.path, n]));
   let n = byPath.get(path);
   if (!n) return { path, error: '没有这个物体' };
@@ -227,6 +228,7 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
   const N = n.types ? Math.max(1, result.nodes.filter((m) => m.types?.[0] === n.types[0] && !m.path.includes('.') === !n.path.includes('.')).length) : 1;
   const total = (x) => +(x.L + N * (x.R_src + x.R_recon)).toFixed(2);
   const current = hood.scorer(hood.cur);
+  const base = !n.types && baseLineOf ? baseLineOf(n.path) : null, saving = base ? reshapeSaving(base) : 0;
   current.S = total(current);
   const cands = [];
   const seen = new Set();
@@ -239,6 +241,7 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
     if (r.errors.length) { cands.push({ name, error: r.errors[0].message }); return; }
     const w = wrap(c.lines);
     const ls = hood.scorer(toWorld(r, n.types ? `${n.path}.body` : n.path), w.text.split('\n'));
+    if (saving) { ls.L = +(ls.L - saving).toFixed(2); ls.S = +(ls.S - saving).toFixed(2); }
     // 去掉一个物体只在它的表面确实被周围的物体解释了的时候才行（平均误差不超过 2τ：贴花、标线、重合的面）；
     // 分数不计语义，一栋楼、一丛灌木不能因为“写出来比误差贵”就消失
     if (c.empty && ls.meanErr > 2 * F.tau) { cands.push({ name, error: `周围的物体解释不了它（平均误差 ${ls.meanErr} m）` }); return; }
@@ -304,7 +307,7 @@ function neighborhood(result, parts, n, part, consts) {
   const rest = world.filter((o) => !mine(o.path));
   return {
     cur: world.filter((o) => mine(o.path)),
-    scorer: neighborhoodScorer({ parts, near, others: rest.filter((o) => boxMeet(o.box, U, pad)), reconColors: new Set(rest.map((o) => String(o.color ?? '').toLowerCase())), consts }),
+    scorer: neighborhoodScorer({ parts, near, others: rest.filter((o) => boxMeet(o.box, U, pad)), reconColors: new Set(rest.map((o) => String(o.color ?? '').toLowerCase())), consts, sharedMeshes: new Set(rest.filter((o) => o.mesh).map((o) => o.mesh.key ?? o.mesh.src)) }),
   };
 }
 // 物体（及其内部各部件）现在的几何，变换到物体自己的坐标系

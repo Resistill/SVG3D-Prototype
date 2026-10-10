@@ -48,6 +48,16 @@ async function scoreWith(P, overrides = {}, consts = {}) {
   const s = score({ result: r, files: P.geometryFiles(overrides), sourceParts: await P.sourceParts(), consts: P.consts(consts), cache: P.scoreCache() });
   return { r, s };
 }
+// 基础层里声明顶层物体 path 的那一行；已经被 over path : 种类 换过形的返回 null（细化的邻域评分用）
+function baseLineOf(P, r, overrides = {}) {
+  const files = new Map(P.geometryFiles(overrides).map((f) => [f.file, f.text]));
+  const all = [...files.values()].join('\n');
+  return (path) => {
+    if (path.includes('.') || new RegExp(`^\\s*over\\s+${path}\\s*:`, 'm').test(all)) return null;
+    const n = r.nodes.find((x) => x.path === path);
+    return n ? files.get(n.file)?.split('\n')[n.line - 1] ?? null : null;
+  };
+}
 // 自动细化：从最差的物体开始，逐个按更细的档位拆分；分数下降就写进修改层，直到解释率达标或预算用完
 async function refineAuto(P, parts, { to, budget, target }) {
   const consts = { delta: FIDELITY[to].tau };
@@ -66,7 +76,7 @@ async function refineAuto(P, parts, { to, budget, target }) {
       tried.add(o.path);
       let x;
       // 一个物体出错不影响整轮：记进日志，接着试下一个
-      try { x = refineProposal(cur.r, parts, o.path, { to, unit: P.unit }); } catch (e) { x = { error: `出错：${e.message}` }; }
+      try { x = refineProposal(cur.r, parts, o.path, { to, unit: P.unit, baseLineOf: baseLineOf(P, cur.r) }); } catch (e) { x = { error: `出错：${e.message}` }; }
       if (x.error) log.push({ path: o.path, skipped: x.error });
       else if (tried.has('T:' + x.target)) log.push({ path: o.path, skipped: '同一种类型已经试过' });
       else { tried.add('T:' + x.target); if (x.gain < 0) pr = x; else log.push({ path: o.path, target: x.target, skipped: '局部分数没有变好', local: { current: x.current.S, best: x.local.S, chosen: x.name } }); }
@@ -401,7 +411,7 @@ export const COMMANDS = {
       if (!targets.length) throw new Error('要细化哪些物体？给路径，或 --worst=N，或 --auto');
       const r = P.compile(), out = [], seen = new Set();
       for (const path of targets) {
-        const pr = refineProposal(r, parts, path, { to, unit: P.unit });
+        const pr = refineProposal(r, parts, path, { to, unit: P.unit, baseLineOf: baseLineOf(P, r) });
         if (pr.error) { out.push(pr); continue; }
         if (seen.has(pr.target)) continue; // 同一种类型只细化一次
         seen.add(pr.target);

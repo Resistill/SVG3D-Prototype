@@ -1,14 +1,15 @@
 // 自评分数：不依赖真值，是 AI 的目标函数，也是人的进度条（docs/PLAN2.md 第 3 节）。
 //   S = L_stmt + L_mesh + R_src + R_recon，越低越好
 //   L_stmt  描述长度：名字、关键字、引用各 1；数字 1 + 0.5 × (小数位 − 1)；注释与 ~元数据不计
-//   L_mesh  仍以源网格引用保留的部分：c_mesh × log2(1 + 三角形数)
+//   L_mesh  仍以源网格引用保留的部分：c_mesh × log2(1 + 三角形数)。同一个网格（享元）只在第一次出现时付，以后的实例只付那一行语句
 //   长度都按米计（δ、dMax、输出的误差），场景单位不是米时按 unit 换算
 //   R_src   源模型的每个部件表面采样，到重建表面的距离 d → log2(1 + max(0, d − δ)/δ)，按 log2(1 + 面积/δ²) 加权
 //           （这块表面在当前精度下有多少个 δ 见方的格子：精度要求越细、表面越大，同样的误差越贵——评分标准随档位变化）。
 //           δ 由档位决定；误差在 δ 以内不计代价（逆向只要求保留语义，不奖励“猜中作者的精确数值”）。
 //           距离优先量到**同材质**的重建表面：沥青路面只能由沥青的物体解释，不能拿底下的地面凑数；
 //           没有同材质的表面时量到全部表面，并多计一个 δ
-//   有效描述：基础层里声明的物体被删掉了，那一行不计长度（替换一个物体不应付两份钱）
+//   有效描述：基础层里声明的物体被删掉了，那一行不计长度（替换一个物体不应付两份钱）；被 over X : 种类 换了形的，
+//           那一行只计名字、定位与材质（形状参数作废了）
 //   R_recon 重建物体表面到源表面的距离，同样计价；复杂度权重以顶层语句为单位、内部按面积分摊（惩罚凭空多出来的东西，但不惩罚拆分）
 // 解释率 explain = 1 − S / S_mesh，S_mesh 是“全部写成 mesh 引用、世界坐标定位”的基线。
 import * as THREE from 'three';
@@ -20,6 +21,29 @@ import { sceneObjects, trisToArray } from './worldtris.mjs';
 // 换算之后分数与单位无关：残差是 d/δ，面积权重是 面积/δ²，都是无量纲的
 export const SCORE_DEFAULTS = { delta: 0.005, cRes: 4, cMesh: 10, dMax: 2, samples: 600, unit: 1 };
 const inScene = (k) => ({ ...k, delta: k.delta / k.unit, dMax: k.dMax / k.unit });
+
+// 一条语句拆成词：方括号、圆括号、引号里的空格不拆
+function splitTokens(line) {
+  const out = [];
+  let cur = '', depth = 0, q = false;
+  for (const ch of line.trim()) {
+    if (q) { cur += ch; if (ch === '"') q = false; continue; }
+    if (ch === '"') { q = true; cur += ch; continue; }
+    if (ch === '[' || ch === '(') depth++;
+    if (ch === ']' || ch === ')') depth--;
+    if (/\s/.test(ch) && depth === 0) { if (cur) out.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+// 被 over X : 种类 换了形的语句能省下的长度：形状参数作废了，只留名字、定位与材质（细化的邻域评分也用它）
+const PLACE_KEYS = new Set(['on', 'at', 'against', 'offset', 'pin', 'align', 'turn', 'rot', 'inside', 'gap', 'under', 'mat']);
+export function reshapeSaving(line) {
+  const ts = splitTokens(line);
+  return lineCost(line) - lineCost(ts.filter((x, i) => i < 2 || x.startsWith('~') || PLACE_KEYS.has(/^([\p{L}_][\p{L}\p{N}_]*)=/u.exec(x)?.[1])).join(' '));
+}
 
 // 不计入描述长度的语句：语义层与风格层（它们不描述几何）
 const SEMANTIC = /^\s*(concept|pattern|check|style|variant|import)\b/;
@@ -152,7 +176,7 @@ function sharedOf(sourceParts, cache) {
     // 包围盒按原始坐标取（基线里的数字要和全量评分一模一样）
     const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
     for (const t of p.tris) for (const v of t) for (let j = 0; j < 3; j++) { if (v[j] < lo[j]) lo[j] = v[j]; if (v[j] > hi[j]) hi[j] = v[j]; }
-    return { i, name: p.uid ?? p.name ?? p.from ?? `part_${i}`, tris: p.tris, pos: trisToArray(p.tris), color: p.material?.color, area: areaOf(p.tris), box: { lo, hi } };
+    return { i, name: p.uid ?? p.name ?? p.from ?? `part_${i}`, meshKey: p.mesh != null ? `m:${p.mesh}` : null, tris: p.tris, pos: trisToArray(p.tris), color: p.material?.color, area: areaOf(p.tris), box: { lo, hi } };
   });
   const shared = { src, srcBVH: surfaces(src) };
   if (cache) { cache.parts = sourceParts; cache.shared = shared; cache.states.clear(); }
@@ -176,7 +200,14 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   const NOT_DECL = /^\s*(material|let|def|over|drop|copy|import|concept|pattern|check|style|variant|\})\b/;
   const fileText = new Map(files.map((f) => [f.file ?? '', f.text.split('\n')]));
   const keep = (x) => { const t = fileText.get(x.file ?? '')?.[x.line - 1] ?? ''; return NOT_DECL.test(t) || !/^\s*[\p{L}_][\p{L}\p{N}_]*\s+[\p{L}_]/u.test(t) || declared.has(`${x.file ?? ''}:${x.line}`); };
-  const lines = D0.lines.filter(keep);
+  // 换形：over X : 种类（X 是顶层物体）——基础层里声明 X 的那一行，形状参数作废了，只计名字、定位与材质
+  const reshaped = new Set();
+  for (const { text } of files) for (const m of text.matchAll(/^\s*over\s+([\p{L}_][\p{L}\p{N}_]*)\s*:\s*[\p{L}_]/gmu)) reshaped.add(m[1]);
+  const lines = D0.lines.filter(keep).map((x) => {
+    const t = fileText.get(x.file ?? '')?.[x.line - 1] ?? '';
+    const m = /^([\p{L}_][\p{L}\p{N}_]*)\s+([\p{L}_][\p{L}\p{N}_]*)/u.exec(t);
+    return m && reshaped.has(m[2]) && !/^(over|def|material|drop)$/.test(m[1]) && !/\{\s*$/.test(t) ? { ...x, cost: lineCost(t) - reshapeSaving(t) } : x;
+  });
   const D = { total: lines.reduce((s, x) => s + x.cost, 0), lines, dropped: D0.lines.length - lines.length };
   // 每行的长度归到在这一行声明的物体（阵列、模板实例的那一行归到容器）
   const byLine = new Map(D.lines.map((x) => [`${x.file ?? ''}:${x.line}`, x.cost]));
@@ -187,11 +218,26 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   const reconBVH = surfaces(recon);
   lap('bvh');
   const per = new Map(recon.map((o) => [o.path, { path: o.path, stmt: 0, mesh: 0, rSrc: 0, rRecon: 0, meanErr: 0, maxErr: 0, src: [] }]));
-  for (const { path, cost } of stmtOf.values()) { const p = per.get(path) ?? per.get([...per.keys()].find((q) => q.startsWith(path + '.')) ?? ''); if (p) p.stmt += cost; }
+  // 描述长度归到物体：自己有几何就归自己，否则归第一个有几何的子物体，再不行沿路径向上找（subtract 的子语句归到 subtract）
+  const ownerOfPath = (path) => {
+    if (per.has(path)) return per.get(path);
+    const child = [...per.keys()].find((q) => q.startsWith(path + '.'));
+    if (child) return per.get(child);
+    for (let p = path; p.includes('.');) { p = p.slice(0, p.lastIndexOf('.')); if (per.has(p)) return per.get(p); }
+    return null;
+  };
+  let attributed = 0;
+  for (const { path, cost } of stmtOf.values()) { const p = ownerOfPath(path); if (p) { p.stmt += cost; attributed += cost; } }
 
   // L_mesh
   let Lmesh = 0;
-  for (const o of recon) if (o.mesh) { const c = k.cMesh * Math.log2(1 + (o.mesh.tris || 1)); Lmesh += c; per.get(o.path).mesh += c; }
+  const meshSeen = new Set();
+  for (const o of recon) if (o.mesh) {
+    const key = o.mesh.key ?? o.mesh.src;
+    if (meshSeen.has(key)) continue;
+    meshSeen.add(key);
+    const c = k.cMesh * Math.log2(1 + (o.mesh.tris || 1)); Lmesh += c; per.get(o.path).mesh += c;
+  }
 
   // 这一次的重建物体：键（路径 + 颜色 + 几何）与包围盒；和上一次比，得到新增的物体与删掉的物体
   const keys = recon.map((o) => `${o.path}|${colorKey(o.color)}|${hashPos(o.pos)}`);
@@ -225,6 +271,8 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
     delta.closer = closer;
   }
 
+  const srcOwner = new Map();
+  for (const n of result.nodes) if (n.meta?.src && !srcOwner.has(n.meta.src)) { const o = ownerOfPath(n.path); if (o) srcOwner.set(n.meta.src, o.path); }
   // R_src：源部件 → 重建。逐点记距离与最近的物体；增量时只重算受影响的点：
   //   最近的物体被删掉了的点；离某个新增物体的包围盒比现在的距离还近的点（同材质的目标存在时只看同材质的新增物体）
   let Rsrc = 0, touchedParts = 0, touchedPoints = 0, byRemoval = 0;
@@ -259,7 +307,8 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
     }
     srcRes.push(x);
     Rsrc += x.c;
-    const who = x.who >= 0 ? ids.path[x.who] : null;
+    // 归属：~src 指向这个源部件的物体优先（它就是“负责解释这块网格”的那个），没有时归到最近点最多落在其上的物体
+    const who = srcOwner.get(s.name) ?? (x.who >= 0 ? ids.path[x.who] : null);
     if (who) { const p = per.get(who); p.rSrc += x.c; p.src.push(s.name); p.meanErr = Math.max(p.meanErr, x.mean); p.maxErr = Math.max(p.maxErr, x.max); }
     srcOut.push({ name: s.name, tris: s.tris.length, cost: +x.c.toFixed(3), meanErr: +(x.mean * u).toFixed(5), maxErr: +(x.max * u).toFixed(5), explainedBy: who });
   }
@@ -298,17 +347,20 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   // 基线：每个源部件写成一句世界坐标的 mesh 引用，误差为零（只取决于源部件与 cMesh）
   const fmt = (x) => String(Math.round(x * 1e4) / 1e4);
   let Smesh = 0;
+  const baseSeen = new Set();
   for (const s of src) {
     const { lo, hi } = s.box;
+    const first = !s.meshKey || !baseSeen.has(s.meshKey);
+    if (s.meshKey) baseSeen.add(s.meshKey);
     const pv = [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2];
-    Smesh += lineCost(`mesh p src="x#${s.name}" size=${[0, 1, 2].map((j) => fmt(hi[j] - lo[j])).join(',')} pivot=${pv.map(fmt).join(',')} at=${pv.map(fmt).join(',')} mat=m`) + k.cMesh * Math.log2(1 + s.tris.length);
+    Smesh += lineCost(`mesh p src="x#${s.name}" size=${[0, 1, 2].map((j) => fmt(hi[j] - lo[j])).join(',')} pivot=${pv.map(fmt).join(',')} at=${pv.map(fmt).join(',')} mat=m`) + (first ? k.cMesh * Math.log2(1 + s.tris.length) : 0);
   }
   lap('S_mesh');
   const S = D.total + Lmesh + Rsrc + Rrecon;
   const objects = [...per.values()].map((p) => ({ ...p, total: +(p.stmt + p.mesh + p.rSrc + p.rRecon).toFixed(3), stmt: +p.stmt.toFixed(2), mesh: +p.mesh.toFixed(2), rSrc: +p.rSrc.toFixed(3), rRecon: +p.rRecon.toFixed(3), meanErr: +(p.meanErr * u).toFixed(5), maxErr: +(p.maxErr * u).toFixed(5) }));
   const r3 = (x) => +x.toFixed(2);
   return {
-    S: r3(S), L_stmt: r3(D.total), droppedLines: D.dropped, L_mesh: r3(Lmesh), R_src: r3(Rsrc), R_recon: r3(Rrecon), S_mesh: r3(Smesh), explain: +(1 - S / Smesh).toFixed(4),
+    S: r3(S), L_stmt: r3(D.total), unattributed: r3(D.total - attributed), droppedLines: D.dropped, L_mesh: r3(Lmesh), R_src: r3(Rsrc), R_recon: r3(Rrecon), S_mesh: r3(Smesh), explain: +(1 - S / Smesh).toFixed(4),
     consts: k0, objects, sources: srcOut,
     worst: [...objects].sort((a, b) => (b.mesh + b.rSrc + b.rRecon) - (a.mesh + a.rSrc + a.rRecon)).slice(0, 20).map((o) => ({ path: o.path, cost: +(o.mesh + o.rSrc + o.rRecon).toFixed(2), meanErr: o.meanErr, mesh: o.mesh > 0 })),
   };
@@ -322,7 +374,7 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
 // 邻居源点到“其余物体”的距离只算一次；每个候选只算它到候选几何的距离，取两者中小的。坐标一律是世界坐标。
 //   parts：全部源部件；near：邻域里源部件的序号（第一个是这个物体自己的）；others：附近其他重建物体 [{pos, color}]；
 //   reconColors：场景里其他重建物体的颜色（colorKey）；返回 (objs:[{pos, color, path}], lines) → 分数
-export function neighborhoodScorer({ parts, near, others, reconColors, consts = {} }) {
+export function neighborhoodScorer({ parts, near, others, reconColors, consts = {}, sharedMeshes = new Set() }) {
   const k0 = { ...SCORE_DEFAULTS, ...consts }, k = inScene(k0);
   const srcColors = new Set(parts.map((p) => colorKey(p.material?.color)));
   const ents = near.map((i) => {
@@ -365,7 +417,8 @@ export function neighborhoodScorer({ parts, near, others, reconColors, consts = 
     }
     const Rrecon = A > 0 ? k.cRes * Math.log2(1 + A / (k.delta * k.delta)) * (acc / A) : 0;
     // 网格引用（现在的写法可能就是一块网格）：c_mesh × log2(1 + 三角形数)，与全场的 L_mesh 一样
-    const L = lines.reduce((s, l) => s + lineCost(l), 0) + recon.reduce((s, o) => s + (o.mesh ? k.cMesh * Math.log2(1 + (o.mesh.tris || 1)) : 0), 0);
+    const seen = new Set(sharedMeshes);
+    const L = lines.reduce((s, l) => s + lineCost(l), 0) + recon.reduce((s, o) => { const key = o.mesh && (o.mesh.key ?? o.mesh.src); if (!o.mesh || seen.has(key)) return s; seen.add(key); return s + k.cMesh * Math.log2(1 + (o.mesh.tris || 1)); }, 0);
     const r3 = (x) => +x.toFixed(2);
     return { S: r3(L + Rsrc + Rrecon), L: r3(L), R_src: r3(Rsrc), R_recon: r3(Rrecon), meanErr: +((own?.mean ?? 0) * k0.unit).toFixed(4), maxErr: +((own?.max ?? 0) * k0.unit).toFixed(4) };
   };
