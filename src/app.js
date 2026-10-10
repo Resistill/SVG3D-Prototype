@@ -3,11 +3,13 @@ import { compile, FACT_EPS, factProviderList } from './s3d.js';
 import { Viewer } from './render.js';
 import { createCollab, detectApi, esc } from './collab.js';
 import { shimWorker, rpc } from './shim-worker.js';
+import { createCompiler } from './compile-client.js';
 
 const $ = (s) => document.querySelector(s);
 const src = $('#src'), gutter = $('#gutter'), errorsEl = $('#errors'), statusEl = $('#status');
 const objList = $('#objects'), factList = $('#facts'), semEl = $('#sem'), tip = $('#tip');
 const viewer = new Viewer($('#view'));
+const compileAsync = createCompiler();
 const EXAMPLES = {
   semantics: '变量 · 集合 · 语义', spaceport: '航天基地', spaceport_edit: '航天基地 · 修改层', spaceport_blueprint: '航天基地 · 蓝图风格',
   curves: '曲线 · 镜像 · 旋转', rotation: '三维旋转', basics: '基础关系',
@@ -233,21 +235,31 @@ async function run() {
   await preload(files.get(rootFile()), rootFile());
   renderFileList();
   const t0 = performance.now();
+  // 编译在 Worker 里（src/compile-client.js）：各文件的文本一起传过去；正在编译时又改了，只编最新的一版，被取代的这次直接返回
   // 工程的场景单位不是米时，空间事实的容差（FACT_EPS，按米）换算成场景单位——与工具（tools/project.mjs）一致
-  const r = compile(files.get(rootFile()), { file: rootFile(), resolve: (p) => files.get(p), factProviders, ...(project ? { factEps: FACT_EPS / project.unit } : {}) });
+  const root = rootFile();
+  let out;
+  try { out = await compileAsync(files.get(root), { file: root, files: Object.fromEntries(files), factProviders, ...(project ? { factEps: FACT_EPS / project.unit } : {}) }); } catch (e) {
+    statusEl.textContent = `编译器出错：${e.message.split('\n')[0]}`;
+    statusEl.classList.add('bad');
+    return;
+  }
+  if (!out || root !== rootFile()) return;
+  const r = out.result;
   const t1 = performance.now();
   // 网格引用的 src 相对组合根所在的目录（工程目录；与工具的约定一致）
   viewer.srcBase = new URL(rootFile(), location.href).href;
   const warn = viewer.setScene(r);
   const t2 = performance.now();
-  lastCost = t2 - t0;
+  // 打字时的等待按主线程上的耗时放宽（编译本身在 Worker 里，不卡界面）
+  lastCost = out.worker ? t2 - t1 : t2 - t0;
   last = r;
   renderGutter();
   errorsEl.innerHTML = [...r.errors.map((e) => `<div class="e" data-file="${esc(e.file ?? '')}" data-line="${e.line ?? ''}"><b>${e.file && e.file !== rootFile() ? esc(e.file) + ' ' : ''}第 ${e.line ?? '?'} 行</b>${esc(e.message)}</div>`),
     ...warn.map((w) => `<div class="e w">${esc(w)}</div>`)].join('');
   errorsEl.hidden = !r.errors.length && !warn.length;
   const failed = r.checks.filter((c) => !c.ok).length;
-  statusEl.textContent = `${r.nodes.length} 个对象 · ${r.items.length} 个实体 · ${r.concepts.length} 个概念 · ${r.facts.length} 条空间事实${failed ? ` · ${failed} 项检查未通过` : ''} · 求解 ${(t1 - t0).toFixed(0)}ms · 建模 ${(t2 - t1).toFixed(0)}ms`;
+  statusEl.textContent = `${r.nodes.length} 个对象 · ${r.items.length} 个实体 · ${r.concepts.length} 个概念 · ${r.facts.length} 条空间事实${failed ? ` · ${failed} 项检查未通过` : ''} · 求解 ${out.ms.toFixed(0)}ms${out.worker ? '（Worker）' : ''} · 建模 ${(t2 - t1).toFixed(0)}ms`;
   statusEl.classList.toggle('bad', r.errors.length > 0);
   $('#sem-badge').textContent = failed ? `✗${failed}` : '';
   renderObjects(r);
@@ -373,7 +385,11 @@ provEl.addEventListener('change', () => {
   run();
 });
 renderProviderToggles();
+// 面板没打开时不生成（大场景上万条事实，每次编译都拼一遍 HTML 也要几十毫秒），切到面板时再补
+let factsFor = null;
 function renderFacts(r) {
+  if ($('#facts-pane').hidden) { factsFor = r; return; }
+  factsFor = null;
   const provs = r.factProviders ?? [...new Set(r.facts.map((f) => f.provider ?? 'contact'))];
   const li = (f) => {
     // 一元事实（X walkable）只有 a；二元事实按“A 关系 B”着色
@@ -488,6 +504,7 @@ function showPane(id) {
   document.querySelectorAll('.pane').forEach((p) => { p.hidden = p.id !== id; });
   if (id === 'prop-pane') { collab?.loadProposals(); collab?.loadInbox(); }
   if (id === 'objects-pane') markSelected(selected);
+  if (id === 'facts-pane' && factsFor) renderFacts(factsFor);
 }
 for (const b of document.querySelectorAll('.tabs button')) b.addEventListener('click', () => showPane(b.dataset.pane));
 

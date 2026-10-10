@@ -8,6 +8,8 @@ import { sceneToGLB } from '../tools/export.mjs';
 import { readParts, reverse } from '../tools/reverse.mjs';
 import { reverseGlb } from '../src/reverse-glb.js';
 import { patchSelfImports } from '../src/shim-worker.js';
+import { createCompiler } from '../src/compile-client.js';
+import { compile } from '../src/s3d.js';
 
 test('reverseGlb（浏览器 Worker 用的入口）与 bin/reverse.mjs 的读法结果逐字节相同', async () => {
   const src = readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8');
@@ -26,6 +28,18 @@ test('reverseGlb（浏览器 Worker 用的入口）与 bin/reverse.mjs 的读法
       }
     }
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('编译客户端：没有 Worker 时退回同步编译，文件表代替 resolve，结果与直接 compile 相同', async () => {
+  const compileAsync = createCompiler();
+  const files = { 'a.s3d': 'import "b.s3d"\nbox top size=1,1,1 on=base', 'b.s3d': 'box base size=4,1,4' };
+  const out = await compileAsync(files['a.s3d'], { file: 'a.s3d', files, factProviders: ['contact', 'walkable'] });
+  assert.equal(out.worker, false);
+  const direct = compile(files['a.s3d'], { file: 'a.s3d', resolve: (p) => files[p], factProviders: ['contact', 'walkable'] });
+  assert.deepEqual(JSON.parse(JSON.stringify(out.result)), JSON.parse(JSON.stringify(direct)));
+  assert.ok(out.result.facts.some((f) => f.text === 'top on base'));
+  // 结果能结构化克隆（Worker 把它传回主线程）
+  assert.doesNotThrow(() => structuredClone(out.result));
 });
 
 test('patchSelfImports：去掉“从自己导入”的语句，别名换回本地名字', () => {
