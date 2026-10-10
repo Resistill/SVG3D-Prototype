@@ -1186,7 +1186,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   // 语义命名：没有源名字的部件按识别出的概念改名（box46 → terrain，cyls_2 → columns）；
   // 给了上一次的结果（previous）时，对得上的物体沿用上一次的名字
   lap('校验结束');
-  const named = names ? semanticNames(out.text, { previous }) : { text: out.text, map: {}, renamed: 0 };
+  const named = names ? semanticNames(out.text, { previous, metre: M }) : { text: out.text, map: {}, renamed: 0 };
   lap('语义命名');
   // 锁定：沿用上一次基础层里的定位 / 形状 / 整行；锁定之后编译出错的撤回，记进 unsatisfied
   let decisionReport = null;

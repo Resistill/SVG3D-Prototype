@@ -37,11 +37,14 @@ const iou = (a, b) => {
   return inter / (v(a) + v(b) - inter);
 };
 
-export function semanticNames(text, { library = SEMANTICS, previous = null } = {}) {
-  const r = compile(`${text}\n${library}`);
+// metre：一米是多少个场景单位（语义库的长度阈值按米写）
+export function semanticNames(text, { library = SEMANTICS, previous = null, metre = 1 } = {}) {
+  const r = compile(`${text}\n${library}`, { metre });
   if (r.errors.length) return { text, map: {}, renamed: 0 };
   const byPath = new Map(r.nodes.map((n) => [n.path, n]));
   const conceptOf = (n) => {
+    // 管道按种类起名：语义库只看尺寸，弯管的包围盒并不细，会被当成板
+    if (n?.kind === 'pipe') return 'pipe';
     const cs = new Set(n?.concepts ?? []);
     return PRIORITY.find((c) => cs.has(c)) ?? null;
   };

@@ -240,7 +240,7 @@ async function run() {
   // 工程的场景单位不是米时，空间事实的容差（FACT_EPS，按米）换算成场景单位——与工具（tools/project.mjs）一致
   const root = rootFile();
   let out;
-  try { out = await compileAsync(files.get(root), { file: root, files: Object.fromEntries(files), factProviders, ...(project ? { factEps: FACT_EPS / project.unit } : {}) }); } catch (e) {
+  try { out = await compileAsync(files.get(root), { file: root, files: Object.fromEntries(files), factProviders, ...(project ? { factEps: FACT_EPS / project.unit, metre: 1 / project.unit } : {}) }); } catch (e) {
     statusEl.textContent = `编译器出错：${e.message.split('\n')[0]}`;
     statusEl.classList.add('bad');
     return;

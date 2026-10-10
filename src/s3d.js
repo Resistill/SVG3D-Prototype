@@ -931,9 +931,10 @@ function staticMeta(s, env, node) {
   return out;
 }
 
-function elaborate(program, errors) {
+// opts.metre：一米是多少个场景单位（默认 1）。语义库的长度阈值写成 3 * metre，场景单位不是米时也对
+function elaborate(program, errors, opts = {}) {
   const defs = new Map(), materials = new Map();
-  const globals = new Env(null);
+  const globals = new Env(null, { metre: opts.metre ?? 1 });
   // 语义作用域：概念只在 concept / style / check 里可见，不会和几何里的对象名冲突
   const semantic = new Env(globals);
   const root = new Node('root', null, new Map(), [], 0, globals, null);
@@ -2418,7 +2419,7 @@ export function compile(src, opts = {}) {
 function compileOnce(src, plan, opts) {
   const errors = [];
   const program = loadProgram(src, opts, errors);
-  const elab = elaborate(program, errors);
+  const elab = elaborate(program, errors, opts);
   const { root, flat, materials, defs, semantic } = elab;
   const S = new Solver(root, flat);
   const fail = (e, n) => {

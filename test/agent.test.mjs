@@ -446,3 +446,15 @@ test('默认材质：没写 mat= 的物体用 default=true 的材质；逆向在
   assert.deepEqual(r2.errors, []);
   assert.ok(r2.items.filter((i) => i.material.name === def[1]).length >= parts.length / 2);
 });
+
+test('语义库的长度阈值按米：metre（一米是多少个场景单位）让 stud 场景里的“小件”“体块”判断正确', () => {
+  const lib = readFileSync(new URL('../lib/semantics.s3d', import.meta.url), 'utf8');
+  // 10 stud 的箱子 = 2.8 m（小件）；40 stud 见方、高 20 stud 的楼 = 11.2 m × 5.6 m（体块）
+  const scene = 'box crate size=10,10,10\nbox hall size=40,20,40 at=50,0,0\n' + lib;
+  const concepts = (r, p) => r.nodes.find((n) => n.path === p).concepts;
+  const m = compile(scene), st = compile(scene, { metre: 1 / 0.28 });
+  assert.deepEqual(m.errors, []);
+  assert.ok(!concepts(m, 'crate').includes('prop'), '按米读：10 米的箱子不是小件');
+  assert.ok(concepts(st, 'crate').includes('prop'), '按 stud 读：2.8 米的箱子是小件');
+  assert.ok(concepts(st, 'hall').includes('volume'));
+});
