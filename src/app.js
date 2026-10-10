@@ -51,6 +51,10 @@ let timer = 0;
 function schedule() { clearTimeout(timer); timer = setTimeout(run, 350); renderGutter(); }
 src.addEventListener('input', () => { store.set('s3d:' + current, src.value); schedule(); });
 
+// 打开任意文件：index.html?file=work/xxx/scene.s3d（路径相对于服务根目录；工程的组合根会顺带加载各层）
+const fileParam = new URLSearchParams(location.search).get('file');
+const fileOf = () => fileParam ?? `examples/${current}.s3d`;
+
 // import 的文件要先取回来（编译本身是同步的纯函数）
 const files = new Map();
 async function preload(text, file) {
@@ -61,16 +65,16 @@ async function preload(text, file) {
   }
 }
 async function run() {
-  await preload(src.value, `examples/${current}.s3d`);
+  await preload(src.value, fileOf());
   const t0 = performance.now();
-  const r = compile(src.value, { file: `examples/${current}.s3d`, resolve: (p) => files.get(p) });
+  const r = compile(src.value, { file: fileOf(), resolve: (p) => files.get(p) });
   const t1 = performance.now();
   const warn = viewer.setScene(r);
   const t2 = performance.now();
   last = r;
-  errLines = new Set(r.errors.filter((e) => !e.file || e.file === `examples/${current}.s3d`).map((e) => e.line).filter(Boolean));
+  errLines = new Set(r.errors.filter((e) => !e.file || e.file === fileOf()).map((e) => e.line).filter(Boolean));
   renderGutter();
-  const here = `examples/${current}.s3d`;
+  const here = fileOf();
   errorsEl.innerHTML = [...r.errors.map((e) => `<div class="e" data-line="${e.file && e.file !== here ? '' : e.line ?? ''}"><b>${e.file && e.file !== here ? esc(e.file) + ' ' : ''}第 ${e.line ?? '?'} 行</b>${esc(e.message)}</div>`),
     ...warn.map((w) => `<div class="e w">${esc(w)}</div>`)].join('');
   errorsEl.hidden = !r.errors.length && !warn.length;
@@ -204,7 +208,8 @@ async function load(name, { reset } = {}) {
   sel.value = name;
   if (reset) store.del('s3d:' + name);
   const saved = store.get('s3d:' + name);
-  src.value = saved ?? await (await fetch(`examples/${name}.s3d`)).text();
+  // ?file= 打开的文件总是从磁盘读（它可能刚被工具改过），不用浏览器里的缓存
+  src.value = fileParam ? await (await fetch(fileParam)).text() : saved ?? await (await fetch(`examples/${name}.s3d`)).text();
   $('#reset').hidden = saved == null;
   viewer.firstFrame = true;
   select(null);
@@ -220,6 +225,12 @@ $('#curves').addEventListener('click', (e) => {
 });
 $('#export').addEventListener('click', () => viewer.exportGLB(current));
 
+if (fileParam) {
+  // 文件模式：示例下拉框换成文件名，编辑不写进浏览器缓存
+  sel.innerHTML = `<option>${fileParam}</option>`;
+  sel.disabled = true;
+  current = 'file:' + fileParam;
+}
 load(current);
 
 // 调试入口：在控制台里用 s3d.viewer / s3d.last / s3d.compile(源码)

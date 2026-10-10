@@ -1,6 +1,14 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "svg3d", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "5178"], "port": 5178 }
+    {
+      "name": "svg3d",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "bin/serve.mjs",
+        "5178"
+      ],
+      "port": 5178
+    }
   ]
 }

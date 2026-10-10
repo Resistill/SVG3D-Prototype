@@ -24,6 +24,8 @@ npm run serve
 
 打开 <http://localhost:5178>：左边写代码，右边实时预览。点击物体会定位到源码；「语义」标签列出概念、模式、变体和检查；「空间事实」标签列出从几何反推出的关系。
 
+打开任意 `.s3d` 文件：在地址后面加 `?file=路径`（相对于仓库根目录），例如工程的组合根 <http://localhost:5178/index.html?file=work/spaceport/scene.s3d>——它 import 的各层会一起加载。文件模式下在网页里的修改不会写回磁盘；工具改过文件后刷新页面即可看到。
+
 ```bash
 npm test
 ```

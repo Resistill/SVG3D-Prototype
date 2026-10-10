@@ -1,0 +1,25 @@
+#!/usr/bin/env node
+// 本地静态服务（零依赖）：node bin/serve.mjs [端口，默认 5178]
+// 一律 Cache-Control: no-store——工具刚改过的文件、刚改过的代码，浏览器刷新就能看到
+// 打开工程：http://localhost:5178/index.html?file=work/<工程>/scene.s3d
+import { createServer } from 'node:http';
+import { readFile, stat } from 'node:fs/promises';
+import { join, normalize, extname, resolve } from 'node:path';
+
+const root = resolve(new URL('..', import.meta.url).pathname);
+const port = +(process.argv[2] ?? process.env.PORT ?? 5178);
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json', '.bin': 'application/octet-stream', '.s3d': 'text/plain; charset=utf-8', '.md': 'text/plain; charset=utf-8' };
+
+createServer(async (req, res) => {
+  try {
+    let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    if (p.endsWith('/')) p += 'index.html';
+    const file = normalize(join(root, p));
+    if (!file.startsWith(root)) { res.writeHead(403).end(); return; }
+    if (!(await stat(file)).isFile()) throw new Error('not a file');
+    // 页面本身附带 Clear-Site-Data：清掉浏览器以前按启发式规则缓存的旧模块（别的服务器留下的）
+    const html = extname(file) === '.html';
+    res.writeHead(200, { 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream', 'Cache-Control': 'no-store', ...(html ? { 'Clear-Site-Data': '"cache"' } : {}) });
+    res.end(await readFile(file));
+  } catch { res.writeHead(404, { 'Cache-Control': 'no-store' }).end('not found'); }
+}).listen(port, '127.0.0.1', () => console.log(`SVG3D 预览：http://localhost:${port}/`));
