@@ -1,0 +1,112 @@
+// 航天基地 · 最小示例
+// 注意：除了地面，几乎没有任何绝对坐标——位置全部由空间关系推出。
+
+material ground   color=#59604f rough=1
+material asphalt  color=#3b3d40 rough=1
+material earth    color=#8a7a58 rough=1
+material concrete color=#b8b4aa
+material steel    color=#7f8b96 metal=0.6 rough=0.4
+material white    color=#eceef0
+material hazard   color=#e0a92e
+
+box ground size=200,1,200 pin=top mat=ground
+
+// ── 发射台与火箭 ───────────────────────────────
+box pad size=26,2,26 on=ground[0.25,1,0] mat=concrete
+
+group rocket on=pad mat=white {
+  cyl stage1 r=2.4 h=28
+  cyl band   r=2.45 h=0.8 on=stage1 gap=-0.8 mat=hazard
+  cyl stage2 r=2 h=14 on=stage1
+  // 整流罩：一条轮廓线绕轴旋转出来
+  revolve nose profile=[(2,0); (1.9,2.5); (1.45,5); (0.7,6.6); (0,7)] smooth=true on=stage2
+  // 尾翼：旋转对称，写一片，另外 3 片由 rotate 生成
+  rotate fins n=3 about=stage1 {
+    wedge fin size=3.5,6,0.4 turn=180 at=stage1.w/2,0,0 pin=bottom-right mat=hazard
+  }
+}
+
+// ── 脐带塔：一个参数化的桁架模板 ───────────────
+def truss(w=6, h=48, lv=8) {
+  repeat legs n=(2,1,2) step=w,0,w center=true {
+    box leg size=0.6,h,0.6
+  }
+  repeat decks n=lv step=0,h/lv,0 {
+    box deck size=w+1.2,0.4,w+1.2 at=0,h/lv-0.4,0
+    // 斜撑：span 连接空间中任意两点，天然是三维的
+    span brace from=(-w/2,0.4,w/2) to=(w/2,h/lv-0.4,w/2) r=0.15
+  }
+}
+
+truss tower on=pad[-0.7,1,-0.7] mat=steel
+
+// 摆臂：从塔的第 6 层平台伸向二级火箭
+span arm from=tower.decks.5.deck.top-right-front to=rocket.stage2[-0.6,0.14,-0.6] section=1.6,0.3 pin=bottom mat=steel
+
+// 对侧的塔与摆臂：关于火箭中轴所在的竖直面镜像。改 tower，tower2 跟着变
+mirror tower2 of=tower across=rocket axis=x
+mirror arm2 of=arm across=rocket axis=x
+
+// 四根灯塔：阵列的原点钉在发射台底面中心
+repeat lights n=(2,1,2) step=40,0,40 center=true at=pad.bottom pin=origin mat=steel {
+  cyl pole r=0.4 h=30
+  box lamp size=2.4,1.2,2.4 on=pole mat=white
+}
+
+// ── 总装厂房：一个“空心盒子减去一个开口” ───────
+def shed(w=34, h=22, d=26, t=0.8, dw=12) {
+  subtract body mat=concrete {
+    box outer size=w,h,d
+    box inner size=w-2*t,h-t,d-2*t
+    box opening size=dw,h*0.7,t*3 at=outer.front pin=center align=bottom
+    // 拱顶：横放的圆柱，圆心钉在开口上沿
+    cyl arch r=dw/2 h=t*3 axis=z at=opening.top pin=center
+  }
+  box roof size=w+2,0.8,d+2 on=body mat=steel
+}
+
+shed hangar on=ground[-0.45,1,-0.2]
+
+// 厂房内横放一枚备用芯级
+cyl spare r=2.4 h=20 axis=x inside=hangar.body align=bottom mat=white
+
+// 两翼对称：只写右翼（附属楼 + 两段楼梯），左翼是它关于厂房中面的镜像
+mirror wings across=hangar.body axis=x {
+  box annex size=12,8,14 against=hangar.body.right align=back,bottom mat=concrete
+  span stair1 from=annex.bottom-front+(0,0,12) to=annex.top-front steps=16 section=2.4,0.25 mat=steel
+  span stair2 from=annex[1,1,0] to=hangar.roof[1,1,-0.43] steps=20 section=2,0.2 mat=steel
+}
+
+// 道路：一条经过几个点的样条，扫出路面
+spline roadline path=[hangar.body.bottom-front+(0,0,10); (-28,0,12); (-4,0,9); pad.bottom-left+(-6,0,0)]
+sweep road path=roadline profile=rect section=9,0.08 pin=bottom mat=asphalt
+
+// ── 燃料罐区与管线 ─────────────────────────────
+repeat tanks n=3 step=10,0,0 center=true on=ground[0.3,1,0.55] mat=white {
+  cyl tank r=3.5 h=9
+  sphere cap r=3.5 on=tank gap=-3.5
+  cyl ring r=3.6 h=0.6 on=tank gap=-3 mat=hazard
+}
+
+// 管线：贝塞尔曲线（控制点不必在线上），再沿曲线扫出圆管
+bezier feedline1 path=[tanks.0.tank[0,-0.7,-1]; tanks.0.tank[0,-0.7,-1]+(0,0,-22); pad.top-front+(-4,0.4,14); pad.top-front+(-4,0.4,0)]
+bezier feedline2 path=[tanks.2.tank[0,-0.7,-1]; tanks.2.tank[0,-0.7,-1]+(0,0,-22); pad.top-front+(4,0.4,14); pad.top-front+(4,0.4,0)]
+sweep feed1 path=feedline1 r=0.35 mat=steel
+sweep feed2 path=feedline2 r=0.35 mat=steel
+
+// ── 指挥掩体：旋转 30°，贴在它上面的物体自动继承朝向 ──
+box bunker size=14,5,10 on=ground[-0.05,1,0.55] turn=30 mat=concrete
+wedge berm size=7,5,10 against=bunker.left align=back,bottom mat=earth
+cyl mast r=0.25 h=7 on=bunker[0.6,1,0] mat=steel
+sphere radome r=1.6 on=mast mat=white
+
+// 螺旋楼梯：踏步沿一条螺旋线分布，扶手沿另一条螺旋线扫出
+group spiral on=ground[-0.18,1,0.5] mat=steel {
+  cyl core r=0.35 h=6.5
+  helix coil r=1.2 pitch=6.24 turns=1
+  repeat treads n=24 along=coil {
+    box tread size=0.7,0.12,2 pin=top
+  }
+  helix railline r=2.1 pitch=6.24 turns=1 at=0,1,0 pin=origin
+  sweep rail path=railline r=0.05
+}

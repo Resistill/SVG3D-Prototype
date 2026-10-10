@@ -1,0 +1,71 @@
+// 曲线、镜像与旋转
+// 曲线本身不是实体：它可以被引用、取点（C.start / C.end / C[0.3]），
+// 也可以让实体沿着它生成（sweep 扫掠、repeat along 分布）。
+
+material ground color=#6b7360 rough=1
+material road   color=#3d3f43 rough=1
+material stone  color=#cfc8b8
+material steel  color=#7f8b96 metal=0.6 rough=0.4
+material white  color=#eef0f2
+material accent color=#e07a3a
+material water  color=#5d93c4 rough=0.2
+
+box ground size=150,1,150 pin=top mat=ground
+
+// ── 环形车道：300° 圆弧 → 扫出路面 → 路灯沿弧分布 ──
+arc loop r=40 angle=-60,240
+sweep lane path=loop profile=rect section=8,0.1 pin=bottom mat=road
+repeat lamps n=11 along=loop mat=steel {
+  // 实例的局部 x 沿切线、z 朝外，所以 z=6 就是路肩外侧
+  cyl pole r=0.18 h=6 at=0,0,6
+  sphere bulb r=0.45 on=pole mat=white
+}
+
+// ── 螺旋坡道：绕核心筒盘旋 3 圈 ──
+group garage {
+  cyl core r=4 h=14 mat=stone
+  helix rampline r=7 pitch=4.5 turns=3
+  sweep ramp path=rampline profile=rect section=5,0.4 pin=bottom mat=stone
+  helix railline r=9.4 pitch=4.5 turns=3 at=0,1,0 pin=origin
+  sweep rail path=railline r=0.08 mat=accent
+}
+
+// ── 拱桥：竖直平面里的半圆弧 + 放在弧顶上的桥面 ──
+box canal size=10,0.05,150 on=ground[-0.75,1,0] mat=water
+arc archline r=8 angle=0,180 plane=xy at=canal.top pin=origin
+sweep arch path=archline profile=rect section=3,0.7 mat=stone
+box deck size=18,0.5,3.6 on=archline mat=stone
+span stepsW from=canal.top-left+(-13.5,0,0) to=deck.top-left steps=16 section=3.6,0.25 mat=stone
+mirror stepsE of=stepsW across=archline axis=x
+
+// ── 水塔：一条轮廓线绕竖直轴旋转 ──
+revolve tower profile=[(0.8,0); (0.7,9); (3.5,11); (4.2,14); (3,16.5); (0.3,17.2)] smooth=true on=ground[0.5,1,-0.55] mat=white
+
+// 对侧再放一座：它是 tower 关于车库中面的镜像
+mirror tower2 of=tower across=garage axis=x
+
+// ── 喷泉广场：旋转对称 ──
+group plaza on=ground[-0.45,1,0.5] {
+  revolve basin profile=[(0,0); (5,0); (5.2,0.9); (4.7,0.9); (4.6,0.35); (0,0.35)] mat=stone
+  revolve spout profile=[(0.5,0); (0.3,2); (1.4,2.7); (0.2,3)] smooth=true on=basin mat=white
+  // 写一张长椅，另外 5 张由 rotate 生成（默认每张 60°）
+  rotate benches n=5 about=basin {
+    box seat size=3.2,0.5,0.9 at=0,0,7.5 mat=accent
+    box back size=3.2,1,0.2 on=seat align=front mat=accent
+  }
+}
+
+// ── 门楼：左右对称，写一半，mirror 容器补另一半 ──
+group gate at=0,0,58 {
+  mirror halves across=x {
+    box house size=5,5,5 at=7,0,0 mat=stone
+    // 楔形有左右之分：镜像后坡向随之翻转
+    wedge ramp size=3,5,5 against=house.right mat=stone
+    box flag size=0.2,7,0.2 on=house[-0.8,1,0.8] mat=accent
+  }
+  arc gatearch r=5 angle=0,180 plane=xy
+  sweep beam path=gatearch profile=rect section=1,0.8 mat=accent
+}
+
+// 背面再来一座：把整个门楼（连同它内部的镜像）绕车库转 180°
+rotate gate2 of=gate about=garage angle=180

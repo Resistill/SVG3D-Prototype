@@ -1,0 +1,70 @@
+// 三维旋转：tilt / roll / rot / aim，绕任意轴的 rotate，以及 drop（落到某个面上）
+
+material ground color=#6e7a5c rough=1
+material white  color=#eef0f2
+material steel  color=#7f8b96 metal=0.6 rough=0.4
+material panel  color=#26406a metal=0.3 rough=0.3
+material accent color=#e07a3a
+material red    color=#c8463c
+
+box ground size=160,1,160 pin=top mat=ground
+
+// ── 风电场：叶片绕水平轴旋转对称 ──
+def turbine(h=32, blade=13, phase=0) {
+  cone tower r=1.3 r2=0.7 h=h mat=white
+  box nacelle size=2.2,2.2,6 on=tower mat=white
+  sphere hub r=1.1 at=nacelle.front pin=center mat=white
+  // 转子：原点钉在轮毂中心，先整体转一个相位，再绕自己的 z 轴（机舱朝向）三重对称
+  rotate rotor n=2 axis=z at=hub.center pin=origin rot=(0,0,1,phase) {
+    box blade size=1.4,blade,0.35 pin=bottom turn=12 mat=white   // turn=桨距角
+  }
+}
+repeat farm n=3 step=26,0,-8 center=true at=ground[0.35,1,-0.6] pin=origin {
+  turbine t turn=-35 phase=idx*40
+}
+
+// ── 卫星与雷达：抛物面天线一直对准卫星 ──
+group sat at=-60,58,-72 turn=30 tilt=20 {
+  box body size=2,2,3 pin=center mat=white
+  box wing size=6,0.1,2 against=body.right mat=panel
+  mirror wing2 of=wing across=body axis=x
+}
+group radar on=ground[-0.55,1,-0.45] {
+  cyl base r=3.5 h=4 mat=white
+  cyl mast r=0.7 h=5 on=base mat=steel
+  revolve dish profile=[(0,0); (1.5,0.25); (3,0.9); (4.5,2.1); (5,2.7); (4.75,2.8); (2.9,1.15); (1.4,0.5); (0,0.3)] on=mast aimwith=top aim=sat mat=white
+  span feed from=dish.bottom to=dish.top+(0,0,0) r=0.1 mat=steel
+  sphere horn r=0.4 at=dish.top pin=center mat=accent
+}
+
+// ── 光伏阵列：面板朝南（+z）倾斜 25° ──
+repeat solar n=(5,1,4) step=5.5,0,4.5 center=true at=ground[0.5,1,0.45] pin=origin {
+  cyl post r=0.12 h=1.6 mat=steel
+  box panel size=5,0.1,2.8 on=post tilt=25 mat=panel
+}
+
+// ── 斜塔：整组滚转 5°，里面的一切跟着倾斜 ──
+group pisa on=ground[-0.15,1,0.5] roll=5 mat=white {
+  cyl core r=4 h=42
+  repeat galleries n=7 step=0,5.6,0 {
+    cyl ring r=4.8 h=0.5 at=0,5.6,0
+    rotate cols n=15 {
+      cyl col r=0.18 h=5.1 at=4.55,0.5,0
+    }
+  }
+  cyl belfry r=3.2 h=6 on=core
+}
+
+// ── 过山车：闭合样条轨道，自定义截面钢轨，枕木随坡度倾斜，立柱落到地面 ──
+group coaster at=ground[0.05,1,-0.05] pin=origin {
+  spline track closed=true path=[(0,6,0); (14,10,6); (22,16,0); (18,8,-12); (6,3,-16); (-10,12,-12); (-18,18,0); (-12,7,10); (-2,4,8)]
+  sweep railL path=track profile=[(-0.75,0); (-0.55,0); (-0.55,0.18); (-0.75,0.18)] mat=red
+  sweep railR path=track profile=[(0.55,0); (0.75,0); (0.75,0.18); (0.55,0.18)] mat=red
+  sweep spine path=track profile=[(-0.2,-0.7); (0.2,-0.7); (0.2,-0.3); (-0.2,-0.3)] mat=steel
+  repeat ties n=110 along=track orient=full {
+    box tie size=0.18,0.12,1.7 pin=top mat=steel
+  }
+  repeat legs n=20 along=track {
+    span col from=(0,-0.7,0) drop=ground r=0.22 mat=steel
+  }
+}

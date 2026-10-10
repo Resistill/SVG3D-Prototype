@@ -1,0 +1,36 @@
+// 基础关系：每一行只写“它和谁是什么关系”，坐标由求解器算出
+
+material a color=#d9d4c7
+material b color=#e07a3a
+material c color=#4f8fc0
+material d color=#7aa35a
+
+box floor size=40,1,24 pin=top mat=a
+
+// on：放在上面
+box table size=8,3,5 on=floor[-0.5,1,0] mat=c
+cyl cup r=0.6 h=1.2 on=table mat=b
+sphere ball r=0.8 on=table[0.6,1,-0.5] mat=d
+
+// against：贴住某个面；align：再与它的面对齐
+box shelf size=10,9,2 on=floor align=back mat=c
+box book1 size=0.6,3,1.6 against=shelf.front align=bottom,left mat=b
+box book2 size=0.6,2.6,1.6 against=book1.right align=bottom,back mat=d
+
+// inside：放进去（这里是一个被减空的盒子）
+subtract crate on=floor[0.55,1,0.4] mat=a {
+  box shell size=5,4,5
+  box hollow size=4.4,4,4.4 at=shell.bottom pin=bottom offset=0,0.3,0
+}
+sphere orb r=1.4 inside=crate.hollow align=bottom mat=b
+
+// span：两点之间
+box pillarL size=1,7,1 on=floor[0.3,1,-0.6] mat=c
+box pillarR size=1,7,1 on=floor[0.85,1,-0.6] mat=c
+span beam from=pillarL.top-right to=pillarR.top-left section=1,0.6 pin=top mat=b
+span ramp from=pillarL.bottom-right+(0,0,2) to=pillarR.top-left+(0,0,2) section=1.5,0.2 pin=bottom mat=d
+span stairs from=table.bottom-left+(-6,0,0) to=table.top-left steps=8 section=2,0.2 mat=d
+
+// 旋转之后，关系仍然以参照物自身的面为准
+box turned size=6,3,3 on=floor[-0.1,1,0.55] turn=35 mat=c
+box sticker size=1,1.5,1 against=turned.right align=bottom mat=b

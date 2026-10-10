@@ -1,0 +1,11 @@
+{
+  "name": "svg3d",
+  "version": "0.1.0",
+  "description": "SVG3D：面向 AI 的三维空间描述语言（原型）",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/core.test.mjs",
+    "serve": "python3 -m http.server 5178",
+    "inspect": "node bin/s3d.mjs examples/spaceport.s3d"
+  }
+}

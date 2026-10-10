@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SVG3D 预览器</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.2/examples/jsm/",
+    "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.9/build/index.module.js",
+    "three-bvh-csg": "https://cdn.jsdelivr.net/npm/three-bvh-csg@0.0.18/build/index.module.js"
+  }
+}
+</script>
+<style>
+  :root {
+    --bg: #15181c; --panel: #1c2026; --line: #2a3038; --text: #d7dce2; --mute: #8892a0;
+    --accent: #ff7a1a; --kw: #7cc4ff; --ref: #c3e88d; --err: #ff6b6b;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.5 -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; }
+  body { display: grid; grid-template-rows: auto 1fr; }
+  header { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 15px; letter-spacing: .5px; }
+  header h1 span { color: var(--accent); }
+  header .sub { color: var(--mute); }
+  #status { margin-left: auto; color: var(--mute); font-family: var(--mono); font-size: 12px; }
+  #status.bad { color: var(--err); }
+  select, button { background: #262b33; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; font: inherit; cursor: pointer; }
+  button:hover, select:hover { border-color: #3b4450; }
+  button.on { border-color: #1f5fd6; color: #9cc0ff; }
+  main { display: grid; grid-template-columns: minmax(340px, 42%) 1fr; min-height: 0; }
+  #left { display: grid; grid-template-rows: 1fr auto; min-height: 0; border-right: 1px solid var(--line); }
+  .editor { display: grid; grid-template-columns: 44px 1fr; min-height: 0; background: var(--bg); }
+  #gutter { overflow: hidden; padding: 10px 0; text-align: right; color: #4c5563; font: 12.5px/1.6 var(--mono); user-select: none; border-right: 1px solid var(--line); }
+  #gutter div { padding-right: 8px; }
+  #gutter .err { color: #fff; background: #6b2020; }
+  #src { resize: none; border: 0; outline: 0; background: transparent; color: var(--text); padding: 10px 12px; font: 12.5px/1.6 var(--mono); white-space: pre; overflow: auto; tab-size: 2; }
+  #src::selection { background: #3a4a60; }
+  #errors { max-height: 30%; overflow: auto; border-top: 1px solid var(--line); background: #2a1719; }
+  #errors .e { padding: 5px 12px; font-family: var(--mono); font-size: 12px; color: #ffc9c9; cursor: pointer; border-bottom: 1px solid #3a2023; }
+  #errors .e b { color: var(--err); margin-right: 8px; font-weight: 600; }
+  #errors .w { color: #ffe0a8; cursor: default; }
+  #right { display: grid; grid-template-rows: 1fr 38%; min-height: 0; }
+  #view { position: relative; min-height: 0; overflow: hidden; }
+  #view canvas { display: block; width: 100%; height: 100%; }
+  #tip { position: absolute; pointer-events: none; background: rgba(20,22,26,.88); color: #fff; padding: 3px 8px; border-radius: 4px; font: 12px var(--mono); white-space: nowrap; }
+  .hint { position: absolute; left: 10px; bottom: 8px; color: #44505c; font-size: 11.5px; pointer-events: none; }
+  #panel { display: grid; grid-template-rows: auto 1fr; min-height: 0; border-top: 1px solid var(--line); background: var(--panel); }
+  .tabs { display: flex; gap: 2px; padding: 6px 8px 0; border-bottom: 1px solid var(--line); }
+  .tabs button { border: 0; border-radius: 6px 6px 0 0; background: transparent; color: var(--mute); padding: 5px 12px; }
+  .tabs button.on { background: var(--bg); color: var(--text); }
+  .pane { overflow: auto; min-height: 0; background: var(--bg); }
+  ul { list-style: none; margin: 0; padding: 4px 0; }
+  #objects li { display: flex; align-items: baseline; gap: 8px; padding: 2px 10px 2px calc(10px + var(--d) * 16px); cursor: pointer; white-space: nowrap; font-family: var(--mono); font-size: 12px; }
+  #objects li:hover { background: #1f242b; }
+  #objects li.sel { background: #3a2a1c; }
+  #objects li.inst .nm { color: var(--mute); }
+  #objects li.ghost .nm { color: #9ab; font-style: italic; }
+  #objects li.curve .nm { color: #7fa8ff; }
+  #objects li.hid { opacity: .45; }
+  #objects li.skin .nm { color: #e0a8ff; }
+  .match { display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline; margin-top: 4px; padding: 2px 0 2px 8px; border-left: 2px solid #2a3038; cursor: pointer; }
+  .match:hover { border-left-color: var(--accent); }
+  .match .mi { color: var(--mute); font: 11px var(--mono); margin-right: 2px; }
+  .match .role { color: #7cc4ff; font: 11px var(--mono); margin-left: 6px; }
+  .match .role::after { content: '='; color: var(--mute); margin-left: 2px; }
+  .nm { color: var(--ref); }
+  .kd { color: var(--kw); font-size: 11px; }
+  .tg { color: #e0a8ff; font-size: 11px; }
+  .late { color: #ffcb6b; font-size: 10.5px; border: 1px solid #5a4a20; border-radius: 3px; padding: 0 4px; }
+  .geo { margin-left: auto; color: #566170; font-size: 11px; padding-left: 12px; }
+  .geo i { font-style: normal; color: #3c4652; }
+  #facts { padding: 4px 0 10px; }
+  #facts h4 { margin: 8px 12px 2px; font-size: 11.5px; color: var(--mute); font-weight: 500; }
+  #facts h4 small { color: #4c5563; }
+  #facts li { padding: 1px 12px 1px 22px; cursor: pointer; font-size: 12px; }
+  #facts li:hover { background: #1f242b; }
+  #facts .kw { color: var(--kw); }
+  #facts .ref { color: var(--ref); }
+  #facts .empty, .note { color: var(--mute); padding: 8px 12px; margin: 0; }
+  #sem { padding: 0 0 12px; }
+  #sem h4 { margin: 10px 12px 4px; font-size: 11.5px; color: var(--mute); font-weight: 500; }
+  .concept { padding: 4px 12px 6px; border-bottom: 1px solid #1f242b; }
+  .concept .head { display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
+  .concept .cn { color: #ffcb6b; font-family: var(--mono); font-weight: 600; }
+  .concept .cnt { color: var(--mute); font-size: 11.5px; }
+  .concept .def { color: #566170; font-family: var(--mono); font-size: 11.5px; margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55%; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .chip { font: 11px var(--mono); color: var(--ref); background: #1d2329; border: 1px solid #2a3038; border-radius: 4px; padding: 0 5px; cursor: pointer; }
+  .chip:hover { border-color: var(--accent); }
+  .check { padding: 4px 12px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .check .ok { color: #8fd18f; } .check .bad { color: var(--err); }
+  .check .msg { color: var(--text); }
+  .cc { color: #ffcb6b; font-size: 11px; }
+  #sem-badge { color: var(--err); font-size: 11px; }
+  #cheat { padding: 6px 16px 14px; font-size: 12.5px; }
+  #cheat h4 { margin: 12px 0 4px; color: var(--accent); font-weight: 600; font-size: 12px; }
+  #cheat code { font-family: var(--mono); color: var(--ref); }
+  #cheat td { padding: 2px 14px 2px 0; vertical-align: top; }
+  #cheat td:first-child { white-space: nowrap; }
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; grid-template-rows: 50vh auto; }
+    #left { border-right: 0; border-bottom: 1px solid var(--line); }
+    #right { grid-template-rows: 60vh 50vh; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>SVG<span>3D</span></h1>
+  <span class="sub">三维空间描述语言 · 原型</span>
+  <select id="example" aria-label="示例"></select>
+  <button id="reset" hidden title="丢弃本地修改，恢复示例原文">恢复原文</button>
+  <button id="curves" class="on" title="显示/隐藏曲线（曲线本身不是实体）">曲线</button>
+  <button id="fit">适配视角</button>
+  <button id="export">导出 GLB</button>
+  <span id="status"></span>
+</header>
+<main>
+  <section id="left">
+    <div class="editor">
+      <div id="gutter"></div>
+      <textarea id="src" spellcheck="false" autocomplete="off" aria-label="SVG3D 源码"></textarea>
+    </div>
+    <div id="errors" hidden></div>
+  </section>
+  <section id="right">
+    <div id="view"><div id="tip" hidden></div><div class="hint">拖动旋转 · 右键平移 · 滚轮缩放 · 点击物体定位到源码</div></div>
+    <div id="panel">
+      <div class="tabs">
+        <button class="on" data-pane="objects-pane">对象</button>
+        <button data-pane="sem-pane">语义 <span id="sem-badge"></span></button>
+        <button data-pane="facts-pane">空间事实</button>
+        <button data-pane="cheat">速查</button>
+      </div>
+      <div class="pane" id="objects-pane"><ul id="objects"></ul></div>
+      <div class="pane" id="sem-pane" hidden>
+        <p class="note">概念由 <code>concept 名字 = 集合表达式</code> 定义，求解后按几何与空间事实识别。点击高亮成员。</p>
+        <div id="sem"></div>
+      </div>
+      <div class="pane" id="facts-pane" hidden>
+        <p class="note">从求解后的几何中反向读出的关系，用的是同一套语言。点击高亮两者。</p>
+        <ul id="facts"></ul>
+      </div>
+      <div class="pane" id="cheat" hidden>
+        <h4>实体</h4>
+        <table>
+          <tr><td><code>box size=w,h,d</code></td><td>长方体（原点在底面中心）</td></tr>
+          <tr><td><code>cyl r= h= axis=y</code> · <code>cone r= r2= h=</code></td><td>圆柱 / 圆台，可沿 x / y / z</td></tr>
+          <tr><td><code>sphere r=</code> · <code>wedge size=w,h,d</code></td><td>球 / 楔形（+x 侧高）</td></tr>
+          <tr><td><code>span from=A to=B section=w,t</code></td><td>连接两点的实体；<code>r=</code> 圆杆，<code>steps=n</code> 台阶</td></tr>
+          <tr><td><code>span from=A drop=B</code></td><td>从 A 竖直向下延伸到 B 的面（立柱）</td></tr>
+          <tr><td><code>revolve profile=[(r,y); …] smooth=true</code></td><td>轮廓绕竖直轴旋转成体</td></tr>
+          <tr><td><code>sweep path=C profile=rect section=w,t</code></td><td>截面沿曲线扫掠；<code>profile=circle r=</code> 圆管；<code>profile=[(u,v);…]</code> 任意截面</td></tr>
+          <tr><td><code>pipe path=[A; B; C] r=</code></td><td>管线简写，拐角自动倒圆</td></tr>
+        </table>
+        <h4>曲线（不是实体）</h4>
+        <table>
+          <tr><td><code>arc r= angle=a0,a1 rise= plane=xz|xy|zy</code></td><td>圆弧；0° 指向 +x，俯视逆时针</td></tr>
+          <tr><td><code>helix r= pitch= turns=</code></td><td>螺旋线</td></tr>
+          <tr><td><code>bezier path=[…]</code> · <code>spline path=[…] closed=true</code> · <code>line</code></td><td>贝塞尔 / 过点样条 / 折线</td></tr>
+          <tr><td><code>C.start C.mid C.end C[0.3]</code></td><td>曲线上按弧长取点</td></tr>
+          <tr><td><code>repeat n= along=C orient=yaw|full|none</code></td><td>沿曲线分布，局部 x 跟随切线</td></tr>
+        </table>
+        <h4>镜像与旋转（副本跟随原物体）</h4>
+        <table>
+          <tr><td><code>mirror R of=A across=B axis=x</code> · <code>across=B.top</code></td><td>R 是 A 关于平面的镜像（手性翻转）</td></tr>
+          <tr><td><code>mirror across=x { … }</code></td><td>对称组，副本在 <code>.mirrored</code> 下</td></tr>
+          <tr><td><code>rotate R of=A about=B axis=z angle=90</code></td><td>R 是 A 绕任意轴旋转的像</td></tr>
+          <tr><td><code>rotate n=5 about=B axis=… { … }</code></td><td>旋转对称，副本在 <code>.r1…</code> 下</td></tr>
+        </table>
+        <h4>关系（决定位置）</h4>
+        <table>
+          <tr><td><code>on=B</code> · <code>under=B</code></td><td>放在 B 上面 / 下面</td></tr>
+          <tr><td><code>against=B.left</code></td><td>贴住 B 的某个面（自动选择自己朝向它的面）</td></tr>
+          <tr><td><code>inside=B</code></td><td>中心对中心放入 B</td></tr>
+          <tr><td><code>at=x,y,z</code> · <code>at=B.top</code></td><td>把自己的 <code>pin</code>（默认底面中心）放到某点</td></tr>
+          <tr><td><code>align=left,back</code></td><td>再与参照物的这些面对齐（或 <code>x/y/z</code> 中心对齐）</td></tr>
+          <tr><td><code>gap=</code> · <code>offset=x,y,z</code></td><td>沿法线留空 / 平移</td></tr>
+        </table>
+        <h4>朝向（都绕 pin 点转）</h4>
+        <table>
+          <tr><td><code>turn=</code> · <code>tilt=</code> · <code>roll=</code></td><td>绕竖直轴 / 顶部倒向前 / 顶部倒向右（度）</td></tr>
+          <tr><td><code>rot=(x,y,z,deg)</code></td><td>绕任意轴</td></tr>
+          <tr><td><code>aim=B aimwith=top</code></td><td>让某个面指向目标，尽量保持直立</td></tr>
+          <tr><td colspan="2">on / against 等关系继承参照物的三维朝向，角度都相对参照物</td></tr>
+        </table>
+        <h4>锚点</h4>
+        <table>
+          <tr><td><code>B.top</code> <code>B.top-left-front</code> <code>B.origin</code></td><td>面 / 棱 / 角 / 原点；也可用 east west north south</td></tr>
+          <tr><td><code>B[u,v,w]</code></td><td>包围盒内的归一化坐标，-1..1</td></tr>
+          <tr><td><code>B.top+(0,2,0)</code></td><td>锚点加偏移</td></tr>
+          <tr><td><code>B.w B.h B.d</code></td><td>B 的尺寸，可用于表达式</td></tr>
+          <tr><td><code>B.top.y</code> · <code>B.x</code></td><td>锚点在当前父坐标系里的坐标分量</td></tr>
+        </table>
+        <h4>变量与集合</h4>
+        <table>
+          <tr><td><code>let h = 12</code> · <code>let t = pad.top</code></td><td>变量：数、向量、对象、集合；块内可见，惰性求值</td></tr>
+          <tr><td><code>#wall</code> · <code>kind(box, house)</code> · <code>a.*.b</code> · <code>all()</code></td><td>集合：按标签 / 类型（含模板名）/ 路径通配</td></tr>
+          <tr><td><code>A | B</code> · <code>A &amp; B</code> · <code>A - B</code></td><td>并 / 交 / 差</td></tr>
+          <tr><td><code>S where h &gt; 2 and kind == "box"</code></td><td>按成员属性筛选（w h d x y z kind name it）</td></tr>
+          <tr><td><code>on(S, k)</code> · <code>supports(S)</code> · <code>against(S)</code> · <code>inside(S)</code> · <code>contains(S)</code> · <code>touching(S)</code></td><td>按空间关系筛选（求解后才有，k 为至少几个）</td></tr>
+          <tr><td><code>concept pier = kind(cyl) &amp; on(ground)</code></td><td>用集合定义新语义，求解后识别</td></tr>
+          <tr><td><code>style pier mat=stone</code></td><td>按集合改材质（后写覆盖先写）</td></tr>
+          <tr><td><code>check "说明" pier - on(ground)</code></td><td>检查：集合为空或条件为真即通过</td></tr>
+          <tr><td><code>repeat over=#pillar { … on=it }</code></td><td>对每个成员各做一次，<code>it</code> 指向成员</td></tr>
+          <tr><td><code>on=#wall</code></td><td>集合也能当参照物（用总包围盒）</td></tr>
+          <tr><td><code>sin cos sqrt min max abs round count</code> · <code>a % b</code></td><td>函数（角度用度）与取余</td></tr>
+        </table>
+        <h4>多对象模式与变体</h4>
+        <table>
+          <tr><td><code>pattern gate(a, b, top) { a in … ; top on a ; top on b }</code></td><td>多个角色之间的关系，搜索所有匹配；一个对象不同时扮演两个角色</td></tr>
+          <tr><td><code>pattern room(floor, walls*, roof) { walls on floor ; count(walls) &gt;= 3 }</code></td><td><code>*</code> 是集合角色：满足约束的全部成员</td></tr>
+          <tr><td><code>room.walls</code> · <code>count(room)</code></td><td>取某个角色的全部绑定 / 匹配次数</td></tr>
+          <tr><td><code>variant deck use=planks gap=0.1</code></td><td>按语义换成另一个模板；外包络不变（模板收到 w h d）</td></tr>
+        </table>
+        <h4>编译期的随机与条件（不是运行时）</h4>
+        <table>
+          <tr><td><code>let seed = 7</code> · <code>rand()</code> · <code>uniform(a, b)</code> · <code>choose(x, y, z)</code></td><td>确定性随机：hash(种子, 调用位置, 键)，同源码同结果</td></tr>
+          <tr><td><code>if cond { … } else if … { … } else { … }</code></td><td>展开时选择结构（参数、let、下标、随机数）</td></tr>
+          <tr><td><code>if(cond, a, b)</code></td><td>表达式里的选择</td></tr>
+        </table>
+        <h4>构造</h4>
+        <table>
+          <tr><td><code>group</code> · <code>union</code> · <code>subtract</code> · <code>intersect</code></td><td>分组与布尔运算（subtract = 第一个减去其余）</td></tr>
+          <tr><td><code>repeat n=4 step=x,y,z turn= center=true</code></td><td>阵列；<code>n=(2,1,3)</code> 为网格；子语句可用 <code>i j k idx</code></td></tr>
+          <tr><td><code>def name(p=默认) { … }</code></td><td>参数化模板，用 <code>name id p=值</code> 实例化</td></tr>
+          <tr><td><code>material name color= metal= rough= opacity=</code></td><td>材质，用 <code>mat=name</code> 引用</td></tr>
+          <tr><td><code>#tag</code></td><td>任意标签（语义由使用者赋予，不影响几何）</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+<script type="module" src="src/app.js"></script>
+</body>
+</html>

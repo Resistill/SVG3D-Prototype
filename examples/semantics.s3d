@@ -1,0 +1,133 @@
+// 变量 · 集合 · 语义
+// 几何里没有“桥”“桥墩”“屋顶”“路灯”这些词，只有盒子、圆柱、楔形和它们之间的空间关系。
+// 这些词由下面的 concept / pattern 用集合和空间关系定义出来；求解之后，编译器按定义把它们找出来，
+// 再按语义换上外观（style）和变体（variant）。打开右下角的「语义」标签，看看识别结果。
+
+// ── 变量：改这里，整个场景跟着变 ──
+let seed = 7               // 随机数种子：换一个数，树林就换一种长法（但每次编译都一样）
+let bridge_len = 36
+let n_piers = 4
+let pier_h = 5
+let house_w = 7
+
+material ground color=#6b7360 rough=1
+material water  color=#4f7fae rough=0.15
+material plain  color=#cfcabe
+material stone  color=#9a958c
+material wood   color=#8a5a3c
+material tile   color=#a8473a
+material metal  color=#59636d metal=0.6 rough=0.4
+material leaf   color=#4f7d45
+material glass  color=#9cc3e0 metal=0.3 rough=0.2
+material brick  color=#b5654a
+
+box ground size=120,1,90 pin=top mat=ground
+box river size=bridge_len-6,0.05,90 on=ground mat=water
+
+// ── 一座桥（纯几何）──
+repeat piers n=n_piers step=(bridge_len-8)/(n_piers-1),0,0 center=true on=river mat=plain {
+  cyl p r=0.9 h=pier_h
+}
+box slab size=bridge_len,0.6,6 on=piers.*.p mat=plain          // 集合当参照物：放在所有墩的总包围盒上
+span rampW from=slab.top-left to=(slab.left.x-12,0,slab.z) section=6,0.5 pin=top mat=plain
+mirror rampE of=rampW across=slab axis=x
+repeat rails n=(12,1,2) step=bridge_len/11.5,0,5.6 center=true on=slab mat=plain {
+  cyl post r=0.08 h=1.1
+}
+// 每根桥墩的正上方立一盏灯：对集合里的每个成员各做一次
+repeat lamps over=piers.*.p mat=plain {
+  cyl pole r=0.12 h=4 at=it.top+(0,0.6,2.4)
+  sphere bulb r=0.35 on=pole
+}
+
+// ── 一条街（纯几何）──
+def house(w=house_w, floors=1) {
+  box body size=w,3*floors,w*0.8 mat=plain
+  wedge half size=w/2,2.2,w*0.8 on=body align=left mat=plain
+  mirror half2 of=half across=body axis=x
+  box door size=1.2,2.2,0.2 against=body.front align=bottom mat=plain
+  // 编译期的条件：两层以上的房子才有烟囱
+  if floors >= 2 { box chimney size=0.8,3,0.8 on=body[0.55,1,0.3] mat=plain }
+}
+repeat street n=(2,1,2) step=14,0,16 center=true on=ground[0.6,1,0] {
+  house h floors=1+i+k
+}
+
+// ── 河西：瞭望塔、树林，还有一个放错了的箱子 ──
+group watch on=ground[-0.55,1,-0.45] mat=plain {
+  repeat legs n=(2,1,2) step=3,0,3 center=true { box leg size=0.3,9,0.3 }
+  box cabin size=4.2,2.5,4.2 on=legs
+  wedge cap size=4.2,1.5,4.6 on=cabin
+}
+// 树林：位置、大小、朝向都由确定性的随机数决定
+repeat trees n=18 at=ground[-0.55,1,0.45] pin=origin mat=plain {
+  let s = uniform(0.7, 1.4)
+  cyl trunk r=0.3*s h=3*s at=uniform(-13,13),0,uniform(-9,9)
+  sphere crown r=1.6*s on=trunk
+}
+box crate size=1.5,1.5,1.5 at=ground[-0.3,1,0.3]+(0,2.5,0) mat=plain   // 悬空了，检查会把它找出来
+
+// ═══ 语义：使用者自己定义的概念 ═══
+let solids = kind(box, cyl, cone, sphere, wedge)
+
+concept pier     = kind(cyl) & on(river) & supports(kind(box))        // 立在水里、托着东西的柱子
+concept deck     = kind(box) & on(pier, 2)                             // 架在至少两根桥墩上的板
+concept bridge   = pier | deck | kind(span) & touching(deck)
+concept railing  = kind(cyl) & on(deck) where h < 2                    // 桥面上矮的柱子
+concept lamp     = (kind(cyl) & on(deck) where h >= 2) | kind(sphere) & on(kind(cyl) & on(deck))
+concept roof     = kind(wedge) & on(kind(box))                         // 任何压在盒子上的楔形
+concept building = kind(house)                                         // 模板就是使用者定义的类型
+concept tall_building = kind(house) where h > 9                        // 三层的房子
+concept stilt    = kind(box) & on(ground) & supports(kind(box)) where h > 5 and w < 1
+concept cabin    = kind(box) & on(stilt, 4)                            // 被四根高桩架起来的盒子
+concept tree     = kind(cyl) & on(ground) & supports(kind(sphere)) | kind(sphere) & on(kind(cyl) & on(ground))
+
+// 样式：按语义上色（同一份布局，换一套 style 就换一种风格）
+style pier mat=stone
+style deck mat=wood
+style bridge-pier-deck mat=stone
+style railing|lamp mat=metal
+style roof mat=tile
+style cabin mat=wood
+style tree mat=leaf
+style kind(cyl)&tree mat=wood
+
+// 多对象模式：几个角色之间的关系。* 表示集合角色（满足约束的全部成员）
+pattern crossing(deck, piers*, ramps*) {
+  deck in kind(box)
+  piers in pier
+  ramps in kind(span)
+  deck on piers
+  ramps touching deck
+  count(piers) >= 2
+}
+pattern home(body, roof*, door) {
+  body in kind(box) where h > 2
+  roof in kind(wedge)
+  door in kind(box) where h < 2.5 and d < 0.5
+  roof on body
+  door against body
+}
+
+// 变体：按语义换外观。外包络不变，所以其他物体与它的关系都不受影响
+def planks(w=1, h=1, d=1) {
+  repeat pl n=floor(w/0.9) step=w/floor(w/0.9),0,0 center=true {
+    box plank size=w/floor(w/0.9)-0.08,h,d
+  }
+}
+def townhouse(w=6, h=8, d=5) {
+  box core size=w,h-0.6,d mat=brick
+  box parapet size=w+0.3,0.6,d+0.3 on=core mat=plain
+  repeat win n=(3,2,1) step=w/3.3,2.4,0 center=true at=core.front+(0,0.2,0) pin=back {
+    box pane size=1.1,1.5,0.12 mat=glass
+  }
+}
+variant deck use=planks
+variant tall_building use=townhouse
+
+// 检查：用集合表达规则；集合为空或条件为真即通过
+check "桥墩数量与变量一致" count(pier) == n_piers
+check "每栋房子都有屋顶" kind(house) where count(descendants(it) & roof) == 0
+check "每座房子都匹配到 home 模式" count(home) == count(kind(house))
+check "高脚屋的每根桩都落地" stilt - on(ground)
+check "没有悬空的实体" solids - on(all()) - ground
