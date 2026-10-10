@@ -330,3 +330,18 @@ test('决定层：忽略、指定形状与名字、合并、保留网格、锁�
   assert.match(out.src, /^box ground .*at=0,-0\.5,0 pin=center/m, '地面沿用人改过的定位');
   assert.deepEqual(compile(out.src).errors, []);
 });
+
+test('台阶：楼梯写成 span … steps=n，级数、截面与原文一致，几何包络对得上；成对的楼梯写成镜像', () => {
+  const src = readFileSync(new URL('../examples/basics.s3d', import.meta.url), 'utf8');
+  const out = reverse(partsOfDocument(sceneToGLB(src, { level: 'L0' }).doc), { srcFile: 'x.glb', level: 'L0' });
+  const m = /^span stairs from=(\S+) to=(\S+) steps=(\d+) section=(\S+)/m.exec(out.src);
+  assert.ok(m, out.src.split('\n').filter((l) => /stairs/.test(l)).join('\n'));
+  assert.equal(+m[3], 8);
+  assert.deepEqual(m[4].split(',').map(Number), [2, 0.2]);
+  const box = (r) => r.nodes.find((n) => n.path === 'stairs').box;
+  const a = box(compile(src)), b = box(compile(out.src));
+  for (const k of ['min', 'max']) a[k].forEach((v, i) => assert.ok(Math.abs(v - b[k][i]) < 0.01, `${k}: ${a[k]} 对 ${b[k]}`));
+  const sp = reverse(partsOfDocument(sceneToGLB(readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8'), { level: 'L0' }).doc), { srcFile: 'x.glb', level: 'L0' });
+  assert.ok((sp.src.match(/^span \S+ from=\S+ to=\S+ steps=/gm) ?? []).length >= 2, '两段楼梯');
+  assert.ok(sp.report.mirrors.some((x) => /stair/.test(x.of)), JSON.stringify(sp.report.mirrors));
+});

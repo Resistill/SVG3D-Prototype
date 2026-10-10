@@ -11,6 +11,7 @@ import { lineCost } from './score.mjs';
 import { NodeIO } from '@gltf-transform/core';
 import { compile, _curves, FACT_EPS } from '../src/s3d.js';
 import { parseDecisions, applyDecisions, applyLocks, PRIMS } from './decisions.mjs';
+import { planesOf } from './panels.mjs';
 
 // ───────── 小工具 ─────────
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -363,6 +364,45 @@ function fitTube(part, i, vol, primE = Infinity) {
   return bend > 1.5 * best.r || (primE > 0.25 && bend > 0.3 * best.r) ? best : null;
 }
 
+// 台阶（楼梯）：朝上的水平面（踏面）大小相近、高度等差、水平中心沿一条直线等距排开 → span from=A to=B steps=n section=宽,厚。
+// 踏面下面配得上朝下的面就用两者的距离当厚度，配不上（实心的楼梯）就用一级的高度（踏步连同踢面一起是一块）。
+// 误差与其他形状同一套：采样点到这些踏步盒子的距离，按最薄的方向归一化
+function fitSteps(part, pts, F) {
+  const scale = Math.max(Math.min(...F.h), 0.02 * Math.max(...F.h), 1e-6);
+  const planes = planesOf(part.tris, { tol: 0.02 * Math.max(...F.h) + 1e-6, minFrac: 0.005 });
+  const box2 = (tris) => { const lo = [Infinity, Infinity], hi = [-Infinity, -Infinity]; for (const t of tris) for (const v of t) { lo[0] = Math.min(lo[0], v[0]); hi[0] = Math.max(hi[0], v[0]); lo[1] = Math.min(lo[1], v[2]); hi[1] = Math.max(hi[1], v[2]); } return { lo, hi, c: [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2] }; };
+  let ups = planes.filter((p) => p.n[1] === 1).map((p) => ({ y: p.d, area: p.area, ...box2(p.tris) }));
+  if (ups.length < 3) return null;
+  const med = [...ups].sort((a, b) => a.area - b.area)[ups.length >> 1].area;
+  ups = ups.filter((u) => u.area > 0.5 * med && u.area < 1.5 * med).sort((a, b) => a.y - b.y);
+  const n = ups.length;
+  if (n < 3) return null;
+  const rise = (ups[n - 1].y - ups[0].y) / (n - 1), stepC = [(ups[n - 1].c[0] - ups[0].c[0]) / (n - 1), (ups[n - 1].c[1] - ups[0].c[1]) / (n - 1)];
+  const run = Math.hypot(...stepC);
+  if (!(rise > 1e-6) || !(run > 1e-6)) return null;
+  // 等差：每一级的高度与水平位移都接近平均值
+  for (let i = 1; i < n; i++) {
+    if (Math.abs(ups[i].y - ups[i - 1].y - rise) > 0.15 * rise) return null;
+    if (Math.hypot(ups[i].c[0] - ups[i - 1].c[0] - stepC[0], ups[i].c[1] - ups[i - 1].c[1] - stepC[1]) > 0.15 * run) return null;
+  }
+  const u = [stepC[0] / run, stepC[1] / run], wv = [-u[1], u[0]];
+  const width = Math.max(...ups.map((t) => Math.abs(wv[0]) * (t.hi[0] - t.lo[0]) + Math.abs(wv[1]) * (t.hi[1] - t.lo[1])));
+  const downs = planes.filter((p) => p.n[1] === -1).map((p) => -p.d);
+  const gaps = ups.map((t) => Math.min(...downs.map((y) => t.y - y).filter((g) => g > 1e-6 && g < rise * 0.95), Infinity)).filter(Number.isFinite).sort((a, b) => a - b);
+  const th = gaps.length >= n / 2 ? gaps[gaps.length >> 1] : rise;
+  const A = [ups[0].c[0] - u[0] * run / 2, ups[0].y - rise, ups[0].c[1] - u[1] * run / 2];
+  const B = [A[0] + u[0] * run * n, A[1] + rise * n, A[2] + u[1] * run * n];
+  // 误差：到第 i 级踏步盒子的距离取最小
+  const sdBox3 = (q, h) => { const d = q.map((x, k) => Math.abs(x) - h[k]); return Math.hypot(...d.map((x) => Math.max(x, 0))) + Math.min(Math.max(...d), 0); };
+  const e = pts.reduce((acc, p) => {
+    const rel = [p[0] - A[0], p[1] - A[1], p[2] - A[2]], x = rel[0] * u[0] + rel[2] * u[1], z = rel[0] * wv[0] + rel[2] * wv[1];
+    let best = Infinity;
+    for (let i = 0; i < n; i++) best = Math.min(best, Math.abs(sdBox3([x - (i + 0.5) * run, rel[1] - ((i + 1) * rise - th / 2), z], [run / 2, th / 2, width / 2])));
+    return acc + best;
+  }, 0) / pts.length / scale;
+  return { shape: 'steps', from: A, to: B, n, w: width, th, e };
+}
+
 // only：只在这种形状里挑（决定层指定了形状）
 export function fitPart(part, i, only = null) {
   const pts = samplePoints(part.tris, 600, i + 1);
@@ -376,6 +416,8 @@ export function fitPart(part, i, only = null) {
   fits.sort((a, b) => effErr(a) - effErr(b));
   // 基本体拟合得不好时，试试管道（弯管、输料管）
   if (!only && fits[0].e > 0.02) { const t = fitTube(part, i, vol, fits[0].e); if (t && t.e < fits[0].e) fits.unshift({ ...t, frame: fits[0].frame }); }
+  // 拟合得不好时，试试台阶（楼梯）
+  if (!only && fits[0].e > 0.05) { const st = fitSteps(part, pts, fits[0].frame); if (st && st.e < fits[0].e) fits.unshift({ ...st, frame: fits[0].frame }); }
   const best = fits[0];
   // 覆盖率：网格表面积 / 基本体表面积。实心的楼块、墙接近 1；一块起伏的地形、一道弯曲的长墙、地面贴花只占包络盒很小一部分表面，
   // 硬套一个基本体比保留网格糟得多（网格常常不闭合，所以不用体积判断）
@@ -383,7 +425,7 @@ export function fitPart(part, i, only = null) {
   const h = best.frame.h, R = Math.max(best.r0 ?? 0, best.r1 ?? 0);
   const areaPrim = best.shape === 'sphere' ? 4 * Math.PI * best.r * best.r
     : best.shape === 'cyl' || best.shape === 'cone' ? 2 * Math.PI * R * R + 2 * Math.PI * R * 2 * h[best.axis]
-      : best.shape === 'tube' ? areaMesh : 8 * (h[0] * h[1] + h[0] * h[2] + h[1] * h[2]);
+      : best.shape === 'tube' || best.shape === 'steps' ? areaMesh : 8 * (h[0] * h[1] + h[0] * h[2] + h[1] * h[2]);
   const cover = areaPrim > 0 ? areaMesh / areaPrim : 1;
   const lo = [0, 1, 2].map((k) => Math.min(...pts.map((p) => p[k]))), hi = [0, 1, 2].map((k) => Math.max(...pts.map((p) => p[k])));
   const uniq = new Map();
@@ -452,6 +494,11 @@ function primitiveOf(fit, part, srcFile) {
       box: { min: [-size[0] / 2, 0, -size[2] / 2], max: [size[0] / 2, size[1], size[2] / 2] }, fit: fitScore, err: fit.e };
   }
   const base = { fit: fitScore, err: fit.e };
+  if (fit.shape === 'steps') {
+    // 台阶：两个端点在父坐标系里（顶层就是世界坐标），不再加定位关系；包围盒取源网格的
+    const { min, max } = fit.aabb;
+    return { ...base, kind: 'span', props: { from: vec(fit.from), to: vec(fit.to), steps: String(fit.n), section: `${fmt(fit.w)},${fmt(fit.th)}` }, cols: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], at: [0, 0, 0], box: { min, max }, absolute: true };
+  }
   if (fit.shape === 'tube') {
     // 管道：点列在父坐标系里（顶层就是世界坐标），不再加定位关系；包围盒取源网格的
     const { min, max } = fit.aabb;
@@ -665,6 +712,12 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     return { id, src: p.uid ?? p.name ?? p.from ?? null, meta: p.meta, material: p.material, ...prim, vol, symY };
   });
   const typeLines = types.flatMap((T) => {
+    // 台阶的位置由两个端点决定（at= 对它不起作用）：端点直接平移到类型的坐标系里（原点在包络的底面中心）
+    if (T.prim.kind === 'span') {
+      const mv = (v) => vec(sub(v.split(',').map(Number), T.c0));
+      const props = Object.entries({ ...T.prim.props, from: mv(T.prim.props.from), to: mv(T.prim.props.to) }).map(([k, v]) => `${k}=${v}`).join(' ');
+      return [`def ${T.name} {`, `  span body ${props}  // ${T.count} 个实例`, '}'];
+    }
     const props = Object.entries(T.prim.props).map(([k, v]) => `${k}=${v}`).join(' ');
     const at0 = sub(T.prim.at, T.c0);
     return [`def ${T.name} {`, '  ' + [T.prim.kind, 'body', props, at0.some((v) => Math.abs(v) > 1e-6) ? `at=${vec(at0)}` : '', orientText(T.prim.cols)].filter(Boolean).join(' ') + `  // ${T.count} 个实例`, '}'];
@@ -1002,7 +1055,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const posOk = () => len(sub(scl(add(n.box.min, n.box.max), 0.5), centerOf(t.o))) < tolP;
       // span 的杆轴是局部 x：比较杆轴与圆柱轴线
       const rodOk = () => Math.abs(n.world.R[0][0] * t.o.cols[1][0] + n.world.R[1][0] * t.o.cols[1][1] + n.world.R[2][0] * t.o.cols[1][2]) > 1 - 1e-6;
-      const ok = n && n.world && n.box && posOk() && (t.rod ? rodOk() : sameOrientation(t.o, n.world.R, !!t.mirror));
+      // 绝对定位的物体（台阶、管道）：朝向由端点、点列决定，比较位置就够了
+      const ok = n && n.world && n.box && posOk() && (t.o.absolute || (t.rod ? rodOk() : sameOrientation(t.o, n.world.R, !!t.mirror)));
       if (ok) continue;
       if (process.env.S3D_DEBUG) console.error('校验不通过', t.path, n ? `中心差 ${len(sub(scl(add(n.box.min, n.box.max), 0.5), centerOf(t.o))).toFixed(4)}` : '找不到节点', n && !sameOrientation(t.o, n.world.R, !!t.mirror) ? '朝向不同' : '');
       changed = true;
@@ -1076,7 +1130,9 @@ function sameOrientation(o, Rw, mirrored = false) {
 function detectMirrors(objs, units, unitOf) {
   const reflect = (p, n, d) => sub(p, scl(n, 2 * (dot(p, n) - d)));
   const reflectDir = (v, n) => sub(v, scl(n, 2 * dot(v, n)));
-  const sizeKey = (o) => [o.kind, o.props.axis ?? '', o.mat, ...Object.entries(o.props).filter(([k]) => !['src', 'pivot', 'axis'].includes(k)).map(([k, v]) => `${k}=${String(v).split(',').map((x) => Math.round(+x / SIZE_Q())).join(',')}`)].join('|');
+  // 台阶（span from= to=）的形状是级数、截面、水平长度与高度，不是两个端点的坐标
+  const spanShape = (o) => { const A = o.props.from.split(',').map(Number), B = o.props.to.split(',').map(Number); return { steps: o.props.steps, section: o.props.section, run: String(Math.hypot(B[0] - A[0], B[2] - A[2])), rise: String(B[1] - A[1]) }; };
+  const sizeKey = (o) => [o.kind, o.props.axis ?? '', o.mat, ...Object.entries(o.kind === 'span' ? spanShape(o) : o.props).filter(([k]) => !['src', 'pivot', 'axis'].includes(k)).map(([k, v]) => `${k}=${String(v).split(',').map((x) => Math.round(+x / SIZE_Q())).join(',')}`)].join('|');
   const ents = [];
   // 参考点用全部成员的质心（网格反射后原点会换到另一个角上，质心不会）
   const centroid = (u) => scl(u.children.flatMap((c) => c.members.map(centerOf)).reduce((s2, p) => add(s2, p), [0, 0, 0]), 1 / u.children.reduce((s2, c) => s2 + c.members.length, 0));
@@ -1088,6 +1144,8 @@ function detectMirrors(objs, units, unitOf) {
     const pa = reflect(centerOf(a), n, d);
     if (len(sub(pa, centerOf(b))) > 0.004 * S + 1e-4 * len(sub(a.box.max, a.box.min))) return false;
     if (a.kind === 'mesh') return true;
+    // 台阶：反射后的两个端点与另一段的端点重合（朝向已经由端点表达）
+    if (a.kind === 'span') { const pt = (o, k) => o.props[k].split(',').map(Number), tol = 0.004 * S + 1e-4 * len(sub(a.box.max, a.box.min)); return ['from', 'to'].every((k) => len(sub(reflect(pt(a, k), n, d), pt(b, k))) < 4 * tol); }
     const rc = a.cols.map((c) => reflectDir(c, n));
     return sameOrientation(b, toRows(rc), true);
   };
