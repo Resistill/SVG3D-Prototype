@@ -10,6 +10,7 @@ import { chainsOf, fitAlong, alongPoses } from './curvefit.mjs';
 import { lineCost } from './score.mjs';
 import { NodeIO } from '@gltf-transform/core';
 import { compile, _curves, FACT_EPS } from '../src/s3d.js';
+import { parseDecisions, applyDecisions, applyLocks, PRIMS } from './decisions.mjs';
 
 // ───────── 小工具 ─────────
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -247,7 +248,7 @@ function meshVolume(tris) {
 // 在一个坐标系里尝试各种形状，返回误差最小的。
 // 误差 = 表面采样点到候选表面的平均距离（按最薄方向归一化）；
 // 再用体积校验排除“比实物大很多”的候选（例如把弯曲的薄路面套进一个大盒子）
-function fitInFrame(F, pts, vol = null, verts = []) {
+function fitInFrame(F, pts, vol = null, verts = [], only = null) {
   const q = pts.map((p) => mvT(F.cols, sub(p, F.c)));
   const vq = verts.map((p) => mvT(F.cols, sub(p, F.c)));
   // 误差按最薄的那个方向归一化：薄板、细杆的偏差要和它的厚度比，而不是和长度比
@@ -261,7 +262,7 @@ function fitInFrame(F, pts, vol = null, verts = []) {
   push({ shape: 'box', e: err((x) => sdBox(x, h)) }, 8 * h[0] * h[1] * h[2]);
   for (let a = 0; a < 3; a++) {
     const [b, c] = [0, 1, 2].filter((k) => k !== a);
-    if (Math.abs(h[b] - h[c]) > 0.08 * Math.max(h[b], h[c])) continue;
+    if (only !== 'cyl' && only !== 'cone' && Math.abs(h[b] - h[c]) > 0.08 * Math.max(h[b], h[c])) continue;
     // 半径取侧面点到轴的距离的中位数（比包围盒稳健，不受轴略微倾斜与多边形近似影响）
     const radial = (x) => Math.hypot(x[b], x[c]);
     // 正多边形近似的圆柱，侧面顶点恰好在半径 r 上：取顶点的最大径向距离
@@ -274,7 +275,7 @@ function fitInFrame(F, pts, vol = null, verts = []) {
     const r0 = Math.max(0, ...near(-1)), r1 = Math.max(0, ...near(1));
     if (Math.abs(r0 - r1) > 0.05 * r) push({ shape: 'cone', axis: a, r0, r1, e: err((x) => sdFrustum(x, a, r0, r1, h[a])) }, (Math.PI * 2 * h[a] / 3) * (r0 * r0 + r0 * r1 + r1 * r1));
   }
-  if (Math.max(...h) - Math.min(...h) < 0.08 * Math.max(...h)) {
+  if (only === 'sphere' || Math.max(...h) - Math.min(...h) < 0.08 * Math.max(...h)) {
     // 球：顶点到顶点质心的平均距离（顶点都在球面上）
     const vc = vq.length ? scl(vq.reduce((s2, v) => add(s2, v), [0, 0, 0]), 1 / vq.length) : [0, 0, 0];
     const r = vq.length ? vq.reduce((s2, v) => s2 + len(sub(v, vc)), 0) / vq.length : (h[0] + h[1] + h[2]) / 3;
@@ -286,8 +287,10 @@ function fitInFrame(F, pts, vol = null, verts = []) {
     const A = [-hs * sign, -hy], B = [hs * sign, -hy], C = [hs * sign, hy];
     push({ shape: 'wedge', slope: s, sign, e: err((x) => sd2(sdTri2(x[s], x[1], A, B, C), Math.abs(x[o]) - h[o])) }, 4 * hs * hy * h[o]);
   }
-  cands.sort((x, y) => effErr(x) - effErr(y));
-  return { ...cands[0], frame: F };
+  const pool = only ? cands.filter((c) => c.shape === only) : cands;
+  if (!pool.length) return null;
+  pool.sort((x, y) => effErr(x) - effErr(y));
+  return { ...pool[0], frame: F };
 }
 
 // 粗档位偏向更简单的形状：楔形、圆锥要比盒子、圆柱明显更好才选（逆向只要求保留语义）
@@ -360,17 +363,19 @@ function fitTube(part, i, vol, primE = Infinity) {
   return bend > 1.5 * best.r || (primE > 0.25 && bend > 0.3 * best.r) ? best : null;
 }
 
-export function fitPart(part, i) {
+// only：只在这种形状里挑（决定层指定了形状）
+export function fitPart(part, i, only = null) {
   const pts = samplePoints(part.tris, 600, i + 1);
   const vol = meshVolume(part.tris);
   const vmap = new Map();
   for (const t of part.tris) for (const v of t) vmap.set(vkey(v), v);
   const verts = [...vmap.values()];
   const frames = [uprightFrame(pts), pcaFrame(pts), normalFrame(part.tris, pts)].filter(Boolean);
-  const fits = frames.map((F) => fitInFrame(F, pts, vol, verts));
+  let fits = frames.map((F) => fitInFrame(F, pts, vol, verts, only)).filter(Boolean);
+  if (!fits.length) fits = frames.map((F) => fitInFrame(F, pts, vol, verts));
   fits.sort((a, b) => effErr(a) - effErr(b));
   // 基本体拟合得不好时，试试管道（弯管、输料管）
-  if (fits[0].e > 0.02) { const t = fitTube(part, i, vol, fits[0].e); if (t && t.e < fits[0].e) fits.unshift({ ...t, frame: fits[0].frame }); }
+  if (!only && fits[0].e > 0.02) { const t = fitTube(part, i, vol, fits[0].e); if (t && t.e < fits[0].e) fits.unshift({ ...t, frame: fits[0].frame }); }
   const best = fits[0];
   // 覆盖率：网格表面积 / 基本体表面积。实心的楼块、墙接近 1；一块起伏的地形、一道弯曲的长墙、地面贴花只占包络盒很小一部分表面，
   // 硬套一个基本体比保留网格糟得多（网格常常不闭合，所以不用体积判断）
@@ -436,7 +441,8 @@ function vkey(v) { return v.map((x) => Math.round(x * 1e5) || 0).join(); }
 function primitiveOf(fit, part, srcFile) {
   const fitScore = Math.max(0, Math.min(1, 1 - fit.e / TOL));
   const F = fit.frame, h = F.h, [ex, ey, ez] = F.cols;
-  if ((fit.e > FID.fitTol || fit.cover < COVER_MIN) && part.name) {
+  const toMesh = part.force === 'mesh' ? !!part.name : !part.force && (fit.e > FID.fitTol || fit.cover < COVER_MIN) && part.name;
+  if (toMesh) {
     // 拟合不了：引用源网格。外包络是世界包围盒，原点在其底面中心
     // （从合并网格里拆出来的部件在源文件里没有节点可引用，只能用最接近的基本体，并如实给出低拟合度）
     const { min, max } = fit.aabb;
@@ -590,8 +596,11 @@ function unifyBoxLabels(objs) {
 }
 
 // ───────── 3 & 4. 关系与校验 ─────────
-export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true } = {}) {
+export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null } = {}) {
   setFidelity(fidelity, sceneUnit);
+  // 决定层：先作用到源部件上（忽略、合并、指定形状 / 名字 / 类型名），锁定在最后按上一次的结果替换
+  let decided = null;
+  if (decisions) { decided = applyDecisions(parts, parseDecisions(decisions)); parts = decided.parts; }
   cleanName = nameCleaner(parts.map((p) => p.name));
   // 计时：S3D_TIMING=1 时把各阶段耗时打到 stderr（实战里定位瓶颈用）
   const T0 = performance.now(), lap = (what) => process.env.S3D_TIMING && console.error(`[reverse] ${what} ${Math.round(performance.now() - T0)}ms`);
@@ -600,7 +609,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   if (useTypes) {
     const groups = new Map();
     parts.forEach((p, i) => {
-      if (!p.matrix || p.mesh == null) return;
+      if (!p.matrix || p.mesh == null || p.force) return;
       const M = p.matrix, cs = [[M[0], M[1], M[2]], [M[4], M[5], M[6]], [M[8], M[9], M[10]]], sc = cs.map(len);
       if (sc.some((x) => x < 1e-9)) return;
       let R = cs.map((c, k) => scl(c, 1 / sc[k]));
@@ -624,7 +633,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const corners = [0, 1, 2, 3, 4, 5, 6, 7].map((b) => add(prim.at, mvC(prim.cols, [0, 1, 2].map((k) => ((b >> k) & 1 ? prim.box.max[k] : prim.box.min[k])))));
       const lo = [0, 1, 2].map((k) => Math.min(...corners.map((c) => c[k]))), hi = [0, 1, 2].map((k) => Math.max(...corners.map((c) => c[k])));
       const c0 = [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2];
-      const base = cleanName(rep.name) ?? `type_${types.length + 1}`;
+      const base = ms.map((m) => parts[m.i].typeName).find(Boolean) ?? cleanName(rep.name) ?? `type_${types.length + 1}`;
       let name = sanitize(base), k2 = 2;
       while (typeNames.has(name) || KINDS_RESERVED.has(name)) name = `${sanitize(base)}_v${k2++}`;
       typeNames.add(name);
@@ -633,11 +642,12 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       for (const m of ms) typeOf.set(m.i, { T, R: m.R, t: m.t });
     }
   }
-  const fits = parts.map((p, i) => (typeOf.has(i) ? null : fitPart(p, i)));
+  const fits = parts.map((p, i) => (typeOf.has(i) ? null : fitPart(p, i, PRIMS.has(p.force) ? p.force : null)));
   lap(`拟合 ${parts.length} 个部件（${types.length} 种类型覆盖 ${typeOf.size} 个实例）`);
   // 名字：L0 用源节点名；没有名字时按形状编号
   const used = new Map(), counters = {};
-  const uniqueId = (id) => { if (used.has(id)) { const n = used.get(id) + 1; used.set(id, n); return `${id}_${n}`; } used.set(id, 1); return id; };
+  const reserved = new Set(parts.filter((p) => p.forceName).map((p) => sanitize(p.forceName)));
+  const uniqueId = (id, own = false) => { if (!own && reserved.has(id) && !used.has(id)) used.set(id, 1); if (used.has(id)) { const n = used.get(id) + 1; used.set(id, n); return `${id}_${n}`; } used.set(id, 1); return id; };
   const objs = parts.map((p, i) => {
     const ty = typeOf.get(i);
     if (ty) {
@@ -648,7 +658,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     }
     const prim = primitiveOf(fits[i], p, srcFile);
     const nm = p.name && !/^part_\d+$|^merged_/.test(p.name) ? cleanName(p.name) : null;
-    const id = uniqueId(nm ? sanitize(nm) : `${prim.kind}${(counters[prim.kind] = (counters[prim.kind] ?? 0) + 1)}`);
+    const id = p.forceName ? uniqueId(sanitize(p.forceName), true) : uniqueId(nm ? sanitize(nm) : `${prim.kind}${(counters[prim.kind] = (counters[prim.kind] ?? 0) + 1)}`);
     const vol = (prim.box.max[0] - prim.box.min[0]) * (prim.box.max[1] - prim.box.min[1]) * (prim.box.max[2] - prim.box.min[2]);
     const symY = prim.kind === 'sphere' || (['cyl', 'cone'].includes(prim.kind) && !prim.props.axis);
     if (symY && Math.abs(prim.cols[1][1] - 1) < 1e-6) prim.cols = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
@@ -1008,6 +1018,19 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   lap('校验结束');
   const named = names ? semanticNames(out.text, { previous }) : { text: out.text, map: {}, renamed: 0 };
   lap('语义命名');
+  // 锁定：沿用上一次基础层里的定位 / 形状 / 整行；锁定之后编译出错的撤回，记进 unsatisfied
+  let decisionReport = null;
+  if (decided) {
+    decisionReport = { ...decided.report };
+    if (decided.locks.length) {
+      const lk = applyLocks(named.text, previous, decided.locks);
+      const before = new Set(compile(named.text, { factEps: FACT_EPS * M }).errors.map((e) => e.message));
+      const errs = compile(lk.text, { factEps: FACT_EPS * M }).errors.filter((e) => !before.has(e.message));
+      if (errs.length) decisionReport.unsatisfied.push(...lk.report.applied.map((x) => ({ ...x, why: `锁定之后编译出错：${errs[0].message}` })));
+      else { named.text = lk.text; decisionReport.applied.push(...lk.report.applied); }
+      decisionReport.unsatisfied.push(...lk.report.unsatisfied);
+    }
+  }
   const nm = (id) => named.map[id] ?? id;
   const report = {
     source: srcFile, level, parts: parts.length,
@@ -1019,6 +1042,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     meanFit: +(objs.reduce((s, o) => s + o.fit, 0) / objs.length).toFixed(3),
     dissolved: [...dissolved], fallback: [...fallback],
     renamed: named.renamed,
+    ...(decisionReport ? { decisions: decisionReport } : {}),
   };
   return { src: named.text + '\n', absSrc, report, objs };
 }

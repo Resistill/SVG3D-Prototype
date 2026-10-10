@@ -298,3 +298,35 @@ test('场景单位：同一个场景按米、stud（0.28 m）、厘米逆向，�
     }
   }
 });
+
+test('决定层：忽略、指定形状与名字、合并、保留网格、锁定定位；满足不了的与找不到的写进报告', () => {
+  const src = readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8');
+  const parts = partsOfDocument(sceneToGLB(src, { level: 'L0' }).doc);
+  const first = reverse(parts, { srcFile: 'x.glb', level: 'L0', fidelity: 'structure' });
+  // 人改过地面的定位（写在上一次的基础层里），并且要求以后不要再动
+  const groundLine = first.src.split('\n').find((l) => /^box ground /.test(l));
+  assert.ok(groundLine, first.src.slice(0, 400));
+  const previous = first.src.replace(groundLine, groundLine.replace(/ at=\S+| pin=\S+/g, '') .replace(/ mat=/, ' at=0,-0.5,0 pin=center mat='));
+  const decisions = [
+    'drop ~src="bunker"',
+    'cyl pad_disc ~src="pad"',
+    'box hangar_mass ~src=["hangar.body","hangar.roof"]',
+    'mesh spare_mesh ~src="spare"',
+    'over ground ~lock=place',
+    'repeat lamps ~src=["lights.0.pole","lights.1.pole"]',
+    'drop ~src="no_such_part"',
+  ].join('\n');
+  const out = reverse(parts, { srcFile: 'x.glb', level: 'L0', fidelity: 'structure', previous, decisions });
+  const d = out.report.decisions;
+  assert.equal(d.applied.length, 5, JSON.stringify(d));
+  assert.equal(d.unsatisfied.length, 1, JSON.stringify(d.unsatisfied));
+  assert.match(d.unsatisfied[0].text, /^repeat lamps/);
+  assert.deepEqual(d.dangling.map((x) => x.missing), [['no_such_part']]);
+  assert.doesNotMatch(out.src, /~src="bunker"/, '掩体被忽略');
+  assert.match(out.src, /^cyl pad_disc .*~src="pad"/m, '发射台写成圆柱，名字是决定里的');
+  assert.match(out.src, /^box hangar_mass /m, '厂房主体与屋顶合成一个盒子');
+  assert.doesNotMatch(out.src, /~src="hangar\.roof"/);
+  assert.match(out.src, /^mesh spare_mesh /m, '保留为网格');
+  assert.match(out.src, /^box ground .*at=0,-0\.5,0 pin=center/m, '地面沿用人改过的定位');
+  assert.deepEqual(compile(out.src).errors, []);
+});

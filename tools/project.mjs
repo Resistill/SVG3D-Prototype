@@ -139,10 +139,12 @@ export async function runReverse(P, { fresh = false, fidelity = null, unit = nul
   if (fidelity || unit != null) writeCfg(P.path('project.json'), P.cfg);
   const parts = await P.sourceParts();
   const previous = !fresh && P.exists('base.s3d') ? joinSource(P.read) : null;
-  const out = reverse(parts, { srcFile: P.cfg.source, level: 'project', previous, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit });
+  // 决定层（decisions.s3d）：逆向必须满足的约束；满足不了的、找不到源部件的写进报告
+  const decisions = P.exists('decisions.s3d') ? P.read('decisions.s3d') : null;
+  const out = reverse(parts, { srcFile: P.cfg.source, level: 'project', previous, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, decisions });
   writeBase(P, out.src);
   P.write('base.report.json', JSON.stringify(out.report, null, 2) + '\n');
   const hash = sha1(P.sourcePath());
   if (hash !== P.cfg.sourceHash) { P.cfg.sourceHash = hash; writeCfg(P.path('project.json'), P.cfg); }
-  return { fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, parts: parts.length, arrays: out.report.arrays.length, mirrors: out.report.mirrors.length, meshes: out.objs.filter((o) => o.kind === 'mesh').length, renamed: out.report.renamed };
+  return { fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, ...(out.report.decisions ? { decisions: { applied: out.report.decisions.applied.length, unsatisfied: out.report.decisions.unsatisfied, dangling: out.report.decisions.dangling } } : {}), parts: parts.length, arrays: out.report.arrays.length, mirrors: out.report.mirrors.length, meshes: out.objs.filter((o) => o.kind === 'mesh').length, renamed: out.report.renamed };
 }

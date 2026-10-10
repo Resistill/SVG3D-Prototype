@@ -290,7 +290,7 @@ node bin/s3d-tool.mjs score --project=work/spaceport
 node bin/s3d-tool.mjs render --focus=beam_1 --project=work/spaceport
 ```
 
-- **工程**：`base.s3d`（逆向结果，可重新生成）+ `edits.s3d` / `semantics.s3d` / `style.s3d` / `decisions.s3d`，由 `scene.s3d` 组合；档位和场景单位（`unit`）记在 `project.json`，分数常数（δ、`dMax`）与输出的误差一律按米。基础层超过 400 行（`project.json` 的 `splitLines`）时自动拆成多个文件：`base/types.s3d`（材质与类型）+ 按楼栋聚组（立在楼上、靠着楼、在楼的投影里的物体跟着楼走）再按水平位置分区的 `base/NN-名字.s3d`，`base.s3d` 只做索引；名字跨文件可见，拆分不改变编译结果与分数。
+- **工程**：`base.s3d`（逆向结果，可重新生成）+ `edits.s3d` / `semantics.s3d` / `style.s3d` / `decisions.s3d`（决定层：忽略、合并、指定形状与名字、保留网格、锁定定位，重跑逆向时必须满足），由 `scene.s3d` 组合；档位和场景单位（`unit`）记在 `project.json`，分数常数（δ、`dMax`）与输出的误差一律按米。基础层超过 400 行（`project.json` 的 `splitLines`）时自动拆成多个文件：`base/types.s3d`（材质与类型）+ 按楼栋聚组（立在楼上、靠着楼、在楼的投影里的物体跟着楼走）再按水平位置分区的 `base/NN-名字.s3d`，`base.s3d` 只做索引；名字跨文件可见，拆分不改变编译结果与分数。
 - **看**：`render` 离屏渲染（纯 JS，零依赖）：多视角、物体编号标注（去重叠）、聚焦时被选中的物体不会被遮挡、误差热图、源模型与重建结果共用取景对照（可用正交相机）。
 - **查**：`outline`、`inspect`（`--source` 看源模型的部件：包络、主轴尺寸、建议语句）、`select`（集合表达式）、`similar`（同形部件，类型与阵列的候选）。
 - **做**：AI 的修改以提议出现——`propose` / `preview`（逐物体的分数变化，可渲染提议后的场景）/ `accept` / `reject`；`check` 空跑；`note` / `inbox` 是人与 AI 之间的留言；每次调用都记在 `state/log.jsonl`。

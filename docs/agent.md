@@ -27,7 +27,7 @@ reverse [--fidelity=…] [--unit=…] [--fresh]                               �
 | `edits.s3d` | 修改层：`over` / `drop` / `copy` / 新物体 / `def` 扩展 | 人；AI 经提议 |
 | `semantics.s3d` | 语义层：`concept` / `pattern` / `check`（已 import 通用语义库） | 人；AI 经提议 |
 | `style.s3d` | 风格层：只改外观 | 人；AI 经提议 |
-| `decisions.s3d` | 决定层：对逆向的约束（M1 实现） | 人；AI 经提议 |
+| `decisions.s3d` | 决定层：对逆向的约束，重跑逆向时必须满足（见下） | 人；AI 经提议 |
 | `scene.s3d` | 组合根（按序 import 各层），工具只编译它 | 不改 |
 | `state/selection.json` | 人在界面里选中的物体 `{paths, camera}` | 界面写，AI 读 |
 | `score.json` | 最近一次评分 | `score` 写 |
@@ -59,6 +59,20 @@ check [--text=…] [--layer=edits]      空跑：把语句临时叠加编译，�
 select "<集合表达式>"                 例如 "kind(cyl) where h > 5 and top > 30"、"on(ground) - #road"
 similar <路径> [--tol=0.01]           全场景里同形同尺寸同材质的物体及其相对位置——类型（def）与阵列的候选
 ```
+
+## 决定层
+
+逆向认错了、人看出了检测器没认出的东西时，把纠正写进 `decisions.s3d`（经 `propose --layer=decisions`），重跑 `reverse` 后生效；决定不进 scene、不计描述长度，效果体现在 base 里：
+
+```
+drop ~src="merged_4#188"                     // 这个部件是噪声、碎片，忽略
+box hangar ~src=["merged_1#1","merged_1#7"]  // 这几个部件是一个物体，叫 hangar，写成盒子（cyl / cone / sphere / wedge 同理）
+mesh road ~src="Road_01"                     // 保留为网格引用（只能是一个有节点名的部件）
+def house ~src=["p1","p2","p3"]              // 这几个部件是同一个类型（目前要求它们共享同一个网格）
+over bunker ~lock=place                      // 沿用上一次基础层里的定位（shape：形状；all：整行）
+```
+
+`reverse` 的返回值里 `decisions.applied` 是生效的条数，`unsatisfied` 是满足不了的（带原因，例如阵列、镜像决定还不支持，锁定之后编译出错），`dangling` 是找不到源部件的。
 
 ## 评
 
