@@ -126,6 +126,7 @@ concept deck = kind(box) & on(pier, 2)
 | 写法 | 说明 |
 |---|---|
 | `group { … }` · `union` · `subtract` · `intersect` | 分组与布尔运算 |
+| `material m color=#… default=true` | 默认材质：哪儿都没写 `mat=`（自己和上级都没有）的物体用它 |
 | `group x envelope=w,h,d { … }` · `envelope=x0,y0,z0,x1,y1,z1` | 名义外包络：关系、锚点、定位点按它算，与内容无关（细化后挂在它上面的物体不动） |
 | `repeat n= step= turn= center=true` · `repeat n= along=C orient=yaw\|full\|none` | 网格阵列 / 沿曲线分布；子语句里可以用 `i j k idx` |
 | `def name(p=默认值) { … }` | 类型（参数化模板）。模板声明的参数优先于同名的定位关键字 |

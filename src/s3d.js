@@ -2012,6 +2012,8 @@ function materialOf(n, S, materials) {
     }
     if (a.src) return materialOf(a.src, S, materials);
   }
+  // 哪儿都没写材质：用标了 default=true 的材质（场景里大多数物体同一种材质时，逆向用它省掉每一行的 mat=）
+  for (const [name, m] of materials) if (m.default) return { name, ...m };
   return { color: '#c9c9c9' };
 }
 

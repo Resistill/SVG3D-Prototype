@@ -275,7 +275,7 @@ export const COMMANDS = {
       }
       const sub = [...new Set([...names.map((x) => byId.get(x)).filter(Boolean), ...picked])];
       if (sub.length < 2) throw new Error(`对上的源部件不到两个（${sub.length}）：给物体路径（带 ~src 的）或 --source=部件名`);
-      const out = reverseParts(sub, { srcFile: P.cfg.source, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit });
+      const out = reverseParts(sub, { srcFile: P.cfg.source, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, defaultMaterial: false });
       const body = out.src.split('\n').filter((l) => l.trim() && !/^(\/\/|material )/.test(l));
       return { parts: sub.length, arrays: out.report.arrays, mirrors: out.report.mirrors, kinds: out.report.kinds, lines: body.length, text: body.join('\n') };
     },

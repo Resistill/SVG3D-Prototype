@@ -134,7 +134,7 @@ function voxelLines(tris, { voxel, maxBoxes, digits }) {
 // 面积大、又拟合不好的分量（一整栋楼的外壳）换成同名的一组体素盒子（substitute='voxel'）或板件（'panel'：墙板、楼板、开洞）。
 // 每个子块记下来源 ~src="部件#分量"，以后还能逐层细化
 function nestedLines(comps, { to, unit, digits, voxel, panel, substitute = 'voxel' }) {
-  const out = reverseParts(comps.map((c) => ({ ...c, name: null })), { srcFile: 'refine', fidelity: to, unit, types: false, names: false });
+  const out = reverseParts(comps.map((c) => ({ ...c, name: null })), { srcFile: 'refine', fidelity: to, unit, types: false, names: false, defaultMaterial: false });
   setFidelity(to, unit);
   const total = comps.reduce((s2, c) => s2 + c.area, 0);
   const bySrc = new Map(comps.map((c) => [c.from, c]));

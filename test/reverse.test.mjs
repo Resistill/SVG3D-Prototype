@@ -277,7 +277,7 @@ const rescale = (doc, k) => {
   return doc;
 };
 
-test('场景单位：同一个场景按米、stud（0.28 m）、厘米逆向，形状、阵列、镜像一致，残差分数不变', () => {
+test('场景单位：同一个场景按米、stud（0.28 m）、厘米逆向，形状、阵列、镜像一致，残差分数基本不变', () => {
   const src = readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8');
   for (const fidelity of ['structure', 'semantic']) {
     const runs = [1, 0.28, 0.01].map((unit) => {
@@ -294,7 +294,8 @@ test('场景单位：同一个场景按米、stud（0.28 m）、厘米逆向，�
       assert.deepEqual(x.kinds, runs[0].kinds, `${fidelity} unit=${x.unit} 形状`);
       assert.deepEqual(x.arrays, runs[0].arrays, `${fidelity} unit=${x.unit} 阵列`);
       assert.deepEqual(x.mirrors, runs[0].mirrors, `${fidelity} unit=${x.unit} 镜像`);
-      assert.ok(Math.abs(x.R - runs[0].R) < 0.01 * runs[0].R, `${fidelity} unit=${x.unit} 残差 ${x.R} 对 ${runs[0].R}`);
+      // 数字按“不粗于米制分辨率的 3 倍”取整，单位不同取整的步长也不同（语义档在 stud 下是整数），残差允许差几个百分点
+      assert.ok(Math.abs(x.R - runs[0].R) < 0.03 * runs[0].R, `${fidelity} unit=${x.unit} 残差 ${x.R} 对 ${runs[0].R}`);
     }
   }
 });

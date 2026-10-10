@@ -38,8 +38,9 @@ export const FIDELITY = {
   structure: { name: 'structure', tau: 0.05, fitTol: 0.25, digits: 2, angle: 0.1 },
   semantic: { name: 'semantic', tau: 0.25, fitTol: Infinity, digits: 1, angle: 1 },
 };
-// 场景单位下的小数位：分辨率不粗于 10^−digits 米（stud ≈ 0.28 m 时与米相同，厘米、毫米时更少，最少 0 位）
-export const digitsFor = (name, unit = 1) => Math.max(0, Math.ceil((FIDELITY[name] ?? FIDELITY.detail).digits + Math.log10(unit) - 1e-9));
+// 场景单位下的小数位：分辨率最多比 10^−digits 米粗到 3 倍（米制下就是 digits；stud ≈ 0.28 m 的结构档是 1 位，0.1 stud ≈ 2.8 cm，
+// 仍小于档位容差；厘米、毫米时更少，最少 0 位）
+export const digitsFor = (name, unit = 1) => Math.max(0, Math.ceil((FIDELITY[name] ?? FIDELITY.detail).digits + Math.log10(unit) - Math.log10(3) - 1e-9));
 let FID = FIDELITY.detail, S = 1, M = 1, DIGITS = FID.digits;
 export const setFidelity = (name, unit = 1) => { FID = FIDELITY[name] ?? FIDELITY.detail; S = FID.tau / unit / 0.005; M = 1 / unit; DIGITS = digitsFor(FID.name, unit); };
 // 尺寸签名的量化步长（场景单位）：档位的小数位与 1 cm 中较粗的那个，按米折算——米制下就是原来“写出的数再量化到厘米”
@@ -493,6 +494,19 @@ function minRot(u) {
 
 // 覆盖率低于它（基本体的表面大部分不贴着网格）就退回网格引用，各档位都一样
 const COVER_MIN = 0.3;
+// 粗档位（结构、语义）保留网格之前先比较代价：相对误差按最薄的方向归一化，薄的东西（地垫、帘子、贴着墙的板）
+// 相对误差很大、绝对误差却很小。网格引用的代价（c_mesh × log2(1 + 三角形数)，同一个网格的实例分摊）与
+// 基本体的残差（按绝对的平均距离估算，与评分同一套计价，双向）比，基本体便宜就用基本体。精细档仍按相对误差
+let MESH_USE = new Map();
+function primCheaper(fit, part) {
+  if (FID.name === 'detail') return false;
+  const h = fit.frame.h, scale = Math.max(Math.min(...h), 0.02 * Math.max(...h), 1e-6);
+  const d = fit.e * scale, area = part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0);
+  const tauS = FID.tau * M;
+  const prim = 2 * 4 * Math.log2(1 + area / (tauS * tauS)) * Math.log2(1 + Math.max(0, d - tauS) / tauS);
+  const mesh = (10 * Math.log2(1 + part.tris.length)) / Math.max(1, MESH_USE.get(part.mesh) ?? 1);
+  return prim < mesh;
+}
 // L2 的网格兜底：合并网格拆出来的分量在源文件里没有节点，拟合不了时引用工程里的部件文件（parts.glb，由调用方写出）；
 // 节点名把 # 换成 ~（# 是“文件#节点”的分隔符）
 let PARTS_FILE = null;
@@ -532,7 +546,7 @@ function primitiveOf(fit, part, srcFile) {
   const fitScore = Math.max(0, Math.min(1, 1 - fit.e / TOL));
   const F = fit.frame, h = F.h, [ex, ey, ez] = F.cols;
   const ref = part.name ? `${srcFile}#${part.uid ?? part.name ?? part.from}` : PARTS_FILE && part.from ? `${PARTS_FILE}#${partsNode(part.from)}` : null;
-  const toMesh = part.force === 'mesh' ? !!ref : !part.force && (fit.e > FID.fitTol || fit.cover < COVER_MIN) && !!ref;
+  const toMesh = part.force === 'mesh' ? !!ref : !part.force && (fit.e > FID.fitTol && !primCheaper(fit, part) || fit.cover < COVER_MIN) && !!ref;
   if (toMesh) {
     // 拟合不了：引用源网格。外包络是世界包围盒，原点在其底面中心
     // （从合并网格里拆出来的部件在源文件里没有节点可引用，只能用最接近的基本体，并如实给出低拟合度）
@@ -707,9 +721,11 @@ function unifyBoxLabels(objs) {
 }
 
 // ───────── 3 & 4. 关系与校验 ─────────
-export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null, prefit = null, partsFile = null } = {}) {
+export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null, prefit = null, partsFile = null, defaultMaterial = true } = {}) {
   setFidelity(fidelity, sceneUnit);
   PARTS_FILE = partsFile;
+  MESH_USE = new Map();
+  for (const p of parts) if (p.mesh != null) MESH_USE.set(p.mesh, (MESH_USE.get(p.mesh) ?? 0) + 1);
   // 决定层：先作用到源部件上（忽略、合并、指定形状 / 名字 / 类型名），锁定在最后按上一次的结果替换
   let decided = null;
   const decs = decisions ? parseDecisions(decisions) : [];
@@ -775,6 +791,15 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     const id = p.forceName ? uniqueId(sanitize(p.forceName), true) : uniqueId(nm ? sanitize(nm) : `${prim.kind}${(counters[prim.kind] = (counters[prim.kind] ?? 0) + 1)}`);
     const vol = (prim.box.max[0] - prim.box.min[0]) * (prim.box.max[1] - prim.box.min[1]) * (prim.box.max[2] - prim.box.min[2]);
     const symY = prim.kind === 'sphere' || prim.kind === 'revolve' || (['cyl', 'cone'].includes(prim.kind) && !prim.props.axis);
+    // 粗档位：局部 y 只差一点点就竖直（拟合的噪声，写出来是 rot=(0.002,-1,-0.004,45) 这样的）→ 吸附成竖直，只留偏航（turn=）。
+    // 倾角不超过档位角度步长的 5 倍，并且最长边 × 倾角不超过容差（远端的偏移在容差以内）
+    if (FID.angle && !prim.absolute && prim.kind !== 'mesh' && prim.cols[1][1] < 1 - 1e-9) {
+      const tilt = Math.acos(Math.min(1, prim.cols[1][1])), ext = Math.max(...[0, 1, 2].map((k) => prim.box.max[k] - prim.box.min[k]));
+      if (tilt < (5 * FID.angle * Math.PI) / 180 && ext * tilt < FID.tau * M) {
+        const y = [0, 1, 0], x = unit(sub(prim.cols[0], scl(y, prim.cols[0][1])));
+        prim.cols = [x, y, cross(x, y)];
+      }
+    }
     if (symY && Math.abs(prim.cols[1][1] - 1) < 1e-6) prim.cols = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
     return { id, src: p.uid ?? p.name ?? p.from ?? null, meta: p.meta, material: p.material, ...prim, vol, symY };
   });
@@ -802,7 +827,13 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     o.mat = mats.get(k).name;
   }
   const header = [`// 由逆向管线从 ${srcFile} 生成（${level}）。~fit 是拟合度，~err 是相对误差；mesh 是拟合不了、直接引用源网格的部件`, ''];
-  for (const m of mats.values()) header.push(`material ${m.name} color=${m.color}${m.metal != null ? ` metal=${fmt(m.metal)}` : ''}${m.rough != null ? ` rough=${fmt(m.rough)}` : ''}`);
+  // 默认材质：一半以上的物体是同一种材质时，它标成 default=true，这些物体的行里不再写 mat=（真实地图常常全场一种白模材质）
+  const matCount = new Map();
+  for (const o of objs) matCount.set(o.mat, (matCount.get(o.mat) ?? 0) + 1);
+  const [defMat, defN] = [...matCount].sort((a, b) => b[1] - a[1])[0] ?? [null, 0];
+  // 嵌进别处的输出（细化的子块、detect）不用：省掉的 mat= 在那里会继承外层物体的材质
+  const defaultMat = defaultMaterial && defN * 2 >= objs.length && objs.length >= 4 ? defMat : null;
+  for (const m of mats.values()) header.push(`material ${m.name} color=${m.color}${m.metal != null ? ` metal=${fmt(m.metal)}` : ''}${m.rough != null ? ` rough=${fmt(m.rough)}` : ''}${m.name === defaultMat ? ' default=true' : ''}`);
   header.push('');
   if (typeLines.length) header.push('// 类型：源模型里同一个网格被多处使用（引擎的享元）', ...typeLines, '');
   const line = (o, place, orient) => {
@@ -810,7 +841,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
     // 旁路信息（sidecar 表里对上的列）也写成 ~元数据：不计描述长度，可以在 where 里读
     const meta = Object.entries(o.meta ?? {}).filter(([, v]) => v !== '').map(([k, v]) => `~${k}=${/^-?\d+(\.\d+)?$/.test(v) ? v : JSON.stringify(String(v))}`);
-    return [o.kind, o.id, props, place, orient, `mat=${o.mat}`, `~fit=${fmt(o.fit)}`, o.src ? `~src=${JSON.stringify(o.src)}` : '', ...meta].filter(Boolean).join(' ');
+    return [o.kind, o.id, props, place, orient, o.mat === defaultMat ? '' : `mat=${o.mat}`, `~fit=${fmt(o.fit)}`, o.src ? `~src=${JSON.stringify(o.src)}` : '', ...meta].filter(Boolean).join(' ');
   };
   const absLine = (o) => line(o, `at=${vec(o.at)}`, orientText(o.cols));
   const absSrc = header.concat(objs.map(absLine)).join('\n');
@@ -922,7 +953,9 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     if (near0) {
       const near = poseOf(near0), t2 = Math.min(tau, 5e-4 * S);
       const ctr = add(near.at, mvC(near.cols, scl(add(near.box.min, near.box.max), 0.5)));
-      const place = shorter(`at=${name(near)}[${anchorTxt(near, norm(near, toB(near, p)), t2)}]`, `at=${name(near)} offset=${offsetTxt(toParent(sub(p, ctr)), t2)}`);
+      // 锚点按参照物的尺寸归一化：落在包络之外很远（|u| > 1.5）时，参照物尺寸的取整误差会被放大好几倍，改用 offset
+      const uvw = norm(near, toB(near, p)), offTxt = `at=${name(near)} offset=${offsetTxt(toParent(sub(p, ctr)), t2)}`;
+      const place = Math.max(...uvw.map(Math.abs)) > 1.5 ? offTxt : shorter(`at=${name(near)}[${anchorTxt(near, uvw, t2)}]`, offTxt);
       return { place, ref: null, kind: 'at' };
     }
     return null;
@@ -1132,8 +1165,10 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       // 位置：一般比较原点（底面中心）；绕自身轴对称的形状比较几何中心——它们的“原点”是包围盒底面中心，
       // 离轴有一个半径，旋转副本会把这个偏移一起转走，而拟合时每个副本的坐标系是按世界“上”规范选的
       const tolP = t.unit || t.mirror ? 2e-3 * S * Math.max(1, len(t.o.at) / (50 * M)) : t.tol;
+      // 校验容差不小于数字取整的步长（数字按档位取整，粗档位、stud 这样的单位下步长可能比容差还大）
+      const tolR = Math.max(tolP, 10 ** -DIGITS);
       // 一律比较几何中心：中心与表示无关；加上考虑对称的朝向比较，位姿就完全确定了
-      const posOk = () => len(sub(scl(add(n.box.min, n.box.max), 0.5), centerOf(t.o))) < tolP;
+      const posOk = () => len(sub(scl(add(n.box.min, n.box.max), 0.5), centerOf(t.o))) < tolR;
       // span 的杆轴是局部 x：比较杆轴与圆柱轴线
       const rodOk = () => Math.abs(n.world.R[0][0] * t.o.cols[1][0] + n.world.R[1][0] * t.o.cols[1][1] + n.world.R[2][0] * t.o.cols[1][2]) > 1 - 1e-6;
       // 绝对定位的物体（台阶、管道）：朝向由端点、点列决定，比较位置就够了
