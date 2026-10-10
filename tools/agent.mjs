@@ -216,6 +216,55 @@ export const COMMANDS = {
       return { expr, errors: r.errors.filter((e) => /__select/.test(e.message) || !e.file), members: c?.members ?? [] };
     },
   },
+  fit: {
+    desc: '拟合一个源部件：按每种基本体（box / cyl / cone / sphere / wedge）分别拟合，给出语句与拟合误差（~err 是相对误差，越小越贴）；可以直接用在提议里（over 物体 : 种类 …）',
+    args: { source: '源部件名（score 的 worstSources、inspect --source 里的名字）', kinds: '可选：只试这几种，逗号分隔' },
+    async run(P, a) {
+      const name = a.source ?? a._?.[0];
+      const parts = await P.sourceParts();
+      const part = parts.find((p) => (p.uid ?? p.name ?? p.from) === name);
+      if (!part) throw new Error(`源模型里没有部件 ${name}`);
+      const kinds = a.kinds ? String(a.kinds).split(',') : ['box', 'cyl', 'cone', 'sphere', 'wedge'];
+      // 借用决定层的“指定形状”：只在这一种形状里挑，不退回网格
+      return kinds.map((kind) => {
+        const out = reverseParts([part], { srcFile: P.cfg.source, compress: false, names: false, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, decisions: `${kind} fitted ~src=${JSON.stringify(name)}` });
+        const line = out.src.split('\n').find((l) => /^\S+ fitted /.test(l)) ?? null;
+        return { kind, line: line?.replace(/ ~src=.*$/, ''), err: line ? +(/~err=(\S+)/.exec(line)?.[1] ?? out.objs[0]?.err ?? NaN) : null, fit: line ? +(/~fit=(\S+)/.exec(line)?.[1] ?? NaN) : null };
+      }).sort((x, y) => (x.err ?? Infinity) - (y.err ?? Infinity));
+    },
+  },
+  detect: {
+    desc: '对一部分物体（或源部件）单独跑一遍带压缩的逆向：找阵列、镜像、类型，返回生成的语句（不改文件；要用就写成提议，先 drop 原来的物体）',
+    args: { paths: '物体路径（取它们的 ~src，阵列与组取全部成员）', source: '可选：源部件名，逗号分隔', selection: '可选：用界面里的选中' },
+    async run(P, a) {
+      const parts = await P.sourceParts();
+      const byId = new Map();
+      for (const p of parts) for (const id of [p.uid, p.name, p.from]) if (id && !byId.has(id)) byId.set(id, p);
+      let names = a.source ? String(a.source).split(',') : [];
+      const paths = pathsArg(P, a);
+      const picked = [];
+      if (paths.length) {
+        const r = P.compile();
+        // 带 ~src 的直接取；阵列成员这样没有 ~src 的，按世界包围盒的重叠度（IoU > 0.5）找源部件
+        const boxes = new Map();
+        const boxOf = (p) => { if (!boxes.has(p)) { const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity]; for (const t of p.tris) for (const v of t) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], v[k]); hi[k] = Math.max(hi[k], v[k]); } boxes.set(p, { lo, hi }); } return boxes.get(p); };
+        const iou = (A, B) => { const v = (lo, hi) => [0, 1, 2].reduce((m, k) => m * Math.max(1e-9, hi[k] - lo[k]), 1); const ov = [0, 1, 2].map((k) => Math.max(0, Math.min(A.hi[k], B.max[k]) - Math.max(A.lo[k], B.min[k]))); const o = ov[0] * ov[1] * ov[2]; return o / (v(A.lo, A.hi) + v(B.min, B.max) - o); };
+        for (const n of r.nodes) {
+          if (!paths.some((q) => n.path === q || n.path.startsWith(q + '.'))) continue;
+          if (n.meta?.src) { names.push(n.meta.src); continue; }
+          if (!r.items.some((i) => i.path === n.path) || !n.box) continue;
+          let best = null, bs = 0.5;
+          for (const p of parts) { const x = iou(boxOf(p), n.box); if (x > bs) { bs = x; best = p; } }
+          if (best) picked.push(best);
+        }
+      }
+      const sub = [...new Set([...names.map((x) => byId.get(x)).filter(Boolean), ...picked])];
+      if (sub.length < 2) throw new Error(`对上的源部件不到两个（${sub.length}）：给物体路径（带 ~src 的）或 --source=部件名`);
+      const out = reverseParts(sub, { srcFile: P.cfg.source, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit });
+      const body = out.src.split('\n').filter((l) => l.trim() && !/^(\/\/|material )/.test(l));
+      return { parts: sub.length, arrays: out.report.arrays, mirrors: out.report.mirrors, kinds: out.report.kinds, lines: body.length, text: body.join('\n') };
+    },
+  },
   similar: {
     desc: '找同形部件：全场景里种类、尺寸（容差内）、材质都相同的物体——类型（def）与阵列的候选',
     args: { paths: '一个路径', tol: '尺寸容差（米，默认 0.01）' },

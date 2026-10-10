@@ -383,3 +383,20 @@ zone_a,Walls,SM_Wall,1,BlockAll,30.5,0.5,0.5,same`);
   const r = compile(out.src);
   assert.deepEqual(r.errors, []);
 });
+
+test('fit / detect：按指定形状拟合一个源部件；对一部分物体单独逆向找阵列', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 's3d-'));
+  const { doc, io } = sceneToGLB(SCENE, { level: 'L0' });
+  const glb = join(dir, 'world.glb');
+  writeFileSync(glb, await io.writeBinary(doc));
+  const proj = join(dir, 'p');
+  await runCommand('init', proj, { source: glb, fidelity: 'structure', unit: 1 });
+  const fits = await runCommand('fit', proj, { source: 'shed', kinds: 'box,cyl,sphere' });
+  assert.equal(fits[0].kind, 'box', JSON.stringify(fits));
+  assert.ok(fits[0].err < 0.01 && fits.every((f) => f.line), JSON.stringify(fits));
+  assert.ok(fits[1].err > fits[0].err);
+  const posts = (await runCommand('select', proj, { expr: 'kind(cyl)' })).members;
+  const det = await runCommand('detect', proj, { paths: posts });
+  assert.equal(det.parts, 6);
+  assert.ok(det.arrays.length >= 1 && /^repeat /m.test(det.text), JSON.stringify(det));
+});
