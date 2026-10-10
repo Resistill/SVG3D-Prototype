@@ -2316,7 +2316,7 @@ function compileOnce(src, plan, opts) {
     path: n.path,
     kind: n.template ? n.template : n.inst ? 'instance' : n.src ? `${n.kind}→${K(n)}` : n.copyOf ? n.copyOf.container.kind : K(n),
     id: n.id, tags: n.tags, concepts: n.concepts ?? [], line: n.line, file: n.file ?? null, types: n.types ?? null, meta: (n.ghostOf ?? n).meta ?? {},
-    depth: n.path.split('.').length - 1, late: !!n.late, ghost: !!n.ghostOf, curve: CURVES.has(K(n)), hidden: !!n.hidden, skin: !!n.skin,
+    depth: n.path.split('.').length - 1, late: !!n.late, ghost: !!n.ghostOf, of: (n.ghostOf ?? n.src)?.path ?? null, curve: CURVES.has(K(n)), hidden: !!n.hidden, skin: !!n.skin,
     world: n._world ?? null, box: n._world && n._box ? transformBox(n._world, n._box) : null,
     // 紧包围盒：按真实形状（与空间事实同一套凸块）求，旋转后的圆柱、球不会被放大
     tight: n._world && n._box && n.geom && LEAVES.has(K(n)) ? tightBox(n) : null,

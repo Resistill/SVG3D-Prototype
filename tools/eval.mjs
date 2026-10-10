@@ -35,13 +35,17 @@ function objectsOf(r) {
   // 镜像：在 mirror 生成的副本里（mirror X of=… 的 X 之下，或 mirror 容器的 .mirrored 之下）；
   // rotate 生成的副本算作阵列（旋转对称）
   const mirrorRoots = r.nodes.filter((n) => /^mirror/.test(n.kind)).map((n) => n.path);
-  return r.items.map((it) => {
+  const out = r.items.map((it) => {
     const n = byPath.get(it.path);
     const rotRoots = r.nodes.filter((x) => x.kind === 'rotate').map((x) => x.path);
     const array = /(^|\.)\d+(\.|$)|\.r\d+(\.|$)/.test(it.path) || rotRoots.some((g) => it.path.startsWith(g + '.'));
     const mirror = mirrorRoots.some((g) => (it.path === g || it.path.startsWith(g + '.')) && !/^mirror$/.test(byPath.get(g).kind)) || /\.mirrored(\.|$)/.test(it.path);
     return { path: it.path, cls: classOf(it), box: n?.tight ?? n?.box, array, mirror };
   }).filter((o) => o.box);
+  // 镜像没有方向：哪一侧是原件只是写法，所以副本的来源也算处在镜像关系里
+  const sources = new Set(out.filter((o) => o.mirror).map((o) => byPath.get(o.path)?.of).filter(Boolean));
+  for (const o of out) if (sources.has(o.path)) o.mirror = true;
+  return out;
 }
 
 export function evaluate(origSrc, reconSrc, opts = {}) {
