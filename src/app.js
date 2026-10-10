@@ -4,6 +4,7 @@ import { Viewer } from './render.js';
 import { createCollab, detectApi, esc } from './collab.js';
 import { shimWorker, rpc } from './shim-worker.js';
 import { createCompiler } from './compile-client.js';
+import { VIEWS } from './views.js';
 
 const $ = (s) => document.querySelector(s);
 const src = $('#src'), gutter = $('#gutter'), errorsEl = $('#errors'), statusEl = $('#status');
@@ -546,6 +547,57 @@ $('#curves').addEventListener('click', (e) => {
 });
 $('#export').addEventListener('click', () => viewer.exportGLB(current));
 
+// ── 相机预设、快照与离屏渲染（docs/PLAN2.md 4.7 多视角一致）──
+// 预设与 tools/raster.mjs 是同一份（src/views.js）：切到 iso 看到的就是 AI 用 render --view=iso 看到的取景。
+// 「快照」按预设相机截正方形图；「离屏渲染」（有接口的工程）调 render 并把同一个取景范围（box）传过去，两张图并排对照
+let viewPreset = null;
+const boxArr = (b) => b && { min: b.min.toArray(), max: b.max.toArray() };
+// 隔离视图里对准隔离的物体（同 render --focus），否则整个场景
+const presetOpts = () => (iso ? { box: boxArr(viewer.boxOf(iso.paths)), focus: true } : {});
+$('#views').innerHTML = Object.keys(VIEWS).map((v) => `<button data-view="${v}" title="视角 ${v}（render --view=${v}）">${v}</button>`).join('');
+$('#views').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-view]');
+  if (!b) return;
+  b.blur();
+  viewPreset = b.dataset.view;
+  viewer.setView(viewPreset, presetOpts());
+  for (const x of $('#views').children) x.classList.toggle('on', x === b);
+});
+// 拖动相机之后就不再是预设视角了
+viewer.controls.addEventListener('start', () => { if (viewPreset) { viewPreset = null; for (const x of $('#views').children) x.classList.remove('on'); } });
+const snapEl = $('#snap');
+const figure = (title, url, name) => `<figure><img src="${esc(url)}" alt="${esc(title)}"><figcaption>${esc(title)}<a href="${esc(url)}" download="${esc(name)}">下载</a></figcaption></figure>`;
+function showSnap(view, figs, note = '', legend = []) {
+  snapEl.hidden = false;
+  $('#snap-title').textContent = `视角 ${view}`;
+  $('#snap-note').textContent = note;
+  $('#snap-imgs').innerHTML = figs.join('');
+  $('#snap-legend').innerHTML = legend.map((l) => `<span data-path="${esc(l.path)}" title="${esc(l.path)}"><b>${l.n ?? ''}</b>${esc(l.path.length > 32 ? '…' + l.path.slice(-31) : l.path)}</span>`).join('');
+}
+$('#snap-close').addEventListener('click', () => { snapEl.hidden = true; });
+$('#snap-legend').addEventListener('click', (e) => { const s = e.target.closest('[data-path]'); if (s) { const n = locate(s.dataset.path); select(s.dataset.path, { line: n?.line, file: n?.file, focus: true }); } });
+$('#snap-btn').addEventListener('click', (e) => {
+  e.target.blur();
+  const view = viewPreset ?? 'iso';
+  const s = viewer.snapshot(view, presetOpts());
+  showSnap(view, [figure('界面快照（Viewer.snapshot）', s.url, `snapshot-${view}.png`)], `取景 box=${[...s.box.min, ...s.box.max].map((v) => +v.toFixed(3)).join(',')}`);
+});
+$('#raster-btn').addEventListener('click', async (e) => {
+  const b = e.target;
+  b.blur();
+  const view = viewPreset ?? 'iso', opts = presetOpts();
+  const s = viewer.snapshot(view, { ...opts, size: 768 });
+  const box = [...s.box.min, ...s.box.max].join(',');
+  b.disabled = true;
+  showSnap(view, [figure('界面快照（Viewer.snapshot）', s.url, `snapshot-${view}.png`)], '离屏渲染中…');
+  try {
+    const args = { view, mode: 'labels', size: 768, box, ...(iso ? { focus: iso.paths } : {}) };
+    const r = await fetch('api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dir: project.apiDir, cmd: 'render', args }) }).then(async (x) => { const j = await x.json(); if (!x.ok) throw new Error(j.error); return j; });
+    showSnap(view, [figure('界面快照（Viewer.snapshot）', s.url, `snapshot-${view}.png`), figure(`离屏渲染（render --view=${view} --mode=labels，AI 看到的）`, `${r.url}?t=${Date.now()}`, r.url.split('/').pop())],
+      `同一个相机与取景 box=${box.split(',').map((v) => +(+v).toFixed(3)).join(',')}${dirty.size ? ' · 离屏渲染读的是磁盘上的文件，没保存的修改不在里面' : ''}`, r.legend ?? []);
+  } catch (err) { showSnap(view, [figure('界面快照（Viewer.snapshot）', s.url, `snapshot-${view}.png`)], `离屏渲染失败：${err.message}`); } finally { b.disabled = false; }
+});
+
 // ── 浏览器内逆向（docs/PLAN2.md 4.8）──
 // 选择或拖入一个 .glb：在 Worker 里读 GLB、跑 tools/reverse.mjs 的 reverse()（与 bin/reverse.mjs 同样的参数，结果逐字节相同），
 // 结果作为没保存的新文件 scratch/<名字>.s3d 打开；网格引用（src="<名字>.glb#节点"）直接用拖入的文件显示。「下载 .s3d」取走
@@ -630,6 +682,7 @@ collab = createCollab({
 });
 if (project) {
   $('#prop-tab').hidden = !api;
+  $('#raster-btn').hidden = !api;
   collab.renderBar();
   document.title = `${project.apiDir} · SVG3D`;
 }

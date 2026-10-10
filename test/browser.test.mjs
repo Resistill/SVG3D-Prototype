@@ -42,6 +42,21 @@ test('编译客户端：没有 Worker 时退回同步编译，文件表代替 re
   assert.doesNotThrow(() => structuredClone(out.result));
 });
 
+test('相机预设：预览器与离屏渲染用同一份（src/views.js），取景不变', async () => {
+  const raster = await import('../tools/raster.mjs');
+  const views = await import('../src/views.js');
+  assert.equal(raster.VIEWS, views.VIEWS);
+  assert.equal(raster.camera, views.camera);
+  assert.deepEqual(Object.keys(views.VIEWS), ['iso', 'iso2', 'top', 'front', 'back', 'left', 'right']);
+  // 整体 1.6 倍半径、聚焦 2.4 倍，半径至少 2
+  const box = { min: [0, 0, 0], max: [6, 8, 0] };
+  const c = views.camera(box, 'front');
+  assert.deepEqual(c.target, [3, 4, 0]);
+  const d = Math.hypot(...c.eye.map((v, k) => v - c.target[k]));
+  assert.ok(Math.abs(d - 5 * 1.6) < 1e-9 && Math.abs(views.camera(box, 'front', true).eye[2] - views.camera(box, 'front').eye[2] * 1.5) < 1e-9);
+  assert.equal(views.camera({ min: [0, 0, 0], max: [0, 0, 0] }).r, 2);
+});
+
 test('patchSelfImports：去掉“从自己导入”的语句，别名换回本地名字', () => {
   const code = `import { Box3 } from 'three';\nimport { BVH as BVH$1, INTERSECTED as INTERSECTED$1, Other } from 'three-mesh-bvh';\nclass BVH {}\nconst INTERSECTED = 1;\nclass ObjectBVH extends BVH$1 { f() { return INTERSECTED$1 + xBVH$1; } }\n`;
   const out = patchSelfImports(code, 'three-mesh-bvh');

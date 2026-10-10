@@ -4,25 +4,16 @@
 //   模式 color：按材质颜色平头着色；id：每个物体一种颜色（图例给出颜色 → 路径）；
 //        labels：color 图上在每个物体可见部分的中心标出编号（图例给出编号 → 路径）
 import { deflateSync } from 'node:zlib';
+import { VIEWS, camera } from '../src/views.js';
 
-export const VIEWS = {
-  iso: [0.75, 0.55, 0.9], iso2: [-0.75, 0.55, -0.9], top: [0, 1, 0.0001], front: [0, 0.25, 1], back: [0, 0.25, -1], left: [-1, 0.25, 0], right: [1, 0.25, 0],
-};
+// 相机预设与取景放在 src/views.js，预览器（Viewer.setView / snapshot）用同一份
+export { VIEWS, camera };
 
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const unit = (a) => { const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
 const hexRGB = (h) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(h)); const n = m ? parseInt(m[1], 16) : 0xc9c9c9; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
-
-// 包围盒取景：与预览器相同（整体 1.6 倍半径，聚焦 2.4 倍）；正交相机按包围球取景
-export function camera(box, view = 'iso', focus = false) {
-  const d = unit(VIEWS[view] ?? VIEWS.iso);
-  const c = [0, 1, 2].map((k) => (box.min[k] + box.max[k]) / 2);
-  const r = Math.max(Math.hypot(...sub(box.max, box.min)) / 2, 2);
-  const eye = c.map((x, k) => x + d[k] * r * (focus ? 2.4 : 1.6));
-  return { eye, target: c, fov: 45, near: 0.1, r };
-}
 
 // 误差 → 颜色（0 绿 → 0.5 黄 → 1 红）
 export const heatColor = (t) => { t = Math.max(0, Math.min(1, t)); return t < 0.5 ? [Math.round(60 + 390 * t), 190, 70] : [235, Math.round(190 - 300 * (t - 0.5)), 60]; };
