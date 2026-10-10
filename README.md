@@ -32,6 +32,12 @@ node bin/s3d.mjs examples/spaceport.s3d
 ```
 
 ```bash
+node bin/s3d.mjs out/spaceport.L1.s3d --outline=2 --semantics
+```
+
+`--outline` 输出分层概要：阵列与副本折叠成一行，每行给出类型、尺寸、实体数、主要关系和识别出的概念，适合作为 AI 阅读大场景的入口；`--semantics` 附加通用语义库。
+
+```bash
 node bin/stats.mjs
 ```
 
@@ -147,7 +153,7 @@ over tower lv=10              // 修改层只写修改
 | `let 名字 = 表达式` | 变量：数、向量、对象、集合。块内整体可见，惰性求值；最外层的 let 在模板里也可见 |
 | `#tag` · `kind(box, house)` · `a.*.b` · `all()` · `[a; b]` | 集合：按标签 / 类型（is-a）/ 路径通配 / 全部 / 列表 |
 | `A \| B` · `A & B` · `A - B` · `children(S)` · `descendants(S)` | 并 / 交 / 差 / 下级 |
-| `S where 条件` | 逐个成员筛选：`w h d`、`x y z`、`kind`、`name`、`it`，以及成员的元数据 |
+| `S where 条件` | 逐个成员筛选：`w h d`（自身尺寸）、`x y z`（世界中心）、`top bottom`（真实形状在世界里的最高 / 最低点）、`kind`、`name`、`it`，以及成员的元数据 |
 | `on(S, k)` · `supports(S)` · `against(S)` · `inside(S)` · `contains(S)` · `touching(S)` · `intersects(S)` | 按空间关系筛选（求解后才有，只能用在语义层） |
 | `sin cos tan sqrt abs min max floor ceil round pow count` | 函数（角度用度） |
 
@@ -161,7 +167,17 @@ over tower lv=10              // 修改层只写修改
 | `style 集合 mat= color=` · `variant 集合 use=模板` | 外观覆盖的简写，等价于只改外观的 `over` |
 | `material 名字 color= metal= rough= opacity=` | 材质，用 `mat=名字` 引用；后定义的覆盖先定义的 |
 
-概念有自己的命名空间，只在 concept / pattern / style / check 里可见，不会和几何里的同名对象冲突。变体（`use=`）只填充外包络，对语义层不可见。
+概念有自己的命名空间，只在 concept / pattern / style / check 里可见，不会和几何里的同名对象冲突。同名概念以后写的为准，所以场景可以覆盖 import 进来的定义。变体（`use=`）只填充外包络，对语义层不可见。
+
+### 通用语义库
+
+`lib/semantics.s3d` 用几何与关系定义常见构件：`terrain` `slab` `platform` `wall` `member` `column` `beam` `roof` `volume` `tank` `prop` `step`。定义只用与写法无关的量（最长 / 最短边 `max(w,h,d)` `min(w,h,d)`、世界高度 `top - bottom`），所以一根梁不论写成 `box(w=6)`、转过 90° 的 `box(h=6)`，还是逆向得到的 `mesh`，理解都相同。
+
+```
+import "../lib/semantics.s3d"
+concept column = all() where top > 5        // 覆盖库里的定义
+concept truss_leg : column = on(platform)   // 派生更细的概念
+```
 
 ### 元数据
 
@@ -202,8 +218,9 @@ node bin/eval.mjs examples/spaceport.s3d out/spaceport.L0.s3d
 3. **压缩**（压缩即理解）：同形状的物体之间如果总是同一个刚体运动，就是阵列——平移（直线、网格）、绕任意轴旋转（`rotate` 容器）、螺旋（带 `turn` 的 `repeat`）；同一运动的几组阵列合并成多部件的 `repeat`；成对对称的物体或阵列写成 `mirror … of=…`，镜像面写成“过某物中心、垂直于它的某根轴”。
 4. **关系**：先发射全坐标版本、编译得到空间事实，再自下而上为每个物体选一条主关系（`on` / `against` / 相对某物的锚点），朝向写成相对参照物的。
 5. **校验**：编译关系版本，逐个比对几何中心与（考虑对称的）朝向；不一致的阵列拆开、物体退回坐标。
+6. **命名**：源模型没有名字时（L1/L2），按通用语义库识别出的概念起名：`box46` → `terrain`，`cyls_2` → `columns`，阵列里的子物体 → `column`、`prop`。输出文件已经存在时，把它当作上一次的结果：几何上对得上的物体沿用原来的名字，所以源模型改动后重跑逆向，编辑层里的 `over` / `drop` 路径仍然有效（`--fresh` 重新起名）。
 
-**评测**（`bin/eval.mjs`）：按紧包围盒 IoU 一一匹配对象，报告形状种类正确率、空间事实的 P/R/F1、阵列与镜像的召回、世界坐标依赖率、语句数比。三个难度：L0 保留名字、L1 抹去名字并打乱、L2 按材质合并网格。
+**评测**（`bin/eval.mjs`）：按紧包围盒 IoU 一一匹配对象，报告形状种类正确率、空间事实的 P/R/F1、语义识别的 P/R/F1（两边都附加通用语义库，逐个概念比较成员）、阵列与镜像的召回、世界坐标依赖率、语句数比。三个难度：L0 保留名字、L1 抹去名字并打乱、L2 按材质合并网格。
 
 航天基地（L0）的往返结果：
 
@@ -215,9 +232,12 @@ node bin/eval.mjs examples/spaceport.s3d out/spaceport.L0.s3d
 | 阵列召回 | 85/85：燃料罐 [罐, 顶, 环]、两座塔的平台 [平台, 斜撑]、2×2 的塔腿与灯塔、尾翼的旋转对称、24 级螺旋楼梯 |
 | 镜像召回 | 24/24：对侧的塔与摆臂、厂房两翼 |
 | 世界坐标依赖率 | 5.9% |
+| 语义识别 F1 | 1.0（L1 也是 1.0，L2 为 0.96） |
 | 语句数比 | 0.76（逆向结果比原文还短） |
 
-已知局限：沿曲线（非刚体运动）分布的阵列（过山车枕木）还认不出来；嵌套的规律（“每层一圈立柱”）会被识别成一个多部件的阵列而不是阵列套旋转；L2 的分割会把多块组成的部件拆碎；源模型带变体（`variant`）时，逆向描述的是变体的外观几何。
+稳定命名：把 spaceport 改成 spaceport_edit（火箭加长、塔改 10 层、罐 3 → 5 个、拆一根灯、加一座厂房）后带着上一次的结果重跑 L1 逆向，源里没改动的物体有 23/25 沿用了原来的路径（不带上一次结果时只有 11/25）；剩下的 2 个是灯阵——拆掉一根后 2×2 网格不再成立，阵列结构本身变了。
+
+已知局限：缺一个成员的阵列还不会写成“阵列 + drop”；沿曲线（非刚体运动）分布的阵列（过山车枕木）还认不出来；嵌套的规律（“每层一圈立柱”）会被识别成一个多部件的阵列而不是阵列套旋转；L2 的分割会把多块组成的部件拆碎；源模型带变体（`variant`）时，逆向描述的是变体的外观几何。
 
 ## 求解是怎么做的
 
