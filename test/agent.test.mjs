@@ -181,7 +181,9 @@ test('细化：两柱一梁的类型被拆成部件（同名扩展 + 名义外�
   // 一个挂在门上的物体：细化前后位置不变
   writeFileSync(join(proj, 'edits.s3d'), readFileSync(join(proj, 'edits.s3d'), 'utf8') + `\nbox sign size=1,1,0.2 on=${insts[1]}[0.5,1,0]\n`);
   const before = openProject(proj).compile().nodes.find((n) => n.path === 'sign').box;
-  const [r] = await runCommand('refine', proj, { paths: [insts[1]], to: 'structure', apply: true });
+  // --apply 默认按工程的 δ（语义档 25 cm）判断；这里要按目标档位（结构档 5 cm）的尺子接受
+  const [r] = await runCommand('refine', proj, { paths: [insts[1]], to: 'structure', apply: true, by: 'target' });
+  assert.ok(typeof r.delta_project === 'number', '同时报告按工程 δ 的分数变化');
   assert.equal(r.kind, 'type', JSON.stringify(r));
   assert.ok(r.boxes >= 3, JSON.stringify(r));
   assert.ok(r.delta < 0 && r.accepted, `按结构档评分应变好：${JSON.stringify(r)}`);

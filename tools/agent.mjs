@@ -64,7 +64,9 @@ async function refineAuto(P, parts, { to, budget, target }) {
     while (cands.length && !pr) {
       const o = cands.shift();
       tried.add(o.path);
-      const x = refineProposal(cur.r, parts, o.path, { to, unit: P.unit });
+      let x;
+      // 一个物体出错不影响整轮：记进日志，接着试下一个
+      try { x = refineProposal(cur.r, parts, o.path, { to, unit: P.unit }); } catch (e) { x = { error: `出错：${e.message}` }; }
       if (x.error) log.push({ path: o.path, skipped: x.error });
       else if (tried.has('T:' + x.target)) log.push({ path: o.path, skipped: '同一种类型已经试过' });
       else { tried.add('T:' + x.target); if (x.gain < 0) pr = x; else log.push({ path: o.path, target: x.target, skipped: '局部分数没有变好', local: { current: x.current.S, best: x.local.S, chosen: x.name } }); }
@@ -80,8 +82,11 @@ async function refineAuto(P, parts, { to, budget, target }) {
     const errors = next.r.errors.filter((e) => !known.has(`${e.file}:${e.message}`));
     const delta = +(next.s.S - cur.s.S).toFixed(2);
     const ok = delta < 0 && !errors.length;
+    // 按工程自己的 δ 又是多少（细化按目标档位的尺子接受；两把尺子方向不同时记下来）
+    let deltaProject = null;
+    if (P.cfg.score?.delta !== consts.delta) { const a0 = await scoreWith(P, {}, {}), a1 = await scoreWith(P, { 'edits.s3d': edits, [file]: body }, {}); deltaProject = +(a1.s.S - a0.s.S).toFixed(2); }
     if (ok) { P.write(file, body); P.write('edits.s3d', edits); cur = next; done.add(pr.path); }
-    log.push({ path: pr.path, target: pr.target, kind: pr.kind, chosen: pr.name, boxes: pr.boxes, local: +pr.gain.toFixed(1), delta, accepted: ok, ...(ok ? { file } : {}), errors: errors.map((e) => e.message).slice(0, 3) });
+    log.push({ path: pr.path, target: pr.target, kind: pr.kind, chosen: pr.name, boxes: pr.boxes, local: +pr.gain.toFixed(1), delta, ...(deltaProject != null ? { delta_project: deltaProject } : {}), accepted: ok, ...(ok ? { file } : {}), errors: errors.map((e) => e.message).slice(0, 3) });
   }
   P.write('score.json', JSON.stringify(cur.s, null, 2) + '\n');
   return { to, start, end: cur.s.S, explain: cur.s.explain, accepted: log.filter((x) => x.accepted).length, log };
@@ -382,7 +387,7 @@ export const COMMANDS = {
   },
   refine: {
     desc: '细化：把物体对应的源网格按更细的档位重新描述（类型实例 → 细化类型本身，所有实例一起变；普通物体 → 保名换形成 group），名字与引用不变。生成几个候选（全部分量 / 按面积只留大块 / 体素），用只看这个物体的局部分数挑最好的——粗档位下窗框、饰条这类小构件会被舍弃。默认生成提议；--apply 分数下降就接受；--auto 从最差的物体开始逐个细化（局部分数没变好的直接跳过），直到解释率达到 --target 或用完 --budget',
-    args: { paths: '要细化的物体（可选）', worst: '可选：细化分数里最差的 N 个', to: '目标档位：structure / detail（默认比工程档位细一档）', apply: '可选：分数下降就直接接受', auto: '可选：自动模式', budget: '自动模式最多尝试几个物体（默认 10）', target: '自动模式的解释率目标（默认 1，即直到预算用完）' },
+    args: { paths: '要细化的物体（可选）', worst: '可选：细化分数里最差的 N 个', to: '目标档位：structure / detail（默认比工程档位细一档）', apply: '可选：分数下降就直接接受（按工程的 δ；--by=target 按目标档位的 δ）', by: '可选：target——--apply 按目标档位的 δ 判断', auto: '可选：自动模式', budget: '自动模式最多尝试几个物体（默认 10）', target: '自动模式的解释率目标（默认 1，即直到预算用完）' },
     async run(P, a) {
       const to = a.to ?? finer(P.cfg.fidelity ?? 'semantic');
       const parts = await P.sourceParts();
@@ -402,21 +407,25 @@ export const COMMANDS = {
         seen.add(pr.target);
         const d = FIDELITY[to].tau;
         const pv = await COMMANDS.propose.run(P, { text: pr.text, why: `细化到 ${to}（按 δ=${d} 衡量）：${pr.kind === 'type' ? '类型' : '物体'} ${pr.target} → ${pr.name}，${pr.boxes} 个部件；局部分数 ${pr.current.S} → ${pr.local.S}`, title: `refine-${pr.target}`.slice(0, 40), delta: d });
+        // 按工程自己的 δ 再算一次：refine 按目标档位挑候选，但写不写进工程要看工程的分数（--by=target 才按目标档位）
+        const pvP = P.cfg.score?.delta === d ? pv : await previewProposal(P, findProposal(P, pv.id), {});
+        const judge = a.by === 'target' ? pv.delta : pvP.delta;
         let accepted = false;
-        if (a.apply && pv.delta < 0 && !pv.errors.length) { await COMMANDS.accept.run(P, { id: pv.id, delta: d }); accepted = true; }
-        out.push({ path, target: pr.target, kind: pr.kind, chosen: pr.name, boxes: pr.boxes, local: { current: pr.current.S, best: pr.local.S, instances: pr.instances }, candidates: pr.candidates, id: pv.id, delta: pv.delta, errors: pv.errors, accepted });
+        if (a.apply && judge < 0 && !pv.errors.length) { await COMMANDS.accept.run(P, { id: pv.id, delta: a.by === 'target' ? d : null }); accepted = true; }
+        const warning = Math.sign(pv.delta) !== Math.sign(pvP.delta) ? `按目标档位（δ=${d}）是 ${pv.delta}，按工程（δ=${P.cfg.score?.delta}）是 ${pvP.delta}：两把尺子方向不同` : undefined;
+        out.push({ path, target: pr.target, kind: pr.kind, chosen: pr.name, boxes: pr.boxes, local: { current: pr.current.S, best: pr.local.S, instances: pr.instances }, candidates: pr.candidates, id: pv.id, delta: pv.delta, delta_project: pvP.delta, ...(warning ? { warning } : {}), errors: pv.errors, accepted });
       }
       return out;
     },
   },
   check: {
     desc: '空跑：把一段语句临时叠加到某一层上编译（不生成提议、不改文件），报告新出现的编译错误；语句对场景没有任何效果时给出警告。不带 text 时检查整个工程',
-    args: { text: '可选：要试的语句（多行用 \\n 分隔）', layer: '叠加到哪一层（默认 edits）' },
+    args: { text: '可选：要试的语句（多行用 \\n 分隔）', file: '可选：从文件读语句', layer: '叠加到哪一层（默认 edits）', score: '可选：顺便算分数变化（不生成提议、不占预算）' },
     async run(P, a) {
       const layer = (a.layer ?? 'edits').replace(/\.s3d$/, '') + '.s3d';
       const before = P.compile();
-      if (!a.text) return { errors: before.errors, objects: before.items.length };
-      const body = String(a.text).replace(/\\n/g, '\n');
+      if (!a.text && !a.file) return { errors: before.errors, objects: before.items.length };
+      const body = a.file ? readFileSync(a.file, 'utf8') : String(a.text).replace(/\\n/g, '\n');
       const after = P.compile('', { [layer]: (P.exists(layer) ? P.read(layer) : '') + '\n' + body + '\n' });
       const known = new Set(before.errors.map((e) => `${e.file}:${e.message}`));
       const errors = after.errors.filter((e) => !known.has(`${e.file}:${e.message}`));
@@ -427,7 +436,9 @@ export const COMMANDS = {
       const modified = [...B.keys()].filter((k) => A.has(k) && A.get(k) !== B.get(k));
       const warnings = [];
       if (!errors.length && !added.length && !removed.length && !modified.length) warnings.push('这段语句对场景没有任何效果（几何、位置、材质都没变）——检查路径和写法');
-      return { errors, warnings, added: added.slice(0, 30), removed: removed.slice(0, 30), modified: modified.slice(0, 30) };
+      let score;
+      if (a.score) { const over = { [layer]: (P.exists(layer) ? P.read(layer) : '') + '\n' + body + '\n' }; const s0 = await scoreWith(P), s1 = await scoreWith(P, over); score = { before: s0.s.S, after: s1.s.S, delta: +(s1.s.S - s0.s.S).toFixed(2) }; }
+      return { errors, warnings, ...(score ? { score } : {}), added: added.slice(0, 30), removed: removed.slice(0, 30), modified: modified.slice(0, 30) };
     },
   },
   score: {
