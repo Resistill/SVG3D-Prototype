@@ -123,6 +123,7 @@ concept deck = kind(box) & on(pier, 2)
 | 写法 | 说明 |
 |---|---|
 | `group { … }` · `union` · `subtract` · `intersect` | 分组与布尔运算 |
+| `group x envelope=w,h,d { … }` · `envelope=x0,y0,z0,x1,y1,z1` | 名义外包络：关系、锚点、定位点按它算，与内容无关（细化后挂在它上面的物体不动） |
 | `repeat n= step= turn= center=true` · `repeat n= along=C orient=yaw\|full\|none` | 网格阵列 / 沿曲线分布；子语句里可以用 `i j k idx` |
 | `def name(p=默认值) { … }` | 类型（参数化模板）。模板声明的参数优先于同名的定位关键字 |
 | `def B(新参数) : A(覆盖的默认值) { over … ; drop … ; 新部件 }` | **类型派生**。`kind(A)` 包含派生类型（is-a） |
@@ -287,6 +288,7 @@ node bin/s3d-tool.mjs render --focus=beam_1 --project=work/spaceport
 - **看**：`render` 离屏渲染（纯 JS，零依赖）：多视角、物体编号标注（去重叠）、聚焦时被选中的物体不会被遮挡、误差热图、源模型与重建结果共用取景对照（可用正交相机）。
 - **查**：`outline`、`inspect`（`--source` 看源模型的部件：包络、主轴尺寸、建议语句）、`select`（集合表达式）、`similar`（同形部件，类型与阵列的候选）。
 - **做**：AI 的修改以提议出现——`propose` / `preview`（逐物体的分数变化，可渲染提议后的场景）/ `accept` / `reject`；`check` 空跑；`note` / `inbox` 是人与 AI 之间的留言；每次调用都记在 `state/log.jsonl`。
+- **细化**：`refine <物体> --to=structure|detail` 把物体对应的源网格按更细的档位拆开（多块的网格在物体坐标系里再逆向一次，单块用体素拆成盒子），类型实例细化的是类型本身；名字、关系、阵列都不变，名义外包络 `envelope` 保证挂在它上面的物体不动；`--auto` 从最差的物体开始逐个细化，按目标档位的尺子评分，变好才保留。
 - **评**：`score` 自评分数，不需要真值：有效描述长度 + 网格引用 + 双向几何残差（容差以内不计、优先量到同材质的表面），越低越好；`explain` 是相对“全部保留网格”的解释率，`worst` / `worstSources` 指出下一步最值得修的地方。在 spaceport L0 上：全部网格引用 8081 > 全世界坐标 3027 > 完整逆向 1668 > 手写原文 720。
 - **MCP**：`node bin/s3d-mcp.mjs --project=…`，工具与命令行是同一张表，`render` 直接返回图像。
 

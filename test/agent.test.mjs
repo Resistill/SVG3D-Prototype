@@ -149,3 +149,43 @@ test('档位：semantic 一律用基本体当语义代理、数字更短，阵�
   assert.ok(at('semantic', 0.25).S < at('detail', 0.25).S, '粗的 δ 下语义档更好');
   assert.ok(at('detail', 0.005).S < at('semantic', 0.005).S, '细的 δ 下精细档更好');
 });
+
+test('细化：两柱一梁的类型被拆成部件（同名扩展 + 名义外包络），挂在它上面的物体不动，按目标档位评分变好', async () => {
+  const { Document } = await import('@gltf-transform/core');
+  const doc = new Document(), buf = doc.createBuffer();
+  const v = [];
+  const box = (cx, cy, cz, w, h, d) => {
+    const c = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]].map(([x, y, z]) => [cx + (x - 0.5) * w, cy + y * h, cz + (z - 0.5) * d]);
+    for (const [a, b, cc, dd] of [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [3, 7, 6, 2], [0, 4, 7, 3], [1, 2, 6, 5]]) v.push(...c[a], ...c[b], ...c[cc], ...c[a], ...c[cc], ...c[dd]);
+  };
+  box(-3, 0, 0, 1, 5, 1); box(3, 0, 0, 1, 5, 1); box(0, 5, 0, 7, 1, 1); // 两柱一梁（三块互不相连）
+  const gate = doc.createMesh().addPrimitive(doc.createPrimitive().setAttribute('POSITION', doc.createAccessor().setType('VEC3').setArray(new Float32Array(v)).setBuffer(buf)));
+  const gv = []; v.length = 0; box(0, -1, 0, 60, 1, 60); gv.push(...v);
+  const ground = doc.createMesh().addPrimitive(doc.createPrimitive().setAttribute('POSITION', doc.createAccessor().setType('VEC3').setArray(new Float32Array(gv)).setBuffer(buf)));
+  const scene = doc.createScene();
+  scene.addChild(doc.createNode('Ground').setMesh(ground));
+  for (const x of [-15, 0, 15]) scene.addChild(doc.createNode('Gate').setMesh(gate).setTranslation([x, 0, 0]));
+  const dir = mkdtempSync(join(tmpdir(), 's3d-')), glb = join(dir, 'gates.glb');
+  writeFileSync(glb, await new (await import('@gltf-transform/core')).NodeIO().writeBinary(doc));
+  const proj = join(dir, 'p');
+  await runCommand('init', proj, { source: glb, fidelity: 'semantic' });
+  const base = readFileSync(join(proj, 'base.s3d'), 'utf8');
+  assert.match(base, /^def Gate \{/m, '三个门是一个类型');
+  const { openProject } = await import('../tools/project.mjs');
+  // 三扇门等距，可能被写成阵列：从编译结果里找 Gate 类型的实例
+  const insts = openProject(proj).compile().nodes.filter((n) => n.types?.[0] === 'Gate').map((n) => n.path);
+  assert.equal(insts.length, 3);
+  // 一个挂在门上的物体：细化前后位置不变
+  writeFileSync(join(proj, 'edits.s3d'), readFileSync(join(proj, 'edits.s3d'), 'utf8') + `\nbox sign size=1,1,0.2 on=${insts[1]}[0.5,1,0]\n`);
+  const before = openProject(proj).compile().nodes.find((n) => n.path === 'sign').box;
+  const [r] = await runCommand('refine', proj, { paths: [insts[1]], to: 'structure', apply: true });
+  assert.equal(r.kind, 'type', JSON.stringify(r));
+  assert.ok(r.boxes >= 3, JSON.stringify(r));
+  assert.ok(r.delta < 0 && r.accepted, `按结构档评分应变好：${JSON.stringify(r)}`);
+  const edits = readFileSync(join(proj, 'edits.s3d'), 'utf8');
+  assert.match(edits, /def Gate : Gate \{\n  drop body\n  group body envelope=/);
+  const after = openProject(proj).compile();
+  assert.deepEqual(after.errors, []);
+  assert.deepEqual(after.nodes.find((n) => n.path === 'sign').box, before, '挂在门上的牌子不动（骨架保留）');
+  assert.ok(after.items.filter((i) => i.path.startsWith(insts[2] + '.')).length >= 3, '所有实例一起变细');
+});

@@ -2,12 +2,13 @@
 //   S = L_stmt + L_mesh + R_src + R_recon，越低越好
 //   L_stmt  描述长度：名字、关键字、引用各 1；数字 1 + 0.5 × (小数位 − 1)；注释与 ~元数据不计
 //   L_mesh  仍以源网格引用保留的部分：c_mesh × log2(1 + 三角形数)
-//   R_src   源模型的每个部件表面采样，到重建表面的距离 d → log2(1 + max(0, d − δ)/δ)，按部件复杂度 log2(1 + T) 加权。
+//   R_src   源模型的每个部件表面采样，到重建表面的距离 d → log2(1 + max(0, d − δ)/δ)，按 log2(1 + 面积/δ²) 加权
+//           （这块表面在当前精度下有多少个 δ 见方的格子：精度要求越细、表面越大，同样的误差越贵——评分标准随档位变化）。
 //           δ 由档位决定；误差在 δ 以内不计代价（逆向只要求保留语义，不奖励“猜中作者的精确数值”）。
 //           距离优先量到**同材质**的重建表面：沥青路面只能由沥青的物体解释，不能拿底下的地面凑数；
 //           没有同材质的表面时量到全部表面，并多计一个 δ
 //   有效描述：基础层里声明的物体被删掉了，那一行不计长度（替换一个物体不应付两份钱）
-//   R_recon 重建的每个物体表面采样，到源表面的距离，同样计价（惩罚凭空多出来的东西）
+//   R_recon 重建物体表面到源表面的距离，同样计价；复杂度权重以顶层语句为单位、内部按面积分摊（惩罚凭空多出来的东西，但不惩罚拆分）
 // 解释率 explain = 1 − S / S_mesh，S_mesh 是“全部写成 mesh 引用、世界坐标定位”的基线。
 import * as THREE from 'three';
 import { MeshBVH } from 'three-mesh-bvh';
@@ -45,6 +46,10 @@ export function descriptionLength(files) {
   return { total, lines };
 }
 
+const areaOf = (tris) => tris.reduce((s2, t) => s2 + len3(cross3(sub3(t[1], t[0]), sub3(t[2], t[0]))) / 2, 0);
+const sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const len3 = (a) => Math.hypot(a[0], a[1], a[2]);
 const toGeom = (pos) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); return g; };
 const triList = (pos) => { const out = []; for (let i = 0; i < pos.length; i += 9) out.push([[pos[i], pos[i + 1], pos[i + 2]], [pos[i + 3], pos[i + 4], pos[i + 5]], [pos[i + 6], pos[i + 7], pos[i + 8]]]); return out; };
 
@@ -96,7 +101,7 @@ function residual(points, target, k, color = null) {
 export function score({ result, files, sourceParts, consts = {} }) {
   const k = { ...SCORE_DEFAULTS, ...consts };
   const recon = sceneObjects(result, { sourceParts }).filter((o) => o.pos.length);
-  const src = sourceParts.map((p, i) => ({ i, name: p.name ?? p.from ?? `part_${i}`, tris: p.tris, pos: trisToArray(p.tris), color: p.material?.color }));
+  const src = sourceParts.map((p, i) => ({ i, name: p.uid ?? p.name ?? p.from ?? `part_${i}`, tris: p.tris, pos: trisToArray(p.tris), color: p.material?.color }));
   const D0 = descriptionLength(files);
   // 有效描述：声明物体的行，物体还在才计
   const declared = new Set(result.nodes.map((n) => `${n.file ?? ''}:${n.line}`));
@@ -124,7 +129,8 @@ export function score({ result, files, sourceParts, consts = {} }) {
   for (const s of src) {
     const pts = samplePoints(s.tris, k.samples, s.i + 1);
     const res = residual(pts, reconBVH, k, s.color);
-    const c = k.cRes * Math.log2(1 + s.tris.length) * res.r;
+    // 权重 = 这块表面在当前精度下有多少个 δ 见方的格子（取对数）：表面越大、精度要求越细，同样的误差越贵
+    const c = k.cRes * Math.log2(1 + areaOf(s.tris) / (k.delta * k.delta)) * res.r;
     Rsrc += c;
     // 归到最近点最多落在其上的那个重建物体
     const votes = new Map();
@@ -134,17 +140,25 @@ export function score({ result, files, sourceParts, consts = {} }) {
     if (who) { const p = per.get(who); p.rSrc += c; p.src.push(s.name); p.meanErr = Math.max(p.meanErr, res.mean); p.maxErr = Math.max(p.maxErr, res.max); }
     srcOut.push({ name: s.name, tris: s.tris.length, cost: +c.toFixed(3), meanErr: +res.mean.toFixed(5), maxErr: +res.max.toFixed(5), explainedBy: who });
   }
-  // R_recon：重建物体 → 源
-  let Rrecon = 0;
-  recon.forEach((o, i) => {
+  // R_recon：重建物体 → 源。权重以顶层语句为单位：一个物体被细化成很多块、一个类型实例里的各个部件，
+  // 共享一个权重、内部按面积分摊——拆分不会因为“块数多”而受罚；凭空多出来的语句照样各算一份
+  const triArea = (t) => len3(cross3(sub3(t[1], t[0]), sub3(t[2], t[0]))) / 2;
+  const rec = recon.map((o, i) => {
     const tris = triList(o.pos);
-    const pts = samplePoints(tris, k.samples, 1000 + i);
-    const res = residual(pts, srcBVH, k, o.color);
-    const c = k.cRes * Math.log2(1 + tris.length) * res.r;
+    const res = residual(samplePoints(tris, k.samples, 1000 + i), srcBVH, k, o.color);
+    return { o, res, tris: tris.length, area: tris.reduce((s2, t) => s2 + triArea(t), 0), top: o.path.split('.')[0] };
+  });
+  const groups = new Map();
+  for (const x of rec) { const g = groups.get(x.top) ?? { tris: 0, area: 0 }; g.tris += x.tris; g.area += x.area; groups.set(x.top, g); }
+  let Rrecon = 0;
+  for (const { o, res, area, top } of rec) {
+    const g = groups.get(top);
+    // 每个顶层语句按它的表面积计权（与源侧同样的 log2(1 + 面积/δ²)），内部按面积分摊：拆分前后总面积不变，拆分本身不受罚
+    const c = k.cRes * Math.log2(1 + g.area / (k.delta * k.delta)) * (g.area > 0 ? area / g.area : 1) * res.r;
     Rrecon += c;
     const p = per.get(o.path);
     p.rRecon += c; p.meanErr = Math.max(p.meanErr, res.mean); p.maxErr = Math.max(p.maxErr, res.max);
-  });
+  }
 
   // 基线：每个源部件写成一句世界坐标的 mesh 引用，误差为零
   const fmt = (x) => String(Math.round(x * 1e4) / 1e4);

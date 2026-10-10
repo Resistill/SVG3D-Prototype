@@ -35,7 +35,7 @@ export const FIDELITY = {
   semantic: { name: 'semantic', tau: 0.25, fitTol: Infinity, digits: 1, angle: 1 },
 };
 let FID = FIDELITY.detail, S = 1;
-const setFidelity = (name) => { FID = FIDELITY[name] ?? FIDELITY.detail; S = FID.tau / 0.005; };
+export const setFidelity = (name) => { FID = FIDELITY[name] ?? FIDELITY.detail; S = FID.tau / 0.005; };
 const fmt = (x) => { const p = 10 ** FID.digits, v = Math.round(x * p) / p; return Object.is(v, -0) ? '0' : String(v); };
 const fmtA = (deg) => fmt6(FID.angle ? Math.round(deg / FID.angle) * FID.angle : deg); // 角度按档位取整
 // 阵列的步长会被乘以实例数：取整误差放大 n 倍，所以位数按“n × 0.5·10^−d ≤ 容差”单独取（至少是档位的位数）
@@ -76,12 +76,16 @@ export function partsOfDocument(doc, { split = 'auto' } = {}) {
       parts.push({ name: node.getName() || null, tris, material, mesh: `${meshIds.get(mesh)}:${pk}`, matrix: Array.from(M) });
     });
   });
+  // 来源标识：节点名常常不唯一（同一分区里同一种网格的多个实例同名）——重名的第 k 个写成 名字@k
+  const count = new Map(), seen = new Map();
+  for (const p of parts) if (p.name) count.set(p.name, (count.get(p.name) ?? 0) + 1);
+  for (const p of parts) if (p.name) { if (count.get(p.name) > 1) { const k = (seen.get(p.name) ?? 0) + 1; seen.set(p.name, k); p.uid = `${p.name}@${k}`; } else p.uid = p.name; }
   const doSplit = split === 'components' || (split === 'auto' && parts.some((p) => /^merged_/.test(p.name ?? '')));
   return doSplit ? parts.flatMap(splitComponents) : parts;
 }
 
 // 按共享顶点（位置焊接）把三角形分成连通分量
-function splitComponents(part) {
+export function splitComponents(part) {
   const key = (p) => p.map((x) => Math.round(x * 1e4)).join(',');
   const parent = part.tris.map((_, i) => i);
   const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
@@ -92,7 +96,7 @@ function splitComponents(part) {
   }));
   const groups = new Map();
   part.tris.forEach((t, i) => { const r = find(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(t); });
-  return [...groups.values()].map((tris, k) => ({ name: null, tris, material: part.material, from: `${part.name}#${k}` }));
+  return [...groups.values()].map((tris, k) => ({ name: null, tris, material: part.material, from: `${part.uid ?? part.name}#${k}` }));
 }
 
 // ───────── 2. 拟合基本体 ─────────
@@ -411,7 +415,7 @@ function primitiveOf(fit, part, srcFile) {
     const { min, max } = fit.aabb;
     const pivot = [(min[0] + max[0]) / 2, min[1], (min[2] + max[2]) / 2];
     const size = sub(max, min);
-    return { kind: 'mesh', props: { src: JSON.stringify(`${srcFile}#${part.name ?? part.from}`), size: vec(size), pivot: vec(pivot) }, cols: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], at: pivot,
+    return { kind: 'mesh', props: { src: JSON.stringify(`${srcFile}#${part.uid ?? part.name ?? part.from}`), size: vec(size), pivot: vec(pivot) }, cols: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], at: pivot,
       box: { min: [-size[0] / 2, 0, -size[2] / 2], max: [size[0] / 2, size[1], size[2] / 2] }, fit: fitScore, err: fit.e };
   }
   const base = { fit: fitScore, err: fit.e };
@@ -482,7 +486,7 @@ function primitiveOf(fit, part, srcFile) {
 
 // 朝向（列为局部轴）→ turn / rot 文本；R 是 3×3（行主序），由列构造
 const toRows = (cols) => [0, 1, 2].map((i) => cols.map((c) => c[i]));
-function orientText(cols) {
+export function orientText(cols) {
   const R = toRows(cols);
   if (Math.abs(R[1][1] - 1) < 1e-6) {
     const yaw = (Math.atan2(R[0][2], R[0][0]) * 180) / Math.PI;
@@ -610,7 +614,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     if (ty) {
       // 类型的实例：位姿就是节点的刚体变换
       const { T, R, t } = ty, b = T.box;
-      return { id: uniqueId(sanitize(cleanName(p.name ?? T.name))), src: p.name ?? null, material: p.material, kind: T.name, props: {}, cols: R, at: add(t, mvC(R, T.c0)), box: b,
+      return { id: uniqueId(sanitize(cleanName(p.name ?? T.name))), src: p.uid ?? p.name ?? null, material: p.material, kind: T.name, props: {}, cols: R, at: add(t, mvC(R, T.c0)), box: b,
         fit: Math.max(0, Math.min(1, 1 - T.fit.e / TOL)), err: T.fit.e, vol: (b.max[0] - b.min[0]) * (b.max[1] - b.min[1]) * (b.max[2] - b.min[2]), symY: false, instance: true };
     }
     const prim = primitiveOf(fits[i], p, srcFile);
@@ -618,7 +622,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     const vol = (prim.box.max[0] - prim.box.min[0]) * (prim.box.max[1] - prim.box.min[1]) * (prim.box.max[2] - prim.box.min[2]);
     const symY = prim.kind === 'sphere' || (['cyl', 'cone'].includes(prim.kind) && !prim.props.axis);
     if (symY && Math.abs(prim.cols[1][1] - 1) < 1e-6) prim.cols = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-    return { id, src: p.name ?? p.from ?? null, material: p.material, ...prim, vol, symY };
+    return { id, src: p.uid ?? p.name ?? p.from ?? null, material: p.material, ...prim, vol, symY };
   });
   const typeLines = types.flatMap((T) => {
     const props = Object.entries(T.prim.props).map(([k, v]) => `${k}=${v}`).join(' ');

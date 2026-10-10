@@ -198,7 +198,11 @@ export class Viewer {
     const [url, node] = item.geom.src.split('#');
     if (!this.gltfCache.has(url)) this.gltfCache.set(url, this.loader.loadAsync(url));
     this.gltfCache.get(url).then((gltf) => {
-      const srcObj = node ? gltf.scene.getObjectByName(node) : gltf.scene;
+      // 节点可以写成 名字@k（重名节点里的第 k 个）
+      const m = node && /^(.*)@(\d+)$/.exec(node);
+      let srcObj = gltf.scene;
+      if (m) { const hits = []; gltf.scene.traverse((o) => { if (o.name === m[1]) hits.push(o); }); srcObj = hits[+m[2] - 1] ?? hits[0]; }
+      else if (node) srcObj = gltf.scene.getObjectByName(node);
       if (!srcObj) throw new Error(`找不到节点 ${node}`);
       gltf.scene.updateMatrixWorld(true);
       const obj = srcObj.clone(true);

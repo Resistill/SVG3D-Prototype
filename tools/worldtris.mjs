@@ -14,7 +14,8 @@ const BOX = [
 // 源部件按名字查：节点名（L0）、part_NNNN（L1）、合并网格的分量 merged_i#k（L2）
 export function sourceIndex(sourceParts) {
   const m = new Map();
-  for (const p of sourceParts) { if (p.name) m.set(p.name, p); if (p.from) m.set(p.from, p); }
+  // 唯一标识（名字@k）优先；只给名字时取第一个同名的
+  for (const p of sourceParts) { if (p.uid) m.set(p.uid, p); if (p.name && !m.has(p.name)) m.set(p.name, p); if (p.from) m.set(p.from, p); }
   return m;
 }
 

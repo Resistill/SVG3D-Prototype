@@ -27,7 +27,7 @@ const KIND_PROPS = {
   sweep: ['path', 'profile', 'r', 'section', 'smooth'], pipe: ['path', 'r', 'smooth'],
   line: ['path'], bezier: ['path'], spline: ['path', 'closed'],
   arc: ['r', 'angle', 'rise', 'plane'], helix: ['r', 'pitch', 'turns'],
-  group: [], union: [], subtract: [], intersect: [],
+  group: ['envelope'], union: [], subtract: [], intersect: [],
   repeat: ['n', 'step', 'turn', 'center', 'along', 'orient'],
   mirror: ['of', 'across', 'axis'], rotate: ['of', 'about', 'axis', 'angle', 'n'], copy: ['of'],
 };
@@ -1880,6 +1880,15 @@ class Solver {
         }
       }
       if (CURVES.has(n.kind)) return boundsOf(this.curve(n).pts);
+      // 名义外包络：envelope=w,h,d（底面中心在原点）或 envelope=x0,y0,z0,x1,y1,z1（自身坐标系里的最小点、最大点）。
+      // 关系、锚点、定位点都按它算，与里面的内容无关——细化把一个物体拆成很多块时，挂在它上面的物体纹丝不动。
+      // 空间事实、渲染、评分仍按真实的内容
+      if (n.kind === 'group' && n.props.has('envelope')) {
+        const e0 = this.eval(n, 'envelope', null), e = Array.isArray(e0) ? e0.map(Number) : null;
+        if (Array.isArray(e) && e.length === 3) return { min: [-e[0] / 2, 0, -e[2] / 2], max: [e[0] / 2, e[1], e[2] / 2] };
+        if (Array.isArray(e) && e.length === 6) return { min: e.slice(0, 3), max: e.slice(3) };
+        throw new S3DError(`${n.path} 的 envelope 写成 w,h,d 或 x0,y0,z0,x1,y1,z1`, n.line, n);
+      }
       // 容器：子物体包围盒之并（subtract 只取被减体）
       const kids = n.kind === 'subtract' ? n.children.slice(0, 1) : n.children;
       const pts = [];

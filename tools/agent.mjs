@@ -6,6 +6,8 @@ import { sceneObjects } from './worldtris.mjs';
 import { rasterize, VIEWS } from './raster.mjs';
 import { initProject, openProject, runReverse } from './project.mjs';
 import { reverse as reverseParts, samplePoints, pcaFrame } from './reverse.mjs';
+import { refineProposal, finer } from './refine.mjs';
+import { FIDELITY } from './reverse.mjs';
 import { readdirSync, renameSync, mkdirSync, appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -39,16 +41,41 @@ function applyProposal(P, id, prop) {
   const text = lines.join('\n').replace(/\n*$/, '\n') + (prop.body ? `// 提议 ${id}${prop.why ? '：' + prop.why : ''}\n${prop.body}\n` : '');
   return text;
 }
-async function scoreWith(P, overrides = {}) {
+// consts 可以覆盖分数常数：细化到某个档位时，用那个档位的 δ 衡量（细化到结构档就用结构档的尺子）
+async function scoreWith(P, overrides = {}, consts = {}) {
   const r = P.compile('', overrides);
-  const s = score({ result: r, files: P.geometryFiles(overrides), sourceParts: await P.sourceParts(), consts: P.cfg.score });
+  const s = score({ result: r, files: P.geometryFiles(overrides), sourceParts: await P.sourceParts(), consts: { ...P.cfg.score, ...consts } });
   return { r, s };
 }
+// 自动细化：从最差的物体开始，逐个按更细的档位拆分；分数下降就写进修改层，直到解释率达标或预算用完
+async function refineAuto(P, parts, { to, budget, target }) {
+  const consts = { delta: FIDELITY[to].tau };
+  let cur = await scoreWith(P, {}, consts);
+  const start = cur.s.S, log = [], tried = new Set();
+  for (let i = 0; i < budget && cur.s.explain < target; i++) {
+    const cands = [...cur.s.objects].filter((o) => !o.mesh && !tried.has(o.path)).sort((x, y) => (y.rSrc + y.rRecon) - (x.rSrc + x.rRecon));
+    let pr = null;
+    while (cands.length && !pr) { const o = cands.shift(); tried.add(o.path); const x = refineProposal(cur.r, parts, o.path, { to }); if (x.error) log.push({ path: o.path, skipped: x.error }); else if (tried.has('T:' + x.target)) log.push({ path: o.path, skipped: '同一种类型已经试过' }); else { tried.add('T:' + x.target); pr = x; } }
+    if (!pr) break;
+    const edits = (P.exists('edits.s3d') ? P.read('edits.s3d') : '').replace(/\n*$/, '\n') + `// 细化到 ${to}：${pr.target}（${pr.boxes} 个盒子）\n${pr.text}\n`;
+    const next = await scoreWith(P, { 'edits.s3d': edits }, consts);
+    const known = new Set(cur.r.errors.map((e) => `${e.file}:${e.message}`));
+    const errors = next.r.errors.filter((e) => !known.has(`${e.file}:${e.message}`));
+    const delta = +(next.s.S - cur.s.S).toFixed(2);
+    const ok = delta < 0 && !errors.length;
+    if (ok) { P.write('edits.s3d', edits); cur = next; }
+    log.push({ path: pr.path, target: pr.target, kind: pr.kind, boxes: pr.boxes, delta, accepted: ok, errors: errors.map((e) => e.message).slice(0, 3) });
+  }
+  P.write('score.json', JSON.stringify(cur.s, null, 2) + '\n');
+  return { to, start, end: cur.s.S, explain: cur.s.explain, accepted: log.filter((x) => x.accepted).length, log };
+}
+
 async function previewProposal(P, p, opts = {}) {
   const prop = parseProposal(P.read(join('proposals', p.file)));
   const text = applyProposal(P, p.id, prop);
-  const before = await scoreWith(P);
-  const after = await scoreWith(P, { [prop.layer]: text });
+  const consts = opts.delta ? { delta: opts.delta } : {};
+  const before = await scoreWith(P, {}, consts);
+  const after = await scoreWith(P, { [prop.layer]: text }, consts);
   const known = new Set(before.r.errors.map((e) => `${e.file}:${e.message}`));
   const errors = after.r.errors.filter((e) => !known.has(`${e.file}:${e.message}`));
   // 逐物体的分数变化：只列变化明显的（≥ 0.5），按幅度排序
@@ -65,7 +92,7 @@ async function previewProposal(P, p, opts = {}) {
     P.write(out, res.png);
     render = { file: P.path(out), legend: res.legend };
   }
-  return { id: p.id, layer: prop.layer, why: prop.why, errors, before: before.s.S, after: after.s.S, delta: +(after.s.S - before.s.S).toFixed(2), explain: after.s.explain, changed, added: added.slice(0, 30), removed: removed.slice(0, 30), render, text, prop };
+  return { id: p.id, layer: prop.layer, why: prop.why, delta_unit: before.s.consts.delta, errors, before: before.s.S, after: after.s.S, delta: +(after.s.S - before.s.S).toFixed(2), explain: after.s.explain, changed, added: added.slice(0, 30), removed: removed.slice(0, 30), render, text, prop };
 }
 
 const near = (a, b, tol) => Math.abs(a - b) <= tol + 0.005 * Math.abs(a);
@@ -89,7 +116,7 @@ async function inspectSource(P, names) {
   try { sc = JSON.parse(P.read('score.json')); } catch { /* 还没评过分 */ }
   const r4 = (v) => v.map((x) => +x.toFixed(4));
   return names.map((name) => {
-    const i = parts.findIndex((p) => (p.name ?? p.from) === name);
+    const i = parts.findIndex((p) => (p.uid ?? p.name ?? p.from) === name);
     if (i < 0) return { name, error: '源模型里没有这个部件（名字见 score 的 worstSources / sources）' };
     const p = parts[i], vs = p.tris.flat();
     const lo = [0, 1, 2].map((k) => Math.min(...vs.map((v) => v[k]))), hi = [0, 1, 2].map((k) => Math.max(...vs.map((v) => v[k])));
@@ -195,7 +222,7 @@ export const COMMANDS = {
       let objs;
       if (a.source) {
         const { trisToArray } = await import('./worldtris.mjs');
-        objs = parts.map((p, i) => ({ path: p.name ?? p.from ?? `part_${i}`, pos: trisToArray(p.tris), color: p.material?.color ?? '#c9c9c9' }));
+        objs = parts.map((p, i) => ({ path: p.uid ?? p.name ?? p.from ?? `part_${i}`, pos: trisToArray(p.tris), color: p.material?.color ?? '#c9c9c9' }));
       } else objs = sceneObjects(P.compile(), { sourceParts: parts });
       const view = a.view ?? 'iso', mode = a.mode ?? 'labels';
       if (mode === 'error') {
@@ -229,7 +256,7 @@ export const COMMANDS = {
       const retract = a.retract ? String(a.retract).split(',').map((n) => `// retract ${n.trim()}`).join('\n') + '\n' : '';
       const file = `${id}-${slug}.s3d`;
       P.write(join('proposals', file), `// layer=${layer} why=${String(a.why ?? '').replace(/\n/g, ' ')}\n${retract}${body.trim()}\n`);
-      const { text, prop, ...pv } = await previewProposal(P, { id, file }, { render: !!a.render });
+      const { text, prop, ...pv } = await previewProposal(P, { id, file }, { render: !!a.render, delta: a.delta ? +a.delta : null });
       return { ...pv, file: P.path(join('proposals', file)) };
     },
   },
@@ -241,14 +268,14 @@ export const COMMANDS = {
   preview: {
     desc: '预览一条提议：叠加编译，报告新出现的错误、分数变化、受影响的物体（不改任何文件）',
     args: { id: '提议编号', render: '可选：渲染应用提议之后的场景（聚焦在变化的物体上）', view: '可选：渲染视角' },
-    async run(P, a) { const { text, prop, ...pv } = await previewProposal(P, findProposal(P, a.id ?? a._?.[0]), { render: !!a.render, view: a.view }); return pv; },
+    async run(P, a) { const { text, prop, ...pv } = await previewProposal(P, findProposal(P, a.id ?? a._?.[0]), { render: !!a.render, view: a.view, delta: a.delta ? +a.delta : null }); return pv; },
   },
   accept: {
     desc: '接受一条提议：追加进目标层（有新的编译错误时拒绝接受，除非 --force），提议移到 proposals/accepted/',
     args: { id: '提议编号', force: '可选：有编译错误也接受' },
     async run(P, a) {
       const p = findProposal(P, a.id ?? a._?.[0]);
-      const pv = await previewProposal(P, p);
+      const pv = await previewProposal(P, p, { delta: a.delta ? +a.delta : null });
       if (pv.errors.length && !a.force) throw new Error(`提议 ${p.id} 会引入编译错误：${pv.errors.map((e) => e.message).join('；')}`);
       P.write(pv.layer, pv.text);
       mkdirSync(P.path('proposals/accepted'), { recursive: true });
@@ -284,6 +311,35 @@ export const COMMANDS = {
     async run(P, a) {
       if (!P.exists('inbox.jsonl')) return [];
       return P.read('inbox.jsonl').split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((e) => !a.since || e.t > a.since);
+    },
+  },
+  refine: {
+    desc: '细化：把物体对应的源网格按更细的档位拆成一组盒子（类型实例 → 细化类型本身，所有实例一起变；普通物体 → 保名换形成 group），名字与引用不变。默认生成提议；--apply 分数下降就接受；--auto 从最差的物体开始逐个细化，直到解释率达到 --target 或用完 --budget',
+    args: { paths: '要细化的物体（可选）', worst: '可选：细化分数里最差的 N 个', to: '目标档位：structure / detail（默认比工程档位细一档）', apply: '可选：分数下降就直接接受', auto: '可选：自动模式', budget: '自动模式最多尝试几个物体（默认 10）', target: '自动模式的解释率目标（默认 1，即直到预算用完）' },
+    async run(P, a) {
+      const to = a.to ?? finer(P.cfg.fidelity ?? 'semantic');
+      const parts = await P.sourceParts();
+      if (a.auto) return refineAuto(P, parts, { to, budget: +(a.budget ?? 10), target: +(a.target ?? 1) });
+      let targets = pathsArg(P, a);
+      if (a.worst) {
+        let sc = null;
+        try { sc = JSON.parse(P.read('score.json')); } catch { sc = await COMMANDS.score.run(P, {}); }
+        targets = sc.worst.filter((w) => !w.mesh).slice(0, +a.worst).map((w) => w.path);
+      }
+      if (!targets.length) throw new Error('要细化哪些物体？给路径，或 --worst=N，或 --auto');
+      const r = P.compile(), out = [], seen = new Set();
+      for (const path of targets) {
+        const pr = refineProposal(r, parts, path, { to });
+        if (pr.error) { out.push(pr); continue; }
+        if (seen.has(pr.target)) continue; // 同一种类型只细化一次
+        seen.add(pr.target);
+        const d = FIDELITY[to].tau;
+        const pv = await COMMANDS.propose.run(P, { text: pr.text, why: `细化到 ${to}（按 δ=${d} 衡量）：${pr.kind === 'type' ? '类型' : '物体'} ${pr.target} 拆成 ${pr.boxes} 个部件`, title: `refine-${pr.target}`.slice(0, 40), delta: d });
+        let accepted = false;
+        if (a.apply && pv.delta < 0 && !pv.errors.length) { await COMMANDS.accept.run(P, { id: pv.id, delta: d }); accepted = true; }
+        out.push({ path, target: pr.target, kind: pr.kind, boxes: pr.boxes, id: pv.id, delta: pv.delta, errors: pv.errors, accepted });
+      }
+      return out;
     },
   },
   check: {
