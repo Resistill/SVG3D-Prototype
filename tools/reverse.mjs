@@ -1322,7 +1322,7 @@ function detectMirrors(objs, units, unitOf) {
     let across = null;
     for (const o of objs) {
       if (o.kind === 'mesh') continue;
-      const cLocal = scl(add(o.box.min, o.box.max), 0.5), c = add(o.at, mvC(o.cols, cLocal));
+      const c = centerOf(o);
       if (Math.abs(dot(c, pl.n) - pl.d) > 1e-3 * M) continue;
       const ax = ['x', 'z'].find((a) => Math.abs(Math.abs(dot(o.cols[a === 'x' ? 0 : 2], pl.n)) - 1) < 1e-6);
       if (ax) { across = { obj: o, axis: ax }; break; }
@@ -1514,6 +1514,14 @@ function detectArrays(objs, related) {
     // 平移运动按步长量化成哈希，查找相同运动不必线性扫描
     const transIdx = new Map(), qk = (v) => v.map((x) => Math.round(x / (2 * tol))).join(',');
     const findTrans = (step) => { const q = step.map((x) => Math.round(x / (2 * tol))); for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (let k = -1; k <= 1; k++) for (const c of transIdx.get(`${q[0] + i},${q[1] + j},${q[2] + k}`) ?? []) if (close(c.motion.step, step)) return c; return null; };
+    // 绕竖直轴的转动（delta ≠ 0）：按量化的角度与中心放进格网，只在相邻格子里找创建得最早的（与线性查找结果一样）
+    const turnIdx = new Map(), turnKey = (m) => [Math.floor(m.delta / 0.05), Math.floor(m.center[0] / (2 * tol)), Math.floor(m.center[2] / (2 * tol))];
+    const findTurn = (m) => {
+      const [a0, b0, c0] = turnKey(m);
+      let best = null;
+      for (let x = -1; x <= 1; x++) for (let y = -1; y <= 1; y++) for (let z = -1; z <= 1; z++) for (const c of turnIdx.get(`${a0 + x},${b0 + y},${c0 + z}`) ?? []) if (sameMotion(c.motion, m) && (!best || c.k < best.k)) best = c;
+      return best;
+    };
     const sameMotion = (m, n) => (m.delta === 0) === (n.delta === 0) && (m.delta === 0
       ? close(m.step, n.step)
       : Math.abs(m.delta - n.delta) < 0.05 && close(m.center, n.center) && Math.abs(m.dy - n.dy) < tol);
@@ -1541,9 +1549,14 @@ function detectArrays(objs, related) {
         // 只保留规范方向（平移的第一个非零分量为正；旋转角为正），这样同一组物体不会一会儿正向一会儿反向
         if (motion.delta === 0) { const f = motion.step.find((v) => Math.abs(v) > 1e-6); if (!(f > 0)) continue; }
         else if (motion.delta < 0) continue;
-        const cl = motion.delta === 0 ? findTrans(motion.step) : clusters.find((c) => sameMotion(c.motion, motion));
-        if (cl) cl.pairs++;
-        else { const c = { motion, pairs: 1 }; clusters.push(c); if (motion.delta === 0) { const k = qk(motion.step); if (!transIdx.has(k)) transIdx.set(k, []); transIdx.get(k).push(c); } }
+        const cl = motion.delta === 0 ? findTrans(motion.step) : findTurn(motion);
+        if (cl) { cl.pairs++; cl.ids.add(a.id); cl.ids.add(b.id); }
+        else {
+          const c = { motion, pairs: 1, ids: new Set([a.id, b.id]), k: clusters.length };
+          clusters.push(c);
+          if (motion.delta === 0) { const k = qk(motion.step); if (!transIdx.has(k)) transIdx.set(k, []); transIdx.get(k).push(c); }
+          else { const k = turnKey(motion).join(','); if (!turnIdx.has(k)) turnIdx.set(k, []); turnIdx.get(k).push(c); }
+        }
       }
     }
     // 一般轴的旋转（不竖直的轴，例如风车叶片）：由相对旋转求轴和角，再解轴上一点。
@@ -1568,7 +1581,7 @@ function detectArrays(objs, related) {
         if (len(sub(rotAbout(u, deg, c, centerOf(a)), centerOf(b))) > tol) continue;
         const motion = { rot: true, u, deg, c };
         const cl = clusters.find((x) => x.motion.rot && Math.abs(x.motion.deg - deg) < 0.05 && dot(x.motion.u, u) > 0.9999 && len(cross(sub(c, x.motion.c), u)) < tol);
-        if (cl) cl.pairs++; else clusters.push({ motion, pairs: 1 });
+        if (cl) { cl.pairs++; cl.ids.add(a.id); cl.ids.add(b.id); } else clusters.push({ motion, pairs: 1, ids: new Set([a.id, b.id]) });
       }
     }
     const apply = (m, o) => (m.rot ? rotAbout(m.u, m.deg, m.c, centerOf(o)) : m.delta ? add(add(mvC(Ry(m.delta), sub(centerOf(o), m.center)), m.center), [0, m.dy, 0]) : add(centerOf(o), m.step));
@@ -1620,21 +1633,32 @@ function detectArrays(objs, related) {
     findRings((n) => n !== 4);
     // 同样多的配对时，优先更简单的解释：纯平移先于旋转
     clusters.sort((x, y) => y.pairs - x.pairs || (x.motion.delta ? 1 : 0) - (y.motion.delta ? 1 : 0));
-    for (const { motion, pairs } of clusters) {
+    // 规模（大组）：空间格网每组建一次（查找时跳过已用的成员），只从参与过这个运动的成员出发找链——
+    // 阵列里相邻的两个成员一定在彼此的近邻里，配对时就记进了这个运动
+    const cellB = 2 * tol, ckB = (p) => p.map((x) => Math.floor(x / cellB)), gridB = new Map();
+    if (BIG) for (const o of g) { const k = ckB(centerOf(o)).join(','); if (!gridB.has(k)) gridB.set(k, []); gridB.get(k).push(o); }
+    let freeAll = null, usedSeen = -1;
+    for (const { motion, pairs, ids } of clusters) {
       // 只出现过一次的运动构不成 3 个以上的链，也拼不成网格（网格的每个方向至少两对）
       if (pairs < 2) continue;
-      const free = g.filter((o) => !used.has(o.id));
-      if (free.length < 2) break;
+      if (used.size !== usedSeen) { freeAll = g.filter((o) => !used.has(o.id)); usedSeen = used.size; }
+      if (freeAll.length < 2) break;
+      const free = BIG ? freeAll.filter((o) => ids.has(o.id)) : freeAll;
       const next = new Map();
       const orientAfter = (m, o) => (m.rot ? o.cols.map((c) => rotAbout(m.u, m.deg, [0, 0, 0], c)) : m.delta ? o.cols.map((c) => mvC(Ry(m.delta), c)) : o.cols);
       // 按中心的空间哈希找“运动之后落在哪个成员上”
       const cell = 2 * tol, ck = (p) => p.map((x) => Math.floor(x / cell));
-      const grid = new Map();
-      for (const o of free) { const k = ck(centerOf(o)).join(','); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(o); }
-      const near = (p) => { const q = ck(p), out = []; for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (let k = -1; k <= 1; k++) out.push(...(grid.get(`${q[0] + i},${q[1] + j},${q[2] + k}`) ?? [])); return out; };
+      let grid = gridB;
+      if (!BIG) { grid = new Map(); for (const o of free) { const k = ck(centerOf(o)).join(','); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(o); } }
+      // 规模：按“收集相邻格子再查找”同样的顺序直接在格子里找，找到就停（不分配数组）
+      const findNear = (p, ok) => {
+        const q = ck(p);
+        for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (let k = -1; k <= 1; k++) for (const x of grid.get(`${q[0] + i},${q[1] + j},${q[2] + k}`) ?? []) if (ok(x)) return x;
+        return undefined;
+      };
       for (const a of free) {
         const p = apply(motion, a), oc = orientAfter(motion, a);
-        const b = near(p).find((x) => x !== a && close(centerOf(x), p) && sameOrientation(x, toRows(oc)));
+        const b = findNear(p, (x) => x !== a && (!BIG || !used.has(x.id)) && close(centerOf(x), p) && sameOrientation(x, toRows(oc)));
         if (b) next.set(a.id, b);
       }
       const hasPrev = new Set([...next.values()].map((b) => b.id));
@@ -1702,15 +1726,19 @@ function detectArrays(objs, related) {
       if (free.length < 3) break;
       let best = null;
       // 以 a 为第 0 个实例、沿 s1（与 s2）的格点上有哪些成员
+      // 规模：中心预先算好，内层只做标量运算（运算顺序与向量写法相同，结果逐位一致）
+      const cs = free.map(centerOf);
       const lattice = (a, s1, s2) => {
-        const at = new Map();
-        for (const b of free) {
-          const d = sub(centerOf(b), centerOf(a));
-          const i = Math.round(dot(d, s1) / dot(s1, s1)), j = s2 ? Math.round(dot(d, s2) / dot(s2, s2)) : 0;
-          if (i < 0 || j < 0 || i > 63 || j > 63) continue;
-          if (!close(add(centerOf(a), add(scl(s1, i), s2 ? scl(s2, j) : [0, 0, 0])), centerOf(b)) || !sameOrientation(b, toRows(a.cols))) continue;
+        const at = new Map(), ca = centerOf(a), rows = toRows(a.cols);
+        const s11 = s1[0] * s1[0] + s1[1] * s1[1] + s1[2] * s1[2], s22 = s2 ? s2[0] * s2[0] + s2[1] * s2[1] + s2[2] * s2[2] : 1;
+        free.forEach((b, bi) => {
+          const c = cs[bi], d0 = c[0] - ca[0], d1 = c[1] - ca[1], d2 = c[2] - ca[2];
+          const i = Math.round((d0 * s1[0] + d1 * s1[1] + d2 * s1[2]) / s11), j = s2 ? Math.round((d0 * s2[0] + d1 * s2[1] + d2 * s2[2]) / s22) : 0;
+          if (i < 0 || j < 0 || i > 63 || j > 63) return;
+          const p0 = ca[0] + (s1[0] * i + (s2 ? s2[0] * j : 0)), p1 = ca[1] + (s1[1] * i + (s2 ? s2[1] * j : 0)), p2 = ca[2] + (s1[2] * i + (s2 ? s2[2] * j : 0));
+          if (!(Math.hypot(p0 - c[0], p1 - c[1], p2 - c[2]) < tol) || !sameOrientation(b, rows)) return;
           at.set(`${i},${j}`, { b, i, j });
-        }
+        });
         return [...at.values()];
       };
       // 吸收的阵列必须整个包含进来，并且至少带进一个散落的物体
