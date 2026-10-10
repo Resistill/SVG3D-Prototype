@@ -57,7 +57,8 @@ async function refineAuto(P, parts, { to, budget, target }) {
     // 已经细化过的物体，它内部新拆出来的部件：记着来源（~src="部件#分量"）的可以再细化，没有来源的（整体体素）不再细化
     const srcOf = new Map(cur.r.nodes.map((n) => [n.path, n.meta?.src]));
     const inside = (p) => !srcOf.get(p) && [...done].some((d) => p.startsWith(d + '.'));
-    const cands = [...cur.s.objects].filter((o) => !o.mesh && !tried.has(o.path) && !inside(o.path)).sort((x, y) => (y.rSrc + y.rRecon) - (x.rSrc + x.rRecon));
+    // 网格引用也可以细化（合批进一个网格的贴花、标线换成更简单的写法或者去掉）：排序时网格代价也算进去
+    const cands = [...cur.s.objects].filter((o) => !tried.has(o.path) && !inside(o.path)).sort((x, y) => (y.rSrc + y.rRecon + y.mesh) - (x.rSrc + x.rRecon + x.mesh));
     let pr = null;
     // 局部分数（只看这个物体）先筛一遍：最好的候选都不如现在的写法，就不必编译、评分整个场景
     while (cands.length && !pr) {

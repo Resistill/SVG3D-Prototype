@@ -171,7 +171,7 @@ function sourceOf(parts, src) {
   return comp ? { part: { ...up.part, uid: src, name: null, from: src, tris: comp.tris }, whole: up.whole } : null;
 }
 
-// 一个物体（编译结果里的节点路径）→ 细化提议 { target, kind: 'type' | 'object', text, boxes, candidates, current, local }；拆不了返回 { error }
+// 一个物体（编译结果里的节点路径，基本体或网格引用都可以）→ 细化提议 { target, kind: 'type' | 'object', text, boxes, candidates, current, local }；拆不了返回 { error }
 // 候选：全部分量 / 按面积只留大块（99%、97%、90%）/ 整体体素（几种粒度）。用邻域评分（全场分数在这个物体附近的变化，按目标档位的 δ）挑最好的：
 // 窗框、饰条这种小构件在粗档位下“写出来的代价 > 省掉的残差”，自然被舍弃。unit：场景单位（每个单位多少米），档位的数值按米、随之换算
 export function refineProposal(result, parts, path, { to = 'structure', unit = 1 } = {}) {
@@ -199,7 +199,6 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
   }
   if (!part) return { path, error: '找不到对应的源部件' };
   if (!n.world || Math.abs(Math.abs(det3(n.world.R)) - 1) > 1e-6 || det3(n.world.R) < 0) return { path, error: '物体的变换不是刚体（缩放或镜像），暂不支持' };
-  if (n.kind === 'mesh' || part && result.items.find((i) => i.path === n.path)?.geom?.type === 'mesh') return { path, error: '它是网格引用（几何已经精确），细化只针对用基本体近似的物体' };
   const F = FIDELITY[to] ?? FIDELITY.structure;
   const consts = { delta: F.tau, unit };
   const local = toLocal(part.tris, n.world);
@@ -240,6 +239,9 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
     if (r.errors.length) { cands.push({ name, error: r.errors[0].message }); return; }
     const w = wrap(c.lines);
     const ls = hood.scorer(toWorld(r, n.types ? `${n.path}.body` : n.path), w.text.split('\n'));
+    // 去掉一个物体只在它的表面确实被周围的物体解释了的时候才行（平均误差不超过 2τ：贴花、标线、重合的面）；
+    // 分数不计语义，一栋楼、一丛灌木不能因为“写出来比误差贵”就消失
+    if (c.empty && ls.meanErr > 2 * F.tau) { cands.push({ name, error: `周围的物体解释不了它（平均误差 ${ls.meanErr} m）` }); return; }
     ls.S = total(ls);
     cands.push({ name, ...w, boxes: c.boxes, parts: c.parts, arrays: c.arrays, voxel: c.voxel, local: ls });
   };
@@ -270,6 +272,8 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
     const c = voxelLines(local, { voxel: v, maxBoxes: mb, digits });
     if (c) add(`体素 ${fmt(c.voxel, 3)}（${c.boxes} 块）`, { ...c, parts: comps.length });
   }
+  // 去掉：由周围的物体解释（贴在墙上的贴花、路面标线离表面只有几厘米；合批进一个网格的一堆小装饰）。名义外包络还在，挂在它上面的物体不动
+  add('去掉（由周围的物体解释）', { lines: [], boxes: 0, parts: 0, empty: true });
   // 板件：有内部空间的大分量（外墙、楼板、内墙连成一个网格）按平面拆成墙板、楼板，门窗洞空出来
   for (const [cell, mb] of [[voxel, to === 'detail' ? 240 : 120], [voxel * 2, 60], [voxel * 4, 30]]) {
     const p = panelLines(local, { ...panel, cell, maxBoxes: mb, digits });

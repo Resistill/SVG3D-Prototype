@@ -364,7 +364,8 @@ export function neighborhoodScorer({ parts, near, others, reconColors, consts = 
       A += area; acc += area * res.r;
     }
     const Rrecon = A > 0 ? k.cRes * Math.log2(1 + A / (k.delta * k.delta)) * (acc / A) : 0;
-    const L = lines.reduce((s, l) => s + lineCost(l), 0);
+    // 网格引用（现在的写法可能就是一块网格）：c_mesh × log2(1 + 三角形数)，与全场的 L_mesh 一样
+    const L = lines.reduce((s, l) => s + lineCost(l), 0) + recon.reduce((s, o) => s + (o.mesh ? k.cMesh * Math.log2(1 + (o.mesh.tris || 1)) : 0), 0);
     const r3 = (x) => +x.toFixed(2);
     return { S: r3(L + Rsrc + Rrecon), L: r3(L), R_src: r3(Rsrc), R_recon: r3(Rrecon), meanErr: +((own?.mean ?? 0) * k0.unit).toFixed(4), maxErr: +((own?.max ?? 0) * k0.unit).toFixed(4) };
   };
