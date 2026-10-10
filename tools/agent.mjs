@@ -216,7 +216,7 @@ export const COMMANDS = {
   },
   render: {
     desc: '离屏渲染成 PNG：view=iso|iso2|top|front|back|left|right，mode=color|id|labels|error（按 score.json 的误差从绿到红上色）；focus=路径或 selection（只标注、并且不被遮挡）；source 渲染源模型；box 指定取景（返回值里的 box 可原样传回，源与重建取景一致）；ortho 正交相机',
-    args: { view: '视角（默认 iso）', mode: '模式（默认 labels）', focus: '可选：路径（或源部件名），或 selection', size: '边长像素（默认 1024）', out: '输出文件（默认 renders/<view>-<mode>.png）', source: '可选：渲染源模型而不是重建结果', box: '可选：取景范围 x0,y0,z0,x1,y1,z1', ortho: '可选：正交相机' },
+    args: { view: '视角（默认 iso）', mode: '模式（默认 labels）', focus: '可选：路径（或源部件名），或 selection', size: '边长像素（默认 1024）', out: '输出文件（默认 renders/<view>-<mode>.png）', source: '可选：渲染源模型而不是重建结果', box: '可选：取景范围 x0,y0,z0,x1,y1,z1', ortho: '可选：正交相机', cut: '可选：水平剖切高度（切掉高于它的部分，配合 --view=top 看某一层的平面）' },
     async run(P, a) {
       const parts = await P.sourceParts();
       let objs;
@@ -237,7 +237,7 @@ export const COMMANDS = {
       if (bx && (bx.length !== 6 || bx.some((v) => !Number.isFinite(v)))) throw new Error('box 写成 x0,y0,z0,x1,y1,z1');
       if (!VIEWS[view]) throw new Error(`没有视角 ${view}（可用：${Object.keys(VIEWS).join(' ')}）`);
       const focus = a.focus === 'selection' ? P.selection().paths : a.focus ? [].concat(a.focus) : null;
-      const res = rasterize(objs, { view, mode, size: +(a.size ?? 1024), focus: focus?.length ? focus : null, box: bx && { min: bx.slice(0, 3), max: bx.slice(3) }, ortho: !!a.ortho });
+      const res = rasterize(objs, { view, mode, size: +(a.size ?? 1024), focus: focus?.length ? focus : null, box: bx && { min: bx.slice(0, 3), max: bx.slice(3) }, ortho: !!a.ortho, cut: a.cut != null ? +a.cut : null });
       const out = a.out ?? `renders/${a.source ? 'source-' : ''}${view}-${mode}${focus ? '-focus' : ''}.png`;
       P.write(out, res.png);
       return { file: P.path(out), view, mode, focus, box: [...res.box.min, ...res.box.max].join(','), legend: res.legend };

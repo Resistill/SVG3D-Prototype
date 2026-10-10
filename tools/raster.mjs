@@ -31,7 +31,9 @@ export const heatColor = (t) => { t = Math.max(0, Math.min(1, t)); return t < 0.
 // objects 可以带 heat（0..1），mode=error 时按它上色（没有 heat 的物体画成浅灰）
 // box：指定取景范围（不指定就按聚焦的物体或整个场景）；返回值里的 box 可以原样传给下一次渲染，两张图取景完全一致
 // ortho：正交相机（尺寸不随深度变化，便于量）
-export function rasterize(objects, { view = 'iso', size = 1024, focus = null, mode = 'color', highlight = null, box: frameBox = null, ortho = false } = {}) {
+// cut：水平剖切高度——高于它的部分被切掉（三角形按平面裁剪），从上往下看就是这一层的平面布局（看室内）
+export function rasterize(objects, { view = 'iso', size = 1024, focus = null, mode = 'color', highlight = null, box: frameBox = null, ortho = false, cut = null } = {}) {
+  if (cut != null) objects = objects.map((o) => ({ ...o, pos: clipBelow(o.pos, cut) }));
   const W = size, H = size;
   let box = { min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity] };
   const grow = (b, p) => { for (let k = 0; k < 3; k++) { b.min[k] = Math.min(b.min[k], p[k]); b.max[k] = Math.max(b.max[k], p[k]); } };
@@ -129,6 +131,24 @@ export function rasterize(objects, { view = 'iso', size = 1024, focus = null, mo
     }
   }
   return { png: encodePNG(rgb, W, H), legend, camera: cam, box: { min: box.min.map((v) => +v.toFixed(4)), max: box.max.map((v) => +v.toFixed(4)) } };
+}
+
+// 把三角形裁剪到 y ≤ h（Sutherland–Hodgman，结果再扇形三角化）
+function clipBelow(pos, h) {
+  const out = [];
+  for (let i = 0; i < pos.length; i += 9) {
+    const P = [[pos[i], pos[i + 1], pos[i + 2]], [pos[i + 3], pos[i + 4], pos[i + 5]], [pos[i + 6], pos[i + 7], pos[i + 8]]];
+    if (P.every((p) => p[1] <= h)) { out.push(...P.flat()); continue; }
+    if (P.every((p) => p[1] > h)) continue;
+    const poly = [];
+    for (let k = 0; k < 3; k++) {
+      const a = P[k], b = P[(k + 1) % 3], ain = a[1] <= h, bin = b[1] <= h;
+      if (ain) poly.push(a);
+      if (ain !== bin) { const t = (h - a[1]) / (b[1] - a[1]); poly.push([a[0] + t * (b[0] - a[0]), h, a[2] + t * (b[2] - a[2])]); }
+    }
+    for (let k = 1; k + 1 < poly.length; k++) out.push(...poly[0], ...poly[k], ...poly[k + 1]);
+  }
+  return Float32Array.from(out);
 }
 
 // 物体编号 → 互相区分度高的颜色（黄金角色相）
