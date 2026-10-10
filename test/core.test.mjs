@@ -776,3 +776,35 @@ test('mesh：引用源模型的网格，外包络参与关系', () => {
   assert.equal(it.geom.src, 'assets/park.glb#Statue');
   assert.ok(r.facts.find((f) => f.a === 'statue' && f.b === 'ground').approx, '网格只有外包络，事实标为近似');
 });
+
+test('通用语义库：理解与写法无关；场景里的同名概念覆盖库里的', () => {
+  const lib = readFileSync(new URL('../lib/semantics.s3d', import.meta.url), 'utf8');
+  const scene = `
+    box ground size=100,1,100 pin=top
+    box a size=0.4,6,0.4 on=ground
+    box b size=6,0.4,0.4 on=ground[0.2,1,0]
+    box c size=0.4,6,0.4 on=ground[-0.2,1,0] roll=90
+    box pad size=8,0.3,8 on=ground[0,1,0.3]
+  `;
+  const r = compile(`${scene}\n${lib}`);
+  assert.deepEqual(r.errors, []);
+  const m = (name) => r.concepts.find((c) => c.name === name).members;
+  assert.deepEqual(m('terrain'), ['ground']);
+  assert.deepEqual(m('column'), ['a'], '竖着的细长体');
+  assert.deepEqual(m('beam').sort(), ['b', 'c'], '写成 w=6 与写成 h=6 再转 90°，都是横着的梁');
+  assert.deepEqual(m('platform'), ['pad']);
+  // import 库之后重新定义：以后写的为准，概念只出现一次
+  const o = layered({ 'lib.s3d': lib, 'a.s3d': `import "lib.s3d"\n${scene}\nconcept column = all() where top > 5` }, 'a.s3d');
+  assert.equal(o.concepts.filter((c) => c.name === 'column').length, 1);
+  assert.deepEqual(o.concepts.find((c) => c.name === 'column').members.sort(), ['a']);
+});
+
+test('where 里的 top / bottom 是真实形状的世界高度', () => {
+  const r = compile(`
+    box ground size=20,1,20 pin=top
+    box tilted size=0.2,0.2,4 on=ground tilt=30
+    concept leaning = all() where top - bottom > 1.5 and top - bottom < 2.5
+  `);
+  assert.deepEqual(r.errors, []);
+  assert.deepEqual(r.concepts[0].members, ['tilted']);
+});

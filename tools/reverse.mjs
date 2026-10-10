@@ -5,6 +5,7 @@
 //   3. 提取关系：先发射全坐标版本，编译得到空间事实；再自下而上为每个物体选一条主关系（on / against），
 //      朝向写成相对参照物的
 //   4. 校验：编译关系版本，逐个比对位置与朝向，不一致的退回坐标
+import { semanticNames } from './naming.mjs';
 import { NodeIO } from '@gltf-transform/core';
 import { compile } from '../src/s3d.js';
 
@@ -375,7 +376,7 @@ function rotAbout(u, deg, c, p) {
 }
 
 // ───────── 3 & 4. 关系与校验 ─────────
-export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true } = {}) {
+export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true } = {}) {
   const fits = parts.map((p, i) => fitPart(p, i));
   // 名字：L0 用源节点名；没有名字时按形状编号
   const used = new Map(), counters = {};
@@ -618,17 +619,21 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     if (!changed) break;
   }
   const kept = units.filter((u) => !dissolved.has(u.id));
+  // 语义命名：没有源名字的部件按识别出的概念改名（box46 → terrain，cyls_2 → columns）
+  const named = names ? semanticNames(out.text) : { text: out.text, map: {}, renamed: 0 };
+  const nm = (id) => named.map[id] ?? id;
   const report = {
     source: srcFile, level, parts: parts.length,
     kinds: Object.fromEntries(Object.entries(objs.reduce((m, o) => ((m[o.kind] = (m[o.kind] ?? 0) + 1), m), {})).sort()),
-    arrays: kept.map((u) => ({ id: u.id, n: u.n, kind: u.rotate ? 'rotate' : u.turn ? 'screw' : u.grid ? 'grid' : 'linear', children: u.children.map((c) => c.id) })),
-    mirrors: mirrors.filter((mi) => !droppedMirrors.has(mi.B.id)).map((mi) => ({ id: mi.B.id, of: mi.A.id, across: mi.across, objects: mi.paths.size })),
+    arrays: kept.map((u) => ({ id: nm(u.id), n: u.n, kind: u.rotate ? 'rotate' : u.turn ? 'screw' : u.grid ? 'grid' : 'linear', children: u.children.map((c) => c.id) })),
+    mirrors: mirrors.filter((mi) => !droppedMirrors.has(mi.B.id)).map((mi) => ({ id: nm(mi.B.id), of: nm(mi.A.id), across: mi.across, objects: mi.paths.size })),
     covered: kept.reduce((s, u) => s + u.children.reduce((t, c) => t + c.members.length, 0), 0),
     placement: out.stats,
     meanFit: +(objs.reduce((s, o) => s + o.fit, 0) / objs.length).toFixed(3),
     dissolved: [...dissolved], fallback: [...fallback],
+    renamed: named.renamed,
   };
-  return { src: out.text + '\n', absSrc, report, objs };
+  return { src: named.text + '\n', absSrc, report, objs };
 }
 
 // 几何中心：与表示方式无关的物理点（“原点”是包围盒底面中心，取决于局部 y 轴选了哪一头）

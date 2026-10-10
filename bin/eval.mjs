@@ -15,5 +15,8 @@ console.log(`形状种类      ${r.kinds.correct}/${r.kinds.fittable} 正确（$
 console.log(`              ${Object.entries(r.kinds.confusion).map(([k, v]) => `${k}:${v}`).join('  ')}`);
 for (const [k, v] of Object.entries(r.facts)) console.log(`事实 ${k.padEnd(10)} 真值 ${String(v.truth).padStart(4)} · 找到 ${String(v.found).padStart(4)} · P ${v.precision} · R ${v.recall} · F1 ${v.f1}`);
 console.log(`压缩召回      阵列 ${r.compression.array.recovered}/${r.compression.array.orig}（${pct(r.compression.array.recall)}）· 镜像 ${r.compression.mirror.recovered}/${r.compression.mirror.orig}（${pct(r.compression.mirror.recall)}）`);
+const sa = r.semantic.all;
+console.log(`语义识别      P ${sa.precision} · R ${sa.recall} · F1 ${sa.f1}（通用语义库，${sa.truth} 个真值成员）`);
+console.log(`              ${Object.entries(r.semantic).filter(([k]) => k !== 'all').map(([k, v]) => `${k}:${v.f1}`).join('  ')}`);
 console.log(`坐标依赖率    ${pct(r.description.coordinateRatio)}（世界坐标定位，越低越好）；相对锚点 ${pct(r.description.anchorRatio)}`);
 console.log(`语句数比      ${r.description.statementRatio}（逆向 / 原始）`);

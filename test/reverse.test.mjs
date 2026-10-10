@@ -66,3 +66,17 @@ test('逆向输出带拟合度与来源，并且命名稳定', () => {
   assert.match(a.src, /~fit=/);
   assert.match(a.src, /~src="table"/);
 });
+
+test('语义命名：源模型没有名字（L1）时按识别出的概念起名，改名不影响任何指标', () => {
+  const { out, ev } = roundTrip('spaceport.s3d', 'L1');
+  assert.ok(out.report.renamed > 20, `改名 ${out.report.renamed} 处`);
+  assert.match(out.src, /^box terrain /m);
+  assert.match(out.src, /^repeat columns(_\d+)? /m);
+  assert.doesNotMatch(out.src, /^(box|cyl|wedge|sphere)\s+(box|cyl|wedge|sphere)\d+\s/m, '基本体不再用形状编号命名');
+  assert.equal(ev.errors.recon, 0);
+  assert.equal(ev.objects.matched, ev.objects.orig);
+  assert.equal(ev.semantic.all.f1, 1, `语义 F1 ${JSON.stringify(ev.semantic.all)}`);
+  const raw = reverse(partsOfDocument(sceneToGLB(readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8'), { level: 'L1' }).doc), { level: 'L1', names: false });
+  const ev2 = evaluate(readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8'), raw.src);
+  assert.deepEqual(ev2.facts, ev.facts, '改名前后空间事实完全相同');
+});

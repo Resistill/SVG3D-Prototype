@@ -1,0 +1,33 @@
+// 通用几何语义库
+// 只用几何（尺寸、朝向）与空间关系定义常见的建筑 / 场景构件，可以 import 到任何场景里，包括逆向得到的描述。
+// 这些定义是“默认的理解”：场景可以在 import 之后用同名 concept 覆盖（以后写的为准），或者派生更细的概念。
+//   import "../lib/semantics.s3d"
+// 定义只依赖与写法无关的量，所以同一个物体不论写成 box(w=4 h=0.3) 还是转过 90° 的 box(w=0.3 h=4)，理解都一样：
+//   max(w,h,d) / min(w,h,d)  最长边 / 最短边；w+h+d-max(w,h,d)-min(w,h,d)  中间那条边
+//   top - bottom              在世界里竖直方向占多高（与最长边相等 → 竖着；与最短边相等 → 平放）
+
+// 形状种类不作为判断依据：同一个物体可能写成 box、span，也可能逆向成 mesh，所以大多数概念对所有实体都成立
+let solid_kinds = kind(box, cyl, cone, sphere, wedge, revolve, span, sweep, pipe, mesh, union, subtract, intersect)
+
+// 承载面：很大、很薄、平放
+concept terrain = solid_kinds where min(w,h,d) < 3 and w+h+d-max(w,h,d)-min(w,h,d) > 40 and top - bottom < 3
+// 板：平放的薄块（地坪、平台、楼板、桥面）
+concept slab    = solid_kinds where min(w,h,d) < 2.5 and w+h+d-max(w,h,d)-min(w,h,d) > 1.5 and min(w,h,d) * 5 < w+h+d-max(w,h,d)-min(w,h,d) and top - bottom < 1.5 * min(w,h,d) + 0.01
+concept platform : slab = (on(all()) | supports(all())) - terrain
+// 墙：竖着的薄块
+concept wall    = solid_kinds where min(w,h,d) < 0.8 and w+h+d-max(w,h,d)-min(w,h,d) > 2 and top - bottom > 0.95 * (w+h+d-max(w,h,d)-min(w,h,d))
+// 杆件：细长体，任意方向（柱、梁、斜撑、栏杆）
+concept member  = solid_kinds where max(w,h,d) > 4 * (w+h+d-max(w,h,d)-min(w,h,d))
+// 柱：竖着的杆件；梁：横着的杆件
+concept column : member = where max(w,h,d) > 2.5 and top - bottom > 0.95 * max(w,h,d)
+concept beam : member = where top - bottom < 0.5 * max(w,h,d)
+// 屋顶：压在盒子上的楔形，或盖在墙 / 柱上的板
+concept roof    = kind(wedge) & on(volume) | slab & on(wall | column)
+// 体块：建筑的主体（三个方向都有一定厚度的盒子或网格）
+concept volume  = solid_kinds where min(w,h,d) > 3 and top - bottom > 3
+// 罐：粗的圆柱（w 是直径，h 是轴向长度）
+concept tank    = kind(cyl) where w > 2.5 and h > 2.5
+// 小件：各边都不超过 3 米
+concept prop    = solid_kinds where max(w,h,d) < 3
+// 台阶：立在别的东西上的小薄板
+concept step    = (kind(box) where min(w,h,d) < 0.4 and max(w,h,d) < 3.5 and top - bottom < 0.5) & on(all()) - slab

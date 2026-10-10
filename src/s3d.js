@@ -756,7 +756,8 @@ function evalAst(ast, ctx) {
       return { '>': a > b, '<': a < b, '>=': a >= b, '<=': a <= b }[ast.op];
     }
     case 'where': {
-      // 对集合里的每个成员求条件；条件里可以用 w h d（自身尺寸）、x y z（世界中心）、kind、name、it
+      // 对集合里的每个成员求条件；条件里可以用 w h d（自身尺寸）、x y z（世界中心）、
+      // top bottom（世界里的最高 / 最低点，按真实形状而不是包围盒）、kind、name、it
       const base = asSet(evalAst(ast.a, ctx));
       if (!ctx.S) throw new S3DError('where 只能在求解阶段使用');
       return new NodeSet(base.nodes.filter((m) => {
@@ -766,6 +767,13 @@ function evalAst(ast, ctx) {
         const ctr = () => { const b = ctx.S.worldBox(m); return scl(add(b.min, b.max), 0.5); };
         ['w', 'h', 'd'].forEach((k, i) => env.setLazy(k, () => size()[i]));
         ['x', 'y', 'z'].forEach((k, i) => env.setLazy(k, () => ctr()[i]));
+        let tb;
+        const tight = () => (tb ??= (() => {
+          try { if (LEAVES.has(K(m)) && m.geom) return boundsOf(localParts(m).parts.flatMap((P) => boxCorners(partBox(worldPart(ctx.S.world(m), P))))); } catch {}
+          return ctx.S.worldBox(m);
+        })());
+        env.setLazy('top', () => tight().max[1]);
+        env.setLazy('bottom', () => tight().min[1]);
         env.setLazy('kind', () => m.template ?? K(m));
         env.setLazy('name', () => m.id ?? '');
         env.setLazy('it', () => mkRef(m));
@@ -932,7 +940,10 @@ function elaborate(program, errors) {
     }
     else if (s.kind === 'concept') {
       // 概念就是一个全局命名的集合，通常依赖空间事实，所以在求解之后才求值
+      // 同名概念以后写的为准：场景可以覆盖 import 进来的通用语义库
       semantic.setThunk(s.name, s.ast, semantic, root, root, root);
+      const prev = concepts.findIndex((c) => c.name === s.name);
+      if (prev >= 0) concepts.splice(prev, 1);
       concepts.push(s);
     } else if (s.kind === 'over' && !s.children.length && s.props.size && [...s.props.keys()].every((k) => APPEARANCE.has(k) || s.props.has('use'))) {
       // 只改外观的覆盖：求解后应用，选择器可以依赖空间事实与概念

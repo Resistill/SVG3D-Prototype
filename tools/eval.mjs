@@ -2,7 +2,11 @@
 //   几何：匹配率、平均 IoU、形状种类正确率（只统计能用基本体表达的原始对象）
 //   关系：空间事实的精确率 / 召回率 / F1（按匹配把逆向结果的对象名换成原始的名字再比）
 //   描述质量：坐标依赖率（用 at= 定位的物体比例，越低越好）、语句数比
+//   语义：把通用语义库（lib/semantics.s3d）同时附加到两边，比较每个概念识别出的成员（按匹配换名后的 P / R / F1）
+import { readFileSync } from 'node:fs';
 import { compile } from '../src/s3d.js';
+
+export const SEMANTICS = readFileSync(new URL('../lib/semantics.s3d', import.meta.url), 'utf8');
 
 const iou = (a, b) => {
   const ov = [0, 1, 2].map((k) => Math.max(0, Math.min(a.max[k], b.max[k]) - Math.max(a.min[k], b.min[k])));
@@ -41,7 +45,10 @@ function objectsOf(r) {
 }
 
 export function evaluate(origSrc, reconSrc, opts = {}) {
-  const A = compile(origSrc, opts.orig ?? {}), B = compile(reconSrc, opts.recon ?? {});
+  // 语义库附加在末尾：同名概念以后写的为准，所以两边用的是同一套定义
+  const lib = opts.semantics ?? SEMANTICS;
+  const withLib = (src) => (lib ? `${src}\n${lib}` : src);
+  const A = compile(withLib(origSrc), opts.orig ?? {}), B = compile(withLib(reconSrc), opts.recon ?? {});
   const oa = objectsOf(A), ob = objectsOf(B);
   // 贪心匹配：IoU 从高到低
   const pairs = [];
@@ -72,6 +79,25 @@ export function evaluate(origSrc, reconSrc, opts = {}) {
     const hit = t.filter((a) => mA.get(a.path)?.b[flag]).length;
     return { orig: t.length, recovered: hit, recall: +(hit / (t.length || 1)).toFixed(3) };
   };
+  // 语义：库里每个概念，在原始里识别出的物体 vs 逆向里识别出的物体（换成原始名字）
+  const libNames = lib ? [...lib.matchAll(/^\s*concept\s+([\p{L}_][\p{L}\p{N}_]*)/gmu)].map((m) => m[1]) : [];
+  const isObj = new Set(oa.map((a) => a.path));
+  const semantic = {};
+  let stp = 0, sfound = 0, struth = 0;
+  for (const name of libNames) {
+    const ca = A.concepts.find((c) => c.name === name), cb = B.concepts.find((c) => c.name === name);
+    const t = new Set((ca?.members ?? []).filter((p) => isObj.has(p)));
+    const m = new Set((cb?.members ?? []).map((p) => mB.get(p)).filter(Boolean));
+    const tp = [...m].filter((x) => t.has(x)).length;
+    stp += tp; sfound += m.size; struth += t.size;
+    if (!t.size && !m.size) continue;
+    const p = m.size ? tp / m.size : 1, r = t.size ? tp / t.size : 1;
+    semantic[name] = { truth: t.size, found: m.size, precision: +p.toFixed(3), recall: +r.toFixed(3), f1: +(p + r ? (2 * p * r) / (p + r) : 0).toFixed(3) };
+  }
+  {
+    const p = sfound ? stp / sfound : 1, r = struth ? stp / struth : 1;
+    semantic.all = { truth: struth, found: sfound, precision: +p.toFixed(3), recall: +r.toFixed(3), f1: +(p + r ? (2 * p * r) / (p + r) : 0).toFixed(3) };
+  }
   const topLines = reconSrc.split('\n').filter((l) => /^(box|cyl|cone|sphere|wedge|mesh|revolve|span|sweep|pipe|repeat|mirror|rotate|copy|group)\s/.test(l));
   // 语句数：把 import 的文件也算进去（修改层本身很短，但它描述的是整个场景）
   const expand = (src, o, seen = new Set()) => src.replace(/^\s*import\s+"([^"]+)".*$/gm, (m, rel) => {
@@ -89,6 +115,7 @@ export function evaluate(origSrc, reconSrc, opts = {}) {
     kinds: { fittable: fittable.length, correct: kindOk, accuracy: +(kindOk / (fittable.length || 1)).toFixed(3), complex: complex.length, complexAsMesh, confusion },
     facts: { all: prf(() => true), ...Object.fromEntries(rels.map((r) => [r, prf((x) => x.startsWith(r + '|'))])), onAgainst: prf((x) => /^(on|against)\|/.test(x)) },
     compression: { array: recall('array'), mirror: recall('mirror') },
+    semantic,
     description: {
       // 只算用世界坐标定位的（at=数字）；at=某物[u,v,w] 是相对锚点，算关系
       // 只算最外层用世界坐标定位的语句；repeat 内缩进的 at= 是相对实例原点的偏移（例如螺旋楼梯的半径）
