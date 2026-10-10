@@ -21,7 +21,7 @@ const AXES = { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] };
 const PLACEMENT = new Set(['at', 'pin', 'on', 'under', 'against', 'inside', 'gap', 'offset', 'align', 'alignto',
   'turn', 'tilt', 'roll', 'rot', 'aim', 'aimwith', 'mat', 'color']);
 const KIND_PROPS = {
-  box: ['size'], wedge: ['size'], cyl: ['r', 'h', 'axis'], cone: ['r', 'r2', 'h', 'axis'], sphere: ['r'],
+  box: ['size'], wedge: ['size'], mesh: ['src', 'size', 'pivot'], cyl: ['r', 'h', 'axis'], cone: ['r', 'r2', 'h', 'axis'], sphere: ['r'],
   revolve: ['profile', 'angle', 'smooth'],
   span: ['from', 'to', 'drop', 'dir', 'section', 'r', 'steps'],
   sweep: ['path', 'profile', 'r', 'section', 'smooth'], pipe: ['path', 'r', 'smooth'],
@@ -31,7 +31,7 @@ const KIND_PROPS = {
   repeat: ['n', 'step', 'turn', 'center', 'along', 'orient'],
   mirror: ['of', 'across', 'axis'], rotate: ['of', 'about', 'axis', 'angle', 'n'], copy: ['of'],
 };
-const LEAVES = new Set(['box', 'wedge', 'cyl', 'cone', 'sphere', 'revolve', 'span', 'sweep', 'pipe']);
+const LEAVES = new Set(['box', 'wedge', 'cyl', 'cone', 'sphere', 'revolve', 'span', 'sweep', 'pipe', 'mesh']);
 const CURVES = new Set(['line', 'bezier', 'spline', 'arc', 'helix']);
 const PATH_CURVES = new Set(['line', 'bezier', 'spline']); // 由父框架中的点定义，自身不再定位
 const LINKS = new Set(['span', 'sweep', 'pipe']);
@@ -479,6 +479,11 @@ function makeStmt(words, children) {
     };
     return { kind: 'def', name: m[1], params: plist(m[2]), base: mb ? mb[1] : null, overrides: mb ? plist(mb[2]) : new Map(), body: children, line };
   }
+  if (kind === 'import') {
+    const m = words.length === 2 && /^"([^"]+)"$/.exec(words[1].v);
+    if (!m || children.length) throw new S3DError('import 写成：import "文件.s3d"', line);
+    return { kind, path: m[1], line };
+  }
   if (kind === 'if' || kind === 'else') throw new S3DError('if / else 已移出语言：结构上的差别请用派生类型表达，例如 def 带烟囱的房子 : 房子 { box chimney … }', line);
   if (kind === 'over' || kind === 'drop') {
     // over 选择器… [key=value …] [{ … }]；drop 选择器…
@@ -559,6 +564,33 @@ function makeStmt(words, children) {
     } else throw new S3DError(`无法理解 “${w.v}”（属性要写成 key=value）`, w.line);
   }
   return st;
+}
+
+// import 把另一个文件的语句按顺序放在这里（后写的覆盖先写的，所以修改层 import 基础描述）
+const dirOf = (f) => (f && f.includes('/') ? f.slice(0, f.lastIndexOf('/') + 1) : '');
+function joinPath(base, rel) {
+  if (rel.startsWith('/')) return rel;
+  const parts = (dirOf(base) + rel).split('/'), out = [];
+  for (const x of parts) { if (x === '..') out.pop(); else if (x !== '.' && x !== '') out.push(x); }
+  return (base && base.startsWith('/') ? '/' : '') + out.join('/');
+}
+function loadProgram(src, opts, errors, stack = []) {
+  const stmts = parseProgram(src, errors);
+  const out = [];
+  for (const s of stmts) {
+    s.file = opts.file ?? null;
+    if (s.kind !== 'import') { out.push(s); continue; }
+    const path = joinPath(opts.file, s.path);
+    if (stack.includes(path)) { errors.push(new S3DError(`import 形成了循环：${[...stack, path].join(' → ')}`, s.line)); continue; }
+    let text;
+    try { text = opts.resolve ? opts.resolve(path) : null; } catch { text = null; }
+    if (typeof text !== 'string') { errors.push(new S3DError(`import 找不到文件 ${path}`, s.line)); continue; }
+    const sub = [];
+    const subStmts = loadProgram(text, { ...opts, file: path }, sub, [...stack, path]);
+    for (const e of sub) { e.file ??= path; errors.push(e); }
+    out.push(...subStmts);
+  }
+  return out;
 }
 
 // pattern 名字(角色, 集合角色*, …) { 角色 in 集合 / 甲 关系 乙 / 布尔表达式 }
@@ -933,7 +965,7 @@ function elaborate(program, errors) {
       for (const s of lets) env.setThunk(s.name, s.ast, env, parent, parent, parent);
     }
     for (const s of stmts) {
-      try { one(s, parent, env, depth); } catch (e) { e.line ??= s.line; errors.push(e); }
+      try { one(s, parent, env, depth); } catch (e) { e.line ??= s.line; e.file ??= s.file; errors.push(e); }
     }
   };
   const one = (s, parent, env, depth) => {
@@ -953,6 +985,7 @@ function elaborate(program, errors) {
       const allowed = new Set([...KIND_PROPS[s.kind], ...PLACEMENT]);
       for (const k of s.props.keys()) if (!allowed.has(k)) errors.push(new S3DError(`${s.kind} 没有属性 ${k}`, s.line));
       const n = new Node(s.kind, s.id, s.props, s.tags, s.line, env, parent);
+      n.file = s.file;
       n.meta = staticMeta(s, env, n);
       n.stmt = s; n.srcEnv = env;
       flat.push(n);
@@ -1001,6 +1034,7 @@ function elaborate(program, errors) {
     const own = new Map([...s.props].filter(([k]) => isPlacement(k)));
     const n = new Node('group', s.id, own, s.tags, s.line, env, parent);
     n.template = s.kind;
+    n.file = s.file;
     n.types = [...new Set(chain.map((d) => d.name))];
     n.meta = staticMeta(s, env, n);
     n.stmt = s; n.srcEnv = env;
@@ -1143,8 +1177,9 @@ function applyOpinions(elab, S, errors, fail) {
       }
       for (let m of members) {
         if (COPIES.has(m.kind) && m.props.has('of')) throw new S3DError(`${m.path} 是 ${m.kind} 生成的副本，副本跟随原物体：请覆盖原物体，或改用 copy`, s.line);
-        // 改模板参数：用新参数重建这个实例（结构可能随参数变化）
-        const paramKeys = m.params ? [...s.props.keys()].filter((k) => m.params.has(k)) : [];
+        // 改模板参数或阵列数量：用新的值重建这个节点（结构会随之变化）
+        const paramKeys = m.params ? [...s.props.keys()].filter((k) => m.params.has(k))
+          : m.kind === 'repeat' && m.stmt ? [...s.props.keys()].filter((k) => k === 'n') : [];
         if (paramKeys.length) {
           const P = m.parent, idx = P.children.indexOf(m);
           const props = new Map(m.stmt.props);
@@ -1717,6 +1752,15 @@ class Solver {
           if (axis === 'x') return { min: [-h / 2, 0, -R], max: [h / 2, 2 * R, R] };
           return { min: [-R, 0, -h / 2], max: [R, 2 * R, h / 2] };
         }
+        case 'mesh': {
+          // 引用源模型里的网格：size 是它的外包络（原点在底面中心，与基本体一致），
+          // pivot 是网格在源文件坐标里对应这个原点的点。外包络写在源码里，所以编译仍是纯函数
+          const src = this.eval(n, 'src');
+          if (typeof src !== 'string' || !src) throw new S3DError(`${n.path}：mesh 需要 src="文件.glb#节点名"`, n.line, n);
+          const [w, h, d] = this.vec(n, 'size');
+          n.geom = { type: 'mesh', src, w, h, d, pivot: this.vec(n, 'pivot', [0, 0, 0]) };
+          return { min: [-w / 2, 0, -d / 2], max: [w / 2, h, d / 2] };
+        }
         case 'sphere': {
           const r = this.num(n, 'r', 0.5);
           n.geom = { type: 'sphere', r };
@@ -1943,6 +1987,7 @@ function localParts(n) {
   if (!g) return { parts: [boxPoly(b)], approx: false };
   switch (g.type) {
     case 'box': case 'beam': return { parts: [boxPoly(b)], approx: false };
+    case 'mesh': return { parts: [boxPoly(b)], approx: true };
     case 'wedge': {
       const { w, h, d } = g;
       const v = [[-w / 2, 0, -d / 2], [w / 2, 0, -d / 2], [w / 2, h, -d / 2], [-w / 2, 0, d / 2], [w / 2, 0, d / 2], [w / 2, h, d / 2]];
@@ -2111,20 +2156,20 @@ function deriveFacts(root, S) {
 // ───────────────────────── 入口 ─────────────────────────
 
 // 有 variant 时编译两遍：第一遍求解并识别语义，决定替换哪些对象；第二遍在这些对象的外包络里换上变体
-export function compile(src) {
-  const first = compileOnce(src, null);
-  return first.plan ? compileOnce(src, first.plan).result : first.result;
+export function compile(src, opts = {}) {
+  const first = compileOnce(src, null, opts);
+  return first.plan ? compileOnce(src, first.plan, opts).result : first.result;
 }
 
-function compileOnce(src, plan) {
+function compileOnce(src, plan, opts) {
   const errors = [];
-  const program = parseProgram(src, errors);
+  const program = loadProgram(src, opts, errors);
   const elab = elaborate(program, errors);
   const { root, flat, materials, defs, semantic } = elab;
   const S = new Solver(root, flat);
   const fail = (e, n) => {
     if (e instanceof Cycle) return new S3DError(`循环依赖：${e.node.path} 的位置最终依赖于它自己`, e.node.line, e.node);
-    if (e instanceof S3DError) { e.line ??= n.line; e.node ??= n; return e; }
+    if (e instanceof S3DError) { e.line ??= n.line; e.node ??= n; e.file ??= e.node?.file ?? n.file; return e; }
     return new S3DError(String(e && e.stack || e), n.line, n);
   };
 
@@ -2252,7 +2297,7 @@ function compileOnce(src, plan) {
   const nodes = order.map((n) => ({
     path: n.path,
     kind: n.template ? n.template : n.inst ? 'instance' : n.src ? `${n.kind}→${K(n)}` : n.copyOf ? n.copyOf.container.kind : K(n),
-    id: n.id, tags: n.tags, concepts: n.concepts ?? [], line: n.line, types: n.types ?? null, meta: (n.ghostOf ?? n).meta ?? {},
+    id: n.id, tags: n.tags, concepts: n.concepts ?? [], line: n.line, file: n.file ?? null, types: n.types ?? null, meta: (n.ghostOf ?? n).meta ?? {},
     depth: n.path.split('.').length - 1, late: !!n.late, ghost: !!n.ghostOf, curve: CURVES.has(K(n)), hidden: !!n.hidden, skin: !!n.skin,
     world: n._world ?? null, box: n._world && n._box ? transformBox(n._world, n._box) : null,
   }));
@@ -2262,7 +2307,7 @@ function compileOnce(src, plan) {
     plan: nextPlan,
     result: {
       items, curves, facts, nodes, concepts, patterns, variants: variantSummary, checks, defs: [...defs.keys()], materials: Object.fromEntries(materials),
-      errors: errors.map((e) => ({ line: e.line ?? null, message: e.message })),
+      errors: errors.map((e) => ({ line: e.line ?? null, file: e.file ?? e.node?.file ?? null, message: e.message })),
     },
   };
 }

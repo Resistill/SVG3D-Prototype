@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Brush, Evaluator, ADDITION, SUBTRACTION, INTERSECTION } from 'three-bvh-csg';
 
 const OPS = { union: ADDITION, subtract: SUBTRACTION, intersect: INTERSECTION };
@@ -36,6 +37,7 @@ function geomOf(s) {
     case 'rod': return new THREE.CylinderGeometry(s.r, s.r, s.L, 14).rotateZ(-Math.PI / 2);
     case 'steps': return mergeGeometries(s.treads.map((t) => normalize(new THREE.BoxGeometry(...t.s).translate(...t.c))));
     case 'sweep': return sweepGeom(s);
+    case 'mesh': return new THREE.BoxGeometry(s.w, s.h, s.d).translate(0, s.h / 2, 0); // 加载前的占位
     case 'revolve': return new THREE.LatheGeometry(s.prof.map(([r, y]) => new THREE.Vector2(r, y)), 48, 0, (s.angle * Math.PI) / 180);
   }
   throw new Error('未知几何 ' + s.type);
@@ -134,6 +136,8 @@ export class Viewer {
     this.curveMat = new THREE.LineDashedMaterial({ color: '#1f5fd6', dashSize: 0.8, gapSize: 0.5, depthTest: false, transparent: true, opacity: 0.85 });
     this.helper = null;
     this.mats = new Map();
+    this.loader = new GLTFLoader();
+    this.gltfCache = new Map();
     this.evaluator = new Evaluator();
     this.evaluator.useGroups = false;
     this.evaluator.attributes = ['position', 'normal', 'uv'];
@@ -189,11 +193,12 @@ export class Viewer {
   }
 
   setScene(result) {
-    for (const m of this.content.children) m.geometry.dispose();
+    this.content.traverse((o) => { if (o.isMesh && o.geometry) o.geometry.dispose(); });
     this.content.clear();
     const warnings = [];
     for (const item of result.items) {
       try {
+        if (item.kind === 'solid' && item.geom.type === 'mesh') { this.addMeshRef(item); continue; }
         const geom = item.kind === 'solid' ? worldGeom(item) : this.brush(item).geometry;
         const mesh = new THREE.Mesh(geom, this.material(item.material));
         mesh.castShadow = mesh.receiveShadow = true;
@@ -221,6 +226,31 @@ export class Viewer {
     return warnings;
   }
 
+  // mesh 引用：先放半透明占位盒，加载完成后换成源文件里的节点（放到外包络里：先减去 pivot，再套用世界变换）
+  addMeshRef(item) {
+    const holder = new THREE.Group();
+    holder.name = item.path;
+    const ph = new THREE.Mesh(worldGeom(item), new THREE.MeshStandardMaterial({ color: '#8899aa', transparent: true, opacity: 0.35 }));
+    ph.userData = { path: item.path, tags: item.tags, baseMat: ph.material };
+    holder.add(ph);
+    this.content.add(holder);
+    const [url, node] = item.geom.src.split('#');
+    if (!this.gltfCache.has(url)) this.gltfCache.set(url, this.loader.loadAsync(url));
+    this.gltfCache.get(url).then((gltf) => {
+      const srcObj = node ? gltf.scene.getObjectByName(node) : gltf.scene;
+      if (!srcObj) throw new Error(`找不到节点 ${node}`);
+      gltf.scene.updateMatrixWorld(true);
+      const obj = srcObj.clone(true);
+      obj.matrixAutoUpdate = false;
+      const { R, t } = item.world, p = item.geom.pivot;
+      const W = new THREE.Matrix4().set(R[0][0], R[0][1], R[0][2], t[0], R[1][0], R[1][1], R[1][2], t[1], R[2][0], R[2][1], R[2][2], t[2], 0, 0, 0, 1);
+      obj.matrix.copy(W.multiply(new THREE.Matrix4().makeTranslation(-p[0], -p[1], -p[2])).multiply(srcObj.matrixWorld));
+      obj.traverse((o) => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; o.userData = { path: item.path, tags: item.tags, baseMat: o.material }; } });
+      holder.remove(ph);
+      holder.add(obj);
+    }).catch((e) => console.warn(`mesh ${item.path} 加载失败：${e.message}`));
+  }
+
   bounds() { return new THREE.Box3().setFromObject(this.content); }
 
   fitShadow() {
@@ -246,7 +276,7 @@ export class Viewer {
 
   pick(v) {
     this.raycaster.setFromCamera(v, this.camera);
-    const hit = this.raycaster.intersectObjects(this.content.children, false)[0];
+    const hit = this.raycaster.intersectObjects(this.content.children, true)[0];
     return hit ? hit.object.userData : null;
   }
 
@@ -256,7 +286,9 @@ export class Viewer {
     this.selected = paths.length ? paths : null;
     if (this.helper) { this.scene.remove(this.helper); this.helper = null; }
     const under = (p) => paths.some((s) => p === s || p.startsWith(s + '.'));
-    for (const m of this.content.children) {
+    const meshes = [];
+    this.content.traverse((o) => { if (o.isMesh && o.userData.baseMat) meshes.push(o); });
+    for (const m of meshes) {
       const base = m.userData.baseMat;
       if (paths.length && under(m.userData.path)) {
         if (!base.userData.hi) { base.userData.hi = base.clone(); base.userData.hi.emissive = new THREE.Color('#ff7a1a'); base.userData.hi.emissiveIntensity = 0.55; }

@@ -724,3 +724,55 @@ test('concept 的层级与元数据', () => {
   assert.equal(r.nodes.find((n) => n.path === 'd1').meta.src, 'node_3');
   assert.deepEqual(r.checks[0].violators, ['d2']);
 });
+
+// ───────── 层：import ─────────
+
+const layered = (files, main) => compile(files[main], { file: main, resolve: (p) => files[p] });
+
+test('import：修改层覆盖基础描述；风格层不改变空间事实', () => {
+  const files = {
+    'base.s3d': `
+      box ground size=40,1,40 pin=top
+      def hut(w=4) { box body size=w,3,w; wedge roof size=w,1.5,w on=body }
+      hut h1 on=ground
+      repeat posts n=3 step=3,0,0 at=10,0,0 { cyl p r=0.2 h=2 }
+      sphere lamp r=0.3 on=h1.roof`,
+    'edit.s3d': `import "base.s3d"
+      over h1 w=8
+      over posts n=5
+      drop posts.0`,
+    'style.s3d': `import "base.s3d"
+      material wood color=#8a5a3c
+      def shingles(w=1, h=1, d=1) { wedge s size=w,h,d }
+      over h1.roof use=shingles
+      over kind(cyl) mat=wood`,
+  };
+  const base = layered(files, 'base.s3d'), edit = layered(files, 'edit.s3d'), style = layered(files, 'style.s3d');
+  for (const r of [base, edit, style]) assert.deepEqual(r.errors, []);
+  near(box(edit, 'h1.body').max[0] - box(edit, 'h1.body').min[0], 8, '参数被覆盖');
+  near(box(edit, 'lamp').min[1], 4.5, '依赖它的灯跟着移动（roof 顶在 3 + 1.5）');
+  assert.deepEqual(edit.nodes.filter((n) => /^posts\.\d+$/.test(n.path)).map((n) => n.path), ['posts.1', 'posts.2', 'posts.3', 'posts.4']);
+  const factSet = (r) => r.facts.map((f) => f.text).sort().join('\n');
+  assert.equal(factSet(style), factSet(base), '风格层不改变空间事实');
+  assert.ok(style.items.some((i) => i.path === 'h1.roof.skin.s'));
+});
+
+test('import 的错误带文件名；循环 import 报错', () => {
+  const r = layered({ 'a.s3d': 'import "b.s3d"\nbox x size=1,1,1', 'b.s3d': 'box y on=nothing' }, 'a.s3d');
+  assert.ok(r.errors.some((e) => e.file === 'b.s3d' && e.message.includes('nothing')));
+  const c = layered({ 'a.s3d': 'import "b.s3d"', 'b.s3d': 'import "a.s3d"' }, 'a.s3d');
+  assert.ok(c.errors.some((e) => e.message.includes('循环')));
+});
+
+test('mesh：引用源模型的网格，外包络参与关系', () => {
+  const r = compile(`
+    box ground size=20,1,20 pin=top
+    mesh statue src="assets/park.glb#Statue" size=2,3,1.5 pivot=0.4,0,-0.2 on=ground ~fit=0.6
+    box plinth size=1,0.2,1 on=statue
+  `);
+  assert.deepEqual(r.errors, []);
+  near(box(r, 'plinth').min[1], 3, '放在网格外包络的顶上');
+  const it = r.items.find((i) => i.path === 'statue');
+  assert.equal(it.geom.src, 'assets/park.glb#Statue');
+  assert.ok(r.facts.find((f) => f.a === 'statue' && f.b === 'ground').approx, '网格只有外包络，事实标为近似');
+});

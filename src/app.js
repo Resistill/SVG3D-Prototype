@@ -6,7 +6,10 @@ const $ = (s) => document.querySelector(s);
 const src = $('#src'), gutter = $('#gutter'), errorsEl = $('#errors'), statusEl = $('#status');
 const objList = $('#objects'), factList = $('#facts'), semEl = $('#sem'), tip = $('#tip');
 const viewer = new Viewer($('#view'));
-const EXAMPLES = { semantics: '变量 · 集合 · 语义', spaceport: '航天基地', curves: '曲线 · 镜像 · 旋转', rotation: '三维旋转', basics: '基础关系' };
+const EXAMPLES = {
+  semantics: '变量 · 集合 · 语义', spaceport: '航天基地', spaceport_edit: '航天基地 · 修改层', spaceport_blueprint: '航天基地 · 蓝图风格',
+  curves: '曲线 · 镜像 · 旋转', rotation: '三维旋转', basics: '基础关系',
+};
 let current = 'semantics', last = null, errLines = new Set();
 
 const store = {
@@ -48,16 +51,27 @@ let timer = 0;
 function schedule() { clearTimeout(timer); timer = setTimeout(run, 350); renderGutter(); }
 src.addEventListener('input', () => { store.set('s3d:' + current, src.value); schedule(); });
 
-function run() {
+// import 的文件要先取回来（编译本身是同步的纯函数）
+const files = new Map();
+async function preload(text, file) {
+  for (const m of text.matchAll(/^\s*import\s+"([^"]+)"/gm)) {
+    const path = new URL(m[1], new URL(file, location.href)).pathname.replace(/^\//, '');
+    if (files.has(path)) continue;
+    try { const t = await (await fetch(path)).text(); files.set(path, t); await preload(t, path); } catch { /* 编译时会报“找不到文件” */ }
+  }
+}
+async function run() {
+  await preload(src.value, `examples/${current}.s3d`);
   const t0 = performance.now();
-  const r = compile(src.value);
+  const r = compile(src.value, { file: `examples/${current}.s3d`, resolve: (p) => files.get(p) });
   const t1 = performance.now();
   const warn = viewer.setScene(r);
   const t2 = performance.now();
   last = r;
-  errLines = new Set(r.errors.map((e) => e.line).filter(Boolean));
+  errLines = new Set(r.errors.filter((e) => !e.file || e.file === `examples/${current}.s3d`).map((e) => e.line).filter(Boolean));
   renderGutter();
-  errorsEl.innerHTML = [...r.errors.map((e) => `<div class="e" data-line="${e.line ?? ''}"><b>第 ${e.line ?? '?'} 行</b>${esc(e.message)}</div>`),
+  const here = `examples/${current}.s3d`;
+  errorsEl.innerHTML = [...r.errors.map((e) => `<div class="e" data-line="${e.file && e.file !== here ? '' : e.line ?? ''}"><b>${e.file && e.file !== here ? esc(e.file) + ' ' : ''}第 ${e.line ?? '?'} 行</b>${esc(e.message)}</div>`),
     ...warn.map((w) => `<div class="e w">${esc(w)}</div>`)].join('');
   errorsEl.hidden = !r.errors.length && !warn.length;
   const failed = r.checks.filter((c) => !c.ok).length;

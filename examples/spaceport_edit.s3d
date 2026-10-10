@@ -1,0 +1,15 @@
+// 航天基地 · 修改层
+// 基础描述（spaceport.s3d）原封不动——它可以是逆向工具重新生成的——这里只写修改。
+// 后写的覆盖先写的；被修改对象的关系照常求解，所以依赖它的东西会跟着动。
+import "spaceport.s3d"
+
+over rocket.stage2 h=20            // 二级加长：整流罩、摆臂的终点都跟着上移
+over tower lv=10                   // 脐带塔改成 10 层：按新参数重建，对侧的镜像塔跟着变
+over hangar dw=16                  // 厂房开口加宽（模板参数）
+over tanks n=5                     // 燃料罐从 3 个加到 5 个（阵列数量）
+drop lights.3                      // 拆掉一根灯塔
+
+// 照着总装厂房再建一座（copy 复制的是定义，之后可以随意改），屋顶换个颜色
+copy hangar2 of=hangar on=ground[-0.45,1,0.42] {
+  over roof color=#4a5560
+}

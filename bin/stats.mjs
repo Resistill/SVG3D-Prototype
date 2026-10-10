@@ -12,7 +12,7 @@ const rows = [];
 for (const f of files) {
   const src = readFileSync(f, 'utf8');
   const t0 = performance.now();
-  const r = compile(src);
+  const r = compile(src, { file: f, resolve: (p) => readFileSync(p, 'utf8') });
   const ms = performance.now() - t0;
   const byRel = {};
   for (const x of r.facts) byRel[x.rel] = (byRel[x.rel] ?? 0) + 1;
