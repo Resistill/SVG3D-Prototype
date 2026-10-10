@@ -10,7 +10,8 @@
     "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js",
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.2/examples/jsm/",
     "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.9/build/index.module.js",
-    "three-bvh-csg": "https://cdn.jsdelivr.net/npm/three-bvh-csg@0.0.18/build/index.module.js"
+    "three-bvh-csg": "https://cdn.jsdelivr.net/npm/three-bvh-csg@0.0.18/build/index.module.js",
+    "@gltf-transform/core": "https://cdn.jsdelivr.net/npm/@gltf-transform/core@4.5.0/+esm"
   }
 }
 </script>
@@ -29,6 +30,8 @@
   header h1 span { color: var(--accent); }
   header .sub { color: var(--mute); }
   #status { margin-left: auto; color: var(--mute); font-family: var(--mono); font-size: 12px; }
+  .revgrp { display: inline-flex; gap: 4px; align-items: center; }
+  body.dropping #view::after { content: '松开：在浏览器里逆向这个 .glb'; position: absolute; inset: 12px; display: grid; place-items: center; border: 2px dashed var(--accent); border-radius: 10px; background: rgba(21,24,28,.6); color: #ffd2b0; font-size: 15px; pointer-events: none; }
   #status.bad { color: var(--err); }
   select, button { background: #262b33; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; font: inherit; cursor: pointer; }
   button:hover, select:hover { border-color: #3b4450; }
@@ -212,6 +215,11 @@
   <button id="fit">适配视角</button>
   <button id="fly" title="漫游：点击画面锁定鼠标，鼠标转视角，WASD 移动，Q/E 升降，Shift 加速，滚轮调速，Esc 退出">漫游</button>
   <button id="export">导出 GLB</button>
+  <span class="revgrp" title="浏览器内逆向：选择或拖入一个 .glb，在 Worker 里逆向成 .s3d（与命令行 bin/reverse.mjs 结果相同），作为一个没保存的新文件打开">
+    <button id="rev-open">逆向 GLB…</button><select id="rev-fid" aria-label="逆向档位"><option value="detail">精细</option><option value="structure">结构</option><option value="semantic">语义</option></select>
+    <button id="rev-save" hidden title="把逆向结果（含编辑器里的修改）下载为 .s3d">下载 .s3d</button>
+    <input type="file" id="rev-file" accept=".glb,model/gltf-binary" hidden>
+  </span>
   <span id="status"></span>
 </header>
 <div id="projbar" hidden>

@@ -2,6 +2,7 @@
 import { compile, FACT_EPS, factProviderList } from './s3d.js';
 import { Viewer } from './render.js';
 import { createCollab, detectApi, esc } from './collab.js';
+import { shimWorker, rpc } from './shim-worker.js';
 
 const $ = (s) => document.querySelector(s);
 const src = $('#src'), gutter = $('#gutter'), errorsEl = $('#errors'), statusEl = $('#status');
@@ -65,7 +66,8 @@ src.addEventListener('input', () => {
   if (src.readOnly) return;
   setFile(active, src.value);
   const wasDirty = dirty.has(active);
-  if (fileParam) dirty.add(active); else if (active === rootFile()) store.set('s3d:' + current, src.value);
+  if (isScratch()) scratch.text = src.value; // 逆向结果不落盘，也不进浏览器缓存；「下载 .s3d」取走
+  else if (fileParam) dirty.add(active); else if (active === rootFile()) store.set('s3d:' + current, src.value);
   // 文件列表只在“未保存”标记或行数变了时重建
   const n = lineCounts.get(active);
   if (!wasDirty || n !== shownCounts.get(active)) renderFileList();
@@ -75,7 +77,10 @@ src.addEventListener('input', () => {
 // 打开任意文件：index.html?file=work/xxx/scene.s3d（路径相对于服务根目录；工程的组合根会顺带加载各层）；?project=work/xxx 等价于打开它的 scene.s3d
 const params = new URLSearchParams(location.search);
 const fileParam = params.get('file') ?? (params.get('project') ? params.get('project').replace(/\/*$/, '/scene.s3d') : null);
-const rootFile = () => fileParam ?? `examples/${current}.s3d`;
+// 浏览器内逆向的结果是一个没保存的新文件（scratch，见下面“浏览器内逆向”）
+let scratch = null;
+const isScratch = () => current === 'scratch' && !!scratch;
+const rootFile = () => (isScratch() ? scratch.path : fileParam ?? `examples/${current}.s3d`);
 // 多文件：总是编译组合根；编辑器显示其中一个文件（active），被 import 的文件也能看、能改
 const files = new Map(), dirty = new Set(), etags = new Map(), lineCounts = new Map(), shownCounts = new Map();
 let active = null;
@@ -493,13 +498,16 @@ async function load(name, { reset } = {}) {
   current = name;
   sel.value = name;
   if (reset) store.del('s3d:' + name);
-  const saved = fileParam ? null : store.get('s3d:' + name);
+  if (reset && isScratch()) scratch.text = scratch.orig;
+  const saved = fileParam || isScratch() ? null : store.get('s3d:' + name);
   // ?file= 打开的文件总是从磁盘读（它可能刚被工具改过），不用浏览器里的缓存
   files.clear(); dirty.clear(); etags.clear(); lineCounts.clear(); showConflicts([]);
-  try { setFile(rootFile(), saved ?? await fetchText(rootFile())); } catch (e) { setFile(rootFile(), ''); statusEl.textContent = `读取失败：${e.message}`; }
+  if (isScratch()) setFile(rootFile(), scratch.text);
+  else try { setFile(rootFile(), saved ?? await fetchText(rootFile())); } catch (e) { setFile(rootFile(), ''); statusEl.textContent = `读取失败：${e.message}`; }
   active = null;
   openFile(rootFile());
-  $('#reset').hidden = saved == null;
+  $('#reset').hidden = isScratch() ? scratch.text === scratch.orig : saved == null;
+  $('#rev-save').hidden = !isScratch();
   viewer.firstFrame = true;
   select(null, { silent: true });
   await run();
@@ -520,6 +528,62 @@ $('#curves').addEventListener('click', (e) => {
   e.target.classList.toggle('on', viewer.curveLayer.visible);
 });
 $('#export').addEventListener('click', () => viewer.exportGLB(current));
+
+// ── 浏览器内逆向（docs/PLAN2.md 4.8）──
+// 选择或拖入一个 .glb：在 Worker 里读 GLB、跑 tools/reverse.mjs 的 reverse()（与 bin/reverse.mjs 同样的参数，结果逐字节相同），
+// 结果作为没保存的新文件 scratch/<名字>.s3d 打开；网格引用（src="<名字>.glb#节点"）直接用拖入的文件显示。「下载 .s3d」取走
+let revCall = null;
+async function reverseFile(file) {
+  if (!file || !/\.glb$/i.test(file.name)) { statusEl.textContent = '浏览器内逆向只接受 .glb'; return; }
+  const fidelity = $('#rev-fid').value;
+  const btn = $('#rev-open');
+  btn.disabled = true;
+  try {
+    statusEl.textContent = `逆向 ${file.name}：加载逆向模块（第一次要从 CDN 取 three、gltf-transform）…`;
+    // Worker 只建一次；加载失败下次重来
+    revCall ??= shimWorker('./reverse-worker.js').then(rpc).catch((e) => { revCall = null; throw e; });
+    const call = await revCall;
+    statusEl.textContent = `逆向 ${file.name}（${fidelity}）…`;
+    const buf = await file.arrayBuffer();
+    const r = await call({ buffer: buf, name: file.name, srcFile: file.name, fidelity }, [buf]);
+    const base = file.name.replace(/\.glb$/i, '');
+    const path = `scratch/${base}.s3d`;
+    // 网格引用相对 .s3d 所在的目录：把那个位置的 URL 预先指向拖入的文件
+    const glbUrl = new URL(file.name, new URL(path, location.href)).href;
+    viewer.gltfCache.set(glbUrl, viewer.loader.loadAsync(URL.createObjectURL(file)));
+    scratch = { path, name: file.name, text: r.src, orig: r.src, report: r.report };
+    if (!sel.querySelector('option[value=scratch]')) sel.insertAdjacentHTML('beforeend', '<option value="scratch"></option>');
+    sel.querySelector('option[value=scratch]').textContent = `逆向：${base}（未保存）`;
+    await load('scratch');
+    const k = r.report?.kinds ?? {};
+    statusEl.textContent = `逆向完成：${r.parts} 个部件 → ${countLines(r.src)} 行（${Object.entries(k).map(([a, b]) => `${a} ${b}`).join(' · ')}）· ${fidelity} · ${r.ms}ms · ${statusEl.textContent}`;
+  } catch (e) {
+    statusEl.textContent = `逆向失败：${e.message.split('\n')[0]}`;
+    console.error(e);
+  } finally { btn.disabled = false; }
+}
+$('#rev-open').addEventListener('click', () => $('#rev-file').click());
+$('#rev-file').addEventListener('change', (e) => { reverseFile(e.target.files[0]); e.target.value = ''; });
+$('#rev-save').addEventListener('click', () => {
+  if (!isScratch()) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([files.get(rootFile())], { type: 'text/plain' }));
+  a.download = scratch.path.split('/').pop();
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+// 拖入：只认带文件的拖动；松开时取第一个 .glb
+let dragDepth = 0;
+const hasFiles = (e) => [...(e.dataTransfer?.types ?? [])].includes('Files');
+addEventListener('dragenter', (e) => { if (hasFiles(e)) { dragDepth++; document.body.classList.add('dropping'); } });
+addEventListener('dragleave', (e) => { if (hasFiles(e) && --dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dropping'); } });
+addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault(); });
+addEventListener('drop', (e) => {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+  dragDepth = 0; document.body.classList.remove('dropping');
+  reverseFile([...e.dataTransfer.files].find((f) => /\.glb$/i.test(f.name)) ?? e.dataTransfer.files[0]);
+});
 
 // 工程：project.json 是静态文件，没有接口也能读（单位、档位、源模型）；有接口时再取待处理提议数
 async function openProjectFor(file) {
