@@ -28,8 +28,8 @@ const KIND_PROPS = {
   line: ['path'], bezier: ['path'], spline: ['path', 'closed'],
   arc: ['r', 'angle', 'rise', 'plane'], helix: ['r', 'pitch', 'turns'],
   group: [], union: [], subtract: [], intersect: [],
-  repeat: ['n', 'step', 'turn', 'center', 'along', 'orient', 'over'],
-  mirror: ['of', 'across', 'axis'], rotate: ['of', 'about', 'axis', 'angle', 'n'],
+  repeat: ['n', 'step', 'turn', 'center', 'along', 'orient'],
+  mirror: ['of', 'across', 'axis'], rotate: ['of', 'about', 'axis', 'angle', 'n'], copy: ['of'],
 };
 const LEAVES = new Set(['box', 'wedge', 'cyl', 'cone', 'sphere', 'revolve', 'span', 'sweep', 'pipe']);
 const CURVES = new Set(['line', 'bezier', 'spline', 'arc', 'helix']);
@@ -38,6 +38,11 @@ const LINKS = new Set(['span', 'sweep', 'pipe']);
 const CSG = new Set(['union', 'subtract', 'intersect']);
 const COPIES = new Set(['mirror', 'rotate']);
 const K = (n) => n.asKind ?? n.kind;
+// 决定位置的主关系：覆盖其中一个时，其余的作废
+const REL_KEYS = ['on', 'under', 'against', 'inside', 'at'];
+const APPEARANCE = new Set(['mat', 'color', 'use']);
+// 带作用域的表达式：over / copy 写下的表达式在“写它的地方”求值，而不是在被修改对象的作用域里
+const unwrap = (a) => (a && a.k === 'envd' ? a.ast : a);
 
 // ───────────────────────── 错误 ─────────────────────────
 
@@ -253,7 +258,6 @@ function lexStatements(src) {
 // ───────────────────────── 词法与语法：表达式 ─────────────────────────
 
 const ID_START = /[\p{L}_]/u, ID_CHAR = /[\p{L}\p{N}_]/u;
-const RANDOM_FNS = new Set(['rand', 'uniform', 'choose']);
 
 function exprTokens(s, line) {
   const out = [];
@@ -297,7 +301,7 @@ function exprTokens(s, line) {
     }
     const two = s.slice(i, i + 2);
     if (['>=', '<=', '==', '!='].includes(two)) { out.push({ t: two }); i += 2; continue; }
-    if ('+-*/%(),;[]<>|&'.includes(c)) { out.push({ t: c }); i++; continue; }
+    if ('+-*/(),;[]<>|&'.includes(c)) { out.push({ t: c }); i++; continue; }
     throw new S3DError(`无法识别的字符 “${c}”`, line);
   }
   return out;
@@ -305,7 +309,7 @@ function exprTokens(s, line) {
 
 export function parseValue(str, line) {
   const toks = exprTokens(str, line);
-  let p = 0, randOrd = 0;
+  let p = 0;
   const err = (m) => new S3DError(`${m}：${str}`, line);
   const eat = (t) => (toks[p] && toks[p].t === t ? (p++, true) : false);
   const expect = (t) => { if (!eat(t)) throw err(`缺少 “${t}”`); };
@@ -351,7 +355,6 @@ export function parseValue(str, line) {
     for (;;) {
       if (eat('*')) a = { k: 'bin', op: '*', a, b: unary() };
       else if (eat('/')) a = { k: 'bin', op: '/', a, b: unary() };
-      else if (eat('%')) a = { k: 'bin', op: '%', a, b: unary() };
       else return a;
     }
   };
@@ -369,7 +372,7 @@ export function parseValue(str, line) {
         p++;
         const args = [];
         if (!eat(')')) { args.push(item()); while (eat(',')) args.push(item()); expect(')'); }
-        return { k: 'call', name: t.segs[0], args, ord: RANDOM_FNS.has(t.segs[0]) ? randOrd++ : 0 };
+        return { k: 'call', name: t.segs[0], args };
       }
       const node = { k: 'path', segs: t.segs };
       if (t.glued) { p++; node.coords = tuple(); expect(']'); }
@@ -446,17 +449,7 @@ function parseProgram(src, errors) {
       }
       let children = [];
       if (toks[p] && toks[p].t === '{') { p++; children = block(true); }
-      try {
-        const st = makeStmt(words, children);
-        if (st.kind === 'else') {
-          // 接到前一个 if（或 else if 链的末端）上
-          let target = stmts[stmts.length - 1];
-          if (!target || target.kind !== 'if') throw new S3DError('else 前面要有 if', st.line);
-          while (target.elseBody && target.elseBody.length === 1 && target.elseBody[0].kind === 'if' && target.elseBody[0].chained) target = target.elseBody[0];
-          if (target.elseBody) throw new S3DError('一个 if 只能有一个 else', st.line);
-          target.elseBody = st.body;
-        } else stmts.push(st);
-      } catch (e) { errors.push(e); }
+      try { stmts.push(makeStmt(words, children)); } catch (e) { errors.push(e); }
     }
     if (closing) errors.push(new S3DError('缺少 “}”', toks[toks.length - 1].line));
     return stmts;
@@ -468,27 +461,38 @@ function makeStmt(words, children) {
   const line = words[0].line;
   const kind = words[0].v;
   if (kind === 'def') {
+    // def 名字(参数=默认值, …) : 基类型(覆盖基类型的默认值, …) { … }
     const sig = words.slice(1).map((w) => w.v).join('');
-    const m = /^([\p{L}_][\p{L}\p{N}_]*)(?:\((.*)\))?$/u.exec(sig);
-    if (!m) throw new S3DError(`def 语法应为 def 名字(参数=默认值, ...) { ... }`, line);
-    const params = new Map();
-    for (const part of splitTop(m[2] || '', ',')) {
-      const kv = splitProp(part);
-      if (kv) params.set(kv[0].trim(), parseValue(kv[1], line));
-      else params.set(part, null);
-    }
-    return { kind: 'def', name: m[1], params, body: children, line };
+    const [left, right] = splitTop(sig, ':');
+    const head = /^([\p{L}_][\p{L}\p{N}_]*)(?:\((.*)\))?$/u;
+    const m = head.exec(left ?? '');
+    const mb = right ? head.exec(right) : null;
+    if (!m || (right && !mb) || splitTop(sig, ':').length > 2) throw new S3DError('def 语法应为 def 名字(参数=默认值, …) { … }，派生写作 def 名字 : 基类型(参数=新默认值) { … }', line);
+    const plist = (txt) => {
+      const out = new Map();
+      for (const part of splitTop(txt || '', ',')) {
+        const kv = splitProp(part);
+        if (kv) out.set(kv[0].trim(), parseValue(kv[1], line));
+        else out.set(part, null);
+      }
+      return out;
+    };
+    return { kind: 'def', name: m[1], params: plist(m[2]), base: mb ? mb[1] : null, overrides: mb ? plist(mb[2]) : new Map(), body: children, line };
   }
-  if (kind === 'if') {
-    if (words.length < 2) throw new S3DError('if 写成：if 条件 { … } else { … }', line);
-    return { kind, cond: parseValue(words.slice(1).map((w) => w.v).join(' '), line), children, line };
-  }
-  if (kind === 'else') {
-    if (words.length > 1) {
-      if (words[1].v !== 'if' || words.length < 3) throw new S3DError('写成 else { … } 或 else if 条件 { … }', line);
-      return { kind, line, body: [{ kind: 'if', chained: true, cond: parseValue(words.slice(2).map((w) => w.v).join(' '), line), children, line }] };
+  if (kind === 'if' || kind === 'else') throw new S3DError('if / else 已移出语言：结构上的差别请用派生类型表达，例如 def 带烟囱的房子 : 房子 { box chimney … }', line);
+  if (kind === 'over' || kind === 'drop') {
+    // over 选择器… [key=value …] [{ … }]；drop 选择器…
+    const selWords = [], props = new Map();
+    for (const w of words.slice(1)) {
+      const kv = kind === 'over' && !selWords.length ? null : kind === 'over' ? splitProp(w.v) : null;
+      if (kv && /^[\p{L}_][\p{L}\p{N}_]*$/u.test(kv[0])) props.set(kv[0], parseValue(kv[1], w.line));
+      else if (props.size) throw new S3DError(`${kind}：属性写完之后不能再出现选择器 “${w.v}”`, w.line);
+      else selWords.push(w.v);
     }
-    return { kind, line, body: children };
+    if (!selWords.length) throw new S3DError(`${kind} 需要选择器，例如 ${kind} hangar.door、${kind} #wall`, line);
+    if (kind === 'drop' && children.length) throw new S3DError('drop 不能带 { }', line);
+    const src = selWords.join(' ');
+    return { kind, sel: parseValue(src, line), src, props, children, line };
   }
   if (kind === 'variant') {
     // variant 集合 use=模板 参数=…：把集合里每个对象的外观换成这个模板，外包络不变
@@ -505,10 +509,17 @@ function makeStmt(words, children) {
   }
   if (kind === 'let' || kind === 'concept') {
     const text = words.slice(1).map((w) => w.v).join(' ');
-    const m = /^([\p{L}_][\p{L}\p{N}_]*)\s*=\s*([\s\S]+)$/u.exec(text);
-    if (!m) throw new S3DError(`${kind} 写成：${kind} 名字 = 表达式`, line);
+    const m = /^([\p{L}_][\p{L}\p{N}_]*)\s*(?::\s*([\p{L}_][\p{L}\p{N}_]*)\s*)?=\s*([\s\S]+)$/u.exec(text);
+    if (!m || (m[2] && kind === 'let')) throw new S3DError(`${kind} 写成：${kind} 名字 = 表达式${kind === 'concept' ? '，或 concept 名字 : 上位概念 = 条件' : ''}`, line);
     if (children.length) throw new S3DError(`${kind} 不能带 { }`, line);
-    return { kind, name: m[1], ast: parseValue(m[2], line), src: m[2], line };
+    let ast;
+    if (m[2]) {
+      // 下位概念：concept 双开门 : 门 = where w > 1.6 ≡ 门 where w > 1.6；否则 ≡ 上位 & 表达式
+      const base = { k: 'path', segs: [m[2]] };
+      const w = /^where\s+([\s\S]+)$/.exec(m[3]);
+      ast = w ? { k: 'where', a: base, pred: parseValue(w[1], line) } : { k: 'and', a: base, b: parseValue(m[3], line) };
+    } else ast = parseValue(m[3], line);
+    return { kind, name: m[1], parent: m[2] ?? null, ast, src: m[3], line };
   }
   if (kind === 'check') {
     let text = words.slice(1).map((w) => w.v).join(' ');
@@ -528,8 +539,15 @@ function makeStmt(words, children) {
     }
     return { kind, sel: parseValue(words[1].v, line), src: words[1].v, props, line };
   }
-  const st = { kind, id: null, props: new Map(), tags: [], children, line };
+  const st = { kind, id: null, props: new Map(), tags: [], meta: new Map(), children, line };
   for (const w of words.slice(1)) {
+    if (w.v.startsWith('~')) {
+      // 元数据：~fit=0.93 ~src="node_12"。不参与几何，可以在 where 里读
+      const mv = splitProp(w.v.slice(1));
+      if (!mv || !/^[\p{L}_][\p{L}\p{N}_]*$/u.test(mv[0])) throw new S3DError(`元数据写成 ~名字=值，看不懂 “${w.v}”`, w.line);
+      st.meta.set(mv[0], parseValue(mv[1], w.line));
+      continue;
+    }
     const kv = splitProp(w.v);
     if (kv) {
       if (!/^[\p{L}_][\p{L}\p{N}_]*$/u.test(kv[0])) throw new S3DError(`属性名不合法：${kv[0]}`, w.line);
@@ -656,7 +674,7 @@ function arith(op, a, b) {
   const isV = Array.isArray;
   if (isRef(a) && isV(b) && (op === '+' || op === '-')) return mkRef(a.node, a.anchor, op === '+' ? add(a.offset, b) : sub(a.offset, b));
   if (typeof a === 'number' && typeof b === 'number') {
-    switch (op) { case '+': return a + b; case '-': return a - b; case '*': return a * b; case '/': return a / b; case '%': return ((a % b) + b) % b; }
+    switch (op) { case '+': return a + b; case '-': return a - b; case '*': return a * b; case '/': return a / b; }
   }
   if (isV(a) && isV(b) && a.length === b.length && (op === '+' || op === '-')) return a.map((x, k) => (op === '+' ? x + b[k] : x - b[k]));
   if (op === '-' && setLike(a) && setLike(b)) { const drop = new Set(asSet(b).nodes); return new NodeSet(asSet(a).nodes.filter((n) => !drop.has(n))); }
@@ -670,6 +688,7 @@ function evalAst(ast, ctx) {
   switch (ast.k) {
     case 'num': return ast.v;
     case 'str': return ast.v;
+    case 'envd': return evalAst(ast.ast, { ...ctx, env: ast.env });
     case 'neg': { const v = evalAst(ast.a, ctx); return typeof v === 'number' ? -v : Array.isArray(v) ? v.map((x) => -x) : arith('*', -1, v); }
     case 'bin': return arith(ast.op, evalAst(ast.a, ctx), evalAst(ast.b, ctx));
     case 'vec': return ast.items.map((x) => {
@@ -710,6 +729,7 @@ function evalAst(ast, ctx) {
       if (!ctx.S) throw new S3DError('where 只能在求解阶段使用');
       return new NodeSet(base.nodes.filter((m) => {
         const env = new Env(ctx.env);
+        for (const [k, v] of Object.entries((m.ghostOf ?? m).meta ?? {})) env.setLazy(k, () => v);
         const size = () => { const b = ctx.S.box(m); return sub(b.max, b.min); };
         const ctr = () => { const b = ctx.S.worldBox(m); return scl(add(b.min, b.max), 0.5); };
         ['w', 'h', 'd'].forEach((k, i) => env.setLazy(k, () => size()[i]));
@@ -732,25 +752,6 @@ function same(a, b) {
   return a === b;
 }
 
-// 确定性随机数：rand = hash(种子, 调用位置, 键)。没有时间和状态，同样的源码永远得到同样的场景
-function hash01(str) {
-  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
-  for (let i = 0; i < str.length; i++) {
-    const c = str.charCodeAt(i);
-    h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677);
-  }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return ((h2 >>> 0) * 2 ** 21 + (h1 >>> 11)) / 2 ** 53;
-}
-function randomOf(ast, ctx, keys) {
-  const seedSlot = ctx.env.lookup('seed', ctx.S);
-  const seed = seedSlot ? seedSlot.v : 0;
-  // 调用位置 = 所在对象的路径 + 属性名 + 这是该表达式里第几个随机调用，所以同一行的两个 rand() 互不相同
-  const site = `${ctx.node ? ctx.node.path : ''}|${ctx.prop ?? ''}|${ast.ord}`;
-  return hash01(`${seed}|${site}|${keys.map((k) => (isRef(k) ? k.node.path : String(k))).join(',')}`);
-}
-
 const MATH = {
   sin: (a) => Math.sin(rad(a)), cos: (a) => Math.cos(rad(a)), tan: (a) => Math.tan(rad(a)),
   asin: (x) => (Math.asin(x) * 180) / Math.PI, acos: (x) => (Math.acos(x) * 180) / Math.PI, atan: (x) => (Math.atan(x) * 180) / Math.PI,
@@ -770,21 +771,6 @@ function evalCall(ast, ctx) {
     if (a.k === 'str') return a.v;
     throw new S3DError(`${name}() 的参数要写名字，如 ${name}(box)`);
   });
-  if (name === 'if') {
-    // 编译期的选择：只求值被选中的那个分支
-    if (args.length !== 3) throw new S3DError('if 写成 if(条件, 是, 否)');
-    return asBool(val(0)) ? val(1) : val(2);
-  }
-  if (name === 'rand') return randomOf(ast, ctx, args.map((_, i) => val(i)));
-  if (name === 'uniform') {
-    if (args.length < 2) throw new S3DError('uniform 写成 uniform(最小, 最大, 可选的键…)');
-    const lo = val(0), hi = val(1);
-    return lo + (hi - lo) * randomOf(ast, ctx, args.slice(2).map((_, i) => val(i + 2)));
-  }
-  if (name === 'choose') {
-    if (!args.length) throw new S3DError('choose 写成 choose(甲, 乙, 丙…)');
-    return val(Math.floor(randomOf(ast, ctx, []) * args.length));
-  }
   if (name in MATH) {
     const xs = args.map((_, i) => val(i));
     if (xs.some((x) => typeof x !== 'number')) throw new S3DError(`${name}() 需要数字参数`);
@@ -794,8 +780,7 @@ function evalCall(ast, ctx) {
   if (!S) throw new S3DError(`${name}() 只能在求解阶段使用`);
   switch (name) {
     case 'all': return new NodeSet(S.allNodes());
-    case 'kind': { const ks = new Set(names()); return new NodeSet(S.allNodes().filter((n) => ks.has(K(n)) || ks.has(n.template))); }
-    case 'tag': { const idx = S.tagIndex(); return new NodeSet(names().flatMap((t) => idx.get(t) ?? [])); }
+    case 'kind': { const ks = new Set(names()); return new NodeSet(S.allNodes().filter((n) => ks.has(K(n)) || (n.types ?? (n.ghostOf ?? n.src)?.types ?? []).some((t) => ks.has(t)))); }
     case 'children': return new NodeSet(asSet(val(0)).nodes.flatMap((n) => n.children));
     case 'descendants': {
       const out = [];
@@ -888,6 +873,12 @@ function evalPath(ast, ctx) {
 
 // ───────────────────────── 展开：模板与阵列 ─────────────────────────
 
+function staticMeta(s, env, node) {
+  const out = {};
+  if (s.meta) for (const [k, ast] of s.meta) out[k] = evalAst(ast, { env, node, S: null });
+  return out;
+}
+
 function elaborate(program, errors) {
   const defs = new Map(), materials = new Map();
   const globals = new Env(null);
@@ -896,14 +887,29 @@ function elaborate(program, errors) {
   const root = new Node('root', null, new Map(), [], 0, globals, null);
   const flat = [];
   const evalStatic = (ast, env, node) => evalAst(ast, { env, node, S: null });
-  const concepts = [], checks = [], styles = [], pending = [], patterns = [], variants = [];
+  const concepts = [], checks = [], styles = [], patterns = [], variants = [], opinions = [], copies = [];
 
   for (const s of program) {
-    if (s.kind === 'def') defs.set(s.name, s);
+    if (s.kind === 'def') {
+      if (s.base === s.name) {
+        // def house : house { … }：就地扩展已有类型，所有实例随之改变
+        s.baseDef = defs.get(s.name);
+        if (!s.baseDef) errors.push(new S3DError(`要扩展的类型 ${s.name} 还没有定义`, s.line));
+      }
+      defs.set(s.name, s);
+    }
     else if (s.kind === 'concept') {
       // 概念就是一个全局命名的集合，通常依赖空间事实，所以在求解之后才求值
       semantic.setThunk(s.name, s.ast, semantic, root, root, root);
       concepts.push(s);
+    } else if (s.kind === 'over' && !s.children.length && s.props.size && [...s.props.keys()].every((k) => APPEARANCE.has(k) || s.props.has('use'))) {
+      // 只改外观的覆盖：求解后应用，选择器可以依赖空间事实与概念
+      if (s.props.has('use')) {
+        const u = s.props.get('use');
+        if (u.k !== 'path' || u.segs.length !== 1) errors.push(new S3DError('use= 后面写模板名', s.line));
+        else variants.push({ kind: 'variant', sel: s.sel, src: s.src, use: u.segs[0], params: new Map([...s.props].filter(([k]) => k !== 'use')), line: s.line });
+      } else styles.push({ kind: 'style', sel: s.sel, src: s.src, props: s.props, line: s.line });
+      s.appearance = true;
     } else if (s.kind === 'pattern') patterns.push(s);
     else if (s.kind === 'variant') variants.push(s);
     else if (s.kind === 'check') checks.push(s);
@@ -931,13 +937,12 @@ function elaborate(program, errors) {
     }
   };
   const one = (s, parent, env, depth) => {
-    if (s.kind === 'material' || s.kind === 'let') return;
-    if (s.kind === 'if') {
-      // 编译期分支：条件必须在展开时就能确定（参数、变量、下标、随机数）
-      let c;
-      try { c = asBool(evalStatic(s.cond, env, parent)); }
-      catch (e) { throw new S3DError(`if 的条件要在展开时就能确定（参数、let、阵列下标、随机数），${e.message}`, s.line); }
-      walk(c ? s.children : s.elseBody ?? [], parent, env, depth);
+    if (s.kind === 'material' || s.kind === 'let' || s.appearance) return;
+    if (s.kind === 'over' || s.kind === 'drop') { opinions.push({ s, env, scope: parent, depth }); return; }
+    if (s.kind === 'copy') {
+      if (!s.id) throw new S3DError('copy 需要名字：copy 新名字 of=原对象 …', s.line);
+      if (!s.props.has('of')) throw new S3DError('copy 需要 of=原对象', s.line);
+      copies.push({ s, env, parent, depth });
       return;
     }
     if (['def', 'concept', 'check', 'style', 'pattern', 'variant'].includes(s.kind)) {
@@ -948,14 +953,11 @@ function elaborate(program, errors) {
       const allowed = new Set([...KIND_PROPS[s.kind], ...PLACEMENT]);
       for (const k of s.props.keys()) if (!allowed.has(k)) errors.push(new S3DError(`${s.kind} 没有属性 ${k}`, s.line));
       const n = new Node(s.kind, s.id, s.props, s.tags, s.line, env, parent);
+      n.meta = staticMeta(s, env, n);
+      n.stmt = s; n.srcEnv = env;
       flat.push(n);
       if ((LEAVES.has(s.kind) || CURVES.has(s.kind)) && s.children.length) throw new S3DError(`${s.kind} 不能有子语句`, s.line);
       if (COPIES.has(s.kind) && s.props.has('of') && s.children.length) throw new S3DError(`${s.kind} 写了 of= 就是复制已有对象，不能再有子语句`, s.line);
-      if (s.kind === 'repeat' && s.props.has('over')) {
-        // 对集合的每个成员各做一次：要等整棵树建好、知道有哪些成员之后才能展开
-        pending.push({ n, s, env, depth });
-        return;
-      }
       if (s.kind === 'repeat') {
         const cnt = s.props.has('n') ? evalStatic(s.props.get('n'), env, n) : 1;
         const dims = Array.isArray(cnt) ? cnt.map((x) => Math.max(0, Math.round(x))) : [Math.max(0, Math.round(cnt))];
@@ -979,27 +981,47 @@ function elaborate(program, errors) {
     const def = defs.get(s.kind);
     if (!def) throw new S3DError(`未知的类型 “${s.kind}”`, s.line);
     if (depth > 32) throw new S3DError(`模板 ${s.kind} 递归过深`, s.line);
+    // 派生链：最派生的在前。参数 = 基类参数，再依次应用每一层的默认值覆盖与新参数
+    const chain = [];
+    for (let d = def; d; d = d.baseDef ?? (d.base && d.base !== d.name ? defs.get(d.base) : null)) {
+      if (chain.includes(d) || chain.length > 32) throw new S3DError(`类型 ${s.kind} 的派生链形成了循环`, s.line);
+      chain.push(d);
+      if (d.base && !d.baseDef && d.base !== d.name && !defs.get(d.base)) throw new S3DError(`${d.name} 的基类型 ${d.base} 没有定义`, d.line);
+    }
+    const params = new Map();
+    for (const d of [...chain].reverse()) {
+      for (const [k, ast] of d.overrides) {
+        if (!params.has(k)) throw new S3DError(`${d.name} 覆盖了基类型没有的参数 ${k}`, d.line);
+        params.set(k, ast);
+      }
+      for (const [k, ast] of d.params) params.set(k, ast);
+    }
     // 模板自己声明了的参数优先于同名的定位关键字（例如模板可以有自己的 gap、turn 参数）
-    const isPlacement = (k) => PLACEMENT.has(k) && !def.params.has(k);
+    const isPlacement = (k) => PLACEMENT.has(k) && !params.has(k);
     const own = new Map([...s.props].filter(([k]) => isPlacement(k)));
     const n = new Node('group', s.id, own, s.tags, s.line, env, parent);
     n.template = s.kind;
+    n.types = [...new Set(chain.map((d) => d.name))];
+    n.meta = staticMeta(s, env, n);
+    n.stmt = s; n.srcEnv = env;
     flat.push(n);
     const body = new Env(globals);
+    n.bodyEnv = body; n.params = params;
     for (const [k, ast] of s.props) {
       if (isPlacement(k)) continue;
-      if (!def.params.has(k)) errors.push(new S3DError(`模板 ${s.kind} 没有参数 ${k}`, s.line));
+      if (!params.has(k)) errors.push(new S3DError(`模板 ${s.kind} 没有参数 ${k}`, s.line));
       body.setThunk(k, ast, env, n);
     }
-    for (const [k, ast] of def.params) {
+    for (const [k, ast] of params) {
       if (body.vars.has(k)) continue;
       if (!ast) throw new S3DError(`模板 ${s.kind} 缺少参数 ${k}`, s.line);
       body.setThunk(k, ast, body, n);
     }
-    walk(def.body, n, body, depth + 1);
+    // 先展开最基础的类型体，再逐层展开派生体（派生体里的 over / drop 作用于已展开的部件）
+    for (const d of [...chain].reverse()) walk(d.body, n, body, depth + 1);
   };
   walk(program, root, globals, 0);
-  return { root, flat, defs, materials, globals, semantic, concepts, checks, styles, pending, patterns, variants, walk };
+  return { root, flat, defs, materials, globals, semantic, concepts, checks, styles, patterns, variants, opinions, copies, walk };
 }
 
 // ───────────────────────── 复制关系：镜像与旋转 ─────────────────────────
@@ -1050,6 +1072,109 @@ function buildCopies(root, flat, S, errors) {
   try { ensure(root); } catch (e) { errors.push(e); }
 }
 
+// ───────────────────────── 结构派生与覆盖 ─────────────────────────
+
+// copy R of=A [定位] [{ 修改 }]：把 A 的定义（语句）在 R 处重新展开一次，再应用块里的修改。
+// 与 mirror / rotate 不同，copy 之后可以随意改；它复制的是 A 的定义，不包括后来对 A 的 over。
+function expandCopies(elab, S, errors, fail) {
+  let queue = [...elab.copies];
+  elab.copies.length = 0;
+  for (let round = 0; queue.length && round < 16; round++) {
+    const later = [];
+    for (const job of queue) {
+      const { s, env, parent, depth } = job;
+      try {
+        const ofAst = s.props.get('of');
+        if (ofAst.k !== 'path' || ofAst.coords) throw new S3DError('copy 的 of 写一个对象名', s.line);
+        const r = S.find(ofAst.segs, parent, parent);
+        if (!r || r.rest.length) {
+          // 也许原对象本身是一个还没展开的 copy
+          if (queue.some((j) => j !== job && j.s.id === ofAst.segs[0])) { later.push(job); continue; }
+          throw new S3DError(`copy 找不到原对象 ${ofAst.segs.join('.')}`, s.line);
+        }
+        const A = r.node;
+        if (A === parent || A.isAncestorOf(parent)) throw new S3DError(`copy 不能复制包含自己的对象 ${A.path}`, s.line);
+        const own = new Map([...s.props].filter(([k]) => k !== 'of').map(([k, a]) => [k, { k: 'envd', env, ast: a }]));
+        const before = parent.children.length;
+        if (A.stmt) {
+          // 新的定位关系取代原来的；朝向、材质等没有给出的属性沿用原对象
+          const replacesRel = [...own.keys()].some((k) => REL_KEYS.includes(k));
+          const props = new Map([...A.stmt.props].filter(([k]) => !(replacesRel && [...REL_KEYS, 'align', 'alignto', 'gap', 'offset', 'pin'].includes(k))));
+          for (const [k, a] of own) props.set(k, a);
+          elab.walk([{ ...A.stmt, id: s.id, props, tags: [...A.stmt.tags, ...s.tags], meta: s.meta?.size ? s.meta : A.stmt.meta }], parent, A.srcEnv, depth);
+        } else {
+          // 没有源语句的对象（如阵列实例）：复制它的每个子语句到一个新组里
+          const G = new Node('group', s.id, own, s.tags, s.line, env, parent);
+          elab.flat.push(G);
+          for (const c of A.children) if (c.stmt) elab.walk([c.stmt], G, c.srcEnv, depth);
+        }
+        const R = parent.children[before];
+        if (!R) throw new S3DError(`copy ${s.id} 没有生成任何对象`, s.line);
+        R.copyOfStruct = A;
+        if (s.children.length) elab.walk(s.children, R, new Env(env, { it: mkRef(R) }), depth);
+      } catch (e) { errors.push(fail(e, { line: s.line })); }
+    }
+    queue = later.concat(elab.copies.splice(0));
+  }
+  for (const job of queue) errors.push(new S3DError(`copy ${job.s.id} 的原对象无法确定（复制关系形成了循环？）`, job.s.line));
+}
+
+// over / drop：在求解之前修改几何与结构。选择器只能与空间事实无关（路径、#标签、kind、按尺寸的 where）。
+// 写在模板体或块里的 over / drop 只作用于该实例或成员内部。后写的覆盖先写的。
+function applyOpinions(elab, S, errors, fail) {
+  const q = elab.opinions;
+  let dropped = false;
+  for (let i = 0; i < q.length; i++) {
+    const { s, env, scope, depth } = q[i];
+    try {
+      let members;
+      try { members = asSet(evalAst(s.sel, { env, node: scope, scope, frame: scope, S })).nodes; }
+      catch (e) {
+        if (/求解后的空间事实/.test(e.message)) throw new S3DError(`${s.kind} 改的是几何，在求解之前生效，不能按空间事实选择（只改外观的 over 可以）`, s.line);
+        throw e;
+      }
+      members = members.filter((m) => !m.dropped && (scope.kind === 'root' || scope.isAncestorOf(m)));
+      if (!members.length) throw new S3DError(`${s.kind} ${s.src} 没有选中任何对象（副本跟随原物体，请覆盖原物体）`, s.line);
+      if (s.kind === 'drop') {
+        const mark = (n) => { n.dropped = true; n.children.forEach(mark); };
+        for (const m of members) { mark(m); m.parent.children.splice(m.parent.children.indexOf(m), 1); }
+        dropped = true;
+        continue;
+      }
+      for (let m of members) {
+        if (COPIES.has(m.kind) && m.props.has('of')) throw new S3DError(`${m.path} 是 ${m.kind} 生成的副本，副本跟随原物体：请覆盖原物体，或改用 copy`, s.line);
+        // 改模板参数：用新参数重建这个实例（结构可能随参数变化）
+        const paramKeys = m.params ? [...s.props.keys()].filter((k) => m.params.has(k)) : [];
+        if (paramKeys.length) {
+          const P = m.parent, idx = P.children.indexOf(m);
+          const props = new Map(m.stmt.props);
+          for (const k of paramKeys) props.set(k, { k: 'envd', env, ast: s.props.get(k) });
+          const mark = (n) => { n.dropped = true; n.children.forEach(mark); };
+          mark(m); P.children.splice(idx, 1); dropped = true;
+          elab.walk([{ ...m.stmt, props }], P, m.srcEnv, depth);
+          const fresh = P.children.pop();
+          P.children.splice(idx, 0, fresh);
+          m = fresh;
+        }
+        for (const [k, ast] of s.props) {
+          if (paramKeys.includes(k)) continue;
+          if (k === 'use') throw new S3DError('use= 只能写在最外层的 over / variant 里', s.line);
+          if (m.props === m.stmt?.props || !m.ownProps) { m.props = new Map(m.props); m.ownProps = true; }
+          if (REL_KEYS.includes(k)) for (const r of REL_KEYS) m.props.delete(r);
+          m.props.set(k, { k: 'envd', env, ast });
+        }
+        if (s.children.length) elab.walk(s.children, m, new Env(env, { it: mkRef(m) }), depth);
+      }
+    } catch (e) { errors.push(fail(e, { line: s.line })); }
+  }
+  if (dropped) {
+    const keep = elab.flat.filter((n) => !n.dropped);
+    elab.flat.length = 0;
+    elab.flat.push(...keep);
+    S.rebuildIndex();
+  }
+}
+
 // ───────────────────────── 求解 ─────────────────────────
 
 // 集合作为参照物时的“虚拟对象”：坐标系与世界对齐，包围盒是所有成员的总包围盒
@@ -1067,11 +1192,15 @@ class Solver {
     this.root = root;
     this.flat = flat;
     this.sets = new Map();
+    this.rebuildIndex();
+  }
+  rebuildIndex() {
     this.index = new Map();
-    for (const n of flat) if (n.id && !n.inst) {
+    for (const n of this.flat) if (n.id && !n.inst) {
       if (!this.index.has(n.id)) this.index.set(n.id, []);
       this.index.get(n.id).push(n);
     }
+    this._tags = null;
   }
 
   // 语义层看到的对象：变体（skin）只是外观，不参与集合、概念、模式与检查
@@ -1186,7 +1315,7 @@ class Solver {
   }
   sym(n, key, dflt) { const v = this.eval(n, key, dflt); return typeof v === 'string' ? v : dflt; }
   names(n, key) {
-    const ast = n.props.get(key);
+    const ast = unwrap(n.props.get(key));
     const items = ast.k === 'vec' ? ast.items : [ast];
     return items.map((a) => {
       if (a.k !== 'path' || a.segs.length !== 1) throw new S3DError(`${key} 只接受面名，如 left,back`, n.line, n);
@@ -1194,7 +1323,7 @@ class Solver {
     });
   }
   anchorSpec(n, key) {
-    const ast = n.props.get(key);
+    const ast = unwrap(n.props.get(key));
     if (ast.k === 'path' && ast.segs.length === 1) {
       if (ast.segs[0] === 'origin') return 'origin';
       const d = dirWord(ast.segs[0]);
@@ -1367,7 +1496,6 @@ class Solver {
   }
 
   instLocal(n) {
-    if (n.inst.over) return IDENT;
     const R = n.parent;
     const turn = rad(this.num(R, 'turn', 0));
     const { index, flat, grid } = n.inst;
@@ -1727,7 +1855,7 @@ function materialOf(n, S, materials) {
     if (a.props.has('color')) return { color: String(S.eval(a, 'color')) };
     if (a.props.has('mat')) {
       // 材质名是符号，不当作对象引用解析（场景里可以同时有叫 ground 的物体和材质）
-      const ast = a.props.get('mat');
+      const ast = unwrap(a.props.get('mat'));
       const name = ast.k === 'path' && ast.segs.length === 1 ? ast.segs[0] : ast.k === 'str' ? ast.v : null;
       const m = materials.get(name);
       if (m) return { name, ...m };
@@ -2000,21 +2128,8 @@ function compileOnce(src, plan) {
     return new S3DError(String(e && e.stack || e), n.line, n);
   };
 
-  // repeat over=集合：树建好后再展开（展开出的内容里可能还有 over，逐个处理）
-  while (elab.pending.length) {
-    const { n, s, env, depth } = elab.pending.shift();
-    try {
-      const v = evalAst(s.props.get('over'), { env, node: n, scope: n.parent, S });
-      const members = asSet(v).nodes.filter((m) => m !== n && !n.isAncestorOf(m) && !m.isAncestorOf(n));
-      members.forEach((m, idx) => {
-        const inst = new Node('group', String(idx), new Map(), [], s.line, env, n);
-        inst.inst = { over: true, flat: idx, member: m };
-        flat.push(inst);
-        elab.walk(s.children, inst, new Env(env, { it: mkRef(m), i: idx, idx }), depth);
-      });
-      n.counts = [members.length]; n.total = members.length;
-    } catch (e) { errors.push(fail(e, n)); }
-  }
+  expandCopies(elab, S, errors, fail);
+  applyOpinions(elab, S, errors, fail);
   buildCopies(root, flat, S, errors);
 
   // 第二遍：把变体挂到被选中的对象上。原物体仍参与求解（外包络、锚点、关系都不变），只是不再渲染
@@ -2086,8 +2201,8 @@ function compileOnce(src, plan) {
     try {
       const set = asSet(semantic.lookup(c.name, S).v);
       for (const m of set.nodes) (m.concepts ??= []).push(c.name);
-      concepts.push({ name: c.name, line: c.line, src: c.src, members: set.nodes.map((m) => m.path) });
-    } catch (e) { errors.push(fail(e, { line: c.line })); concepts.push({ name: c.name, line: c.line, src: c.src, members: [], error: e.message }); }
+      concepts.push({ name: c.name, parent: c.parent, line: c.line, src: c.src, members: set.nodes.map((m) => m.path) });
+    } catch (e) { errors.push(fail(e, { line: c.line })); concepts.push({ name: c.name, parent: c.parent, line: c.line, src: c.src, members: [], error: e.message }); }
   }
   S.styleMap = new Map();
   for (const st of elab.styles) {
@@ -2137,7 +2252,7 @@ function compileOnce(src, plan) {
   const nodes = order.map((n) => ({
     path: n.path,
     kind: n.template ? n.template : n.inst ? 'instance' : n.src ? `${n.kind}→${K(n)}` : n.copyOf ? n.copyOf.container.kind : K(n),
-    id: n.id, tags: n.tags, concepts: n.concepts ?? [], line: n.line,
+    id: n.id, tags: n.tags, concepts: n.concepts ?? [], line: n.line, types: n.types ?? null, meta: (n.ghostOf ?? n).meta ?? {},
     depth: n.path.split('.').length - 1, late: !!n.late, ghost: !!n.ghostOf, curve: CURVES.has(K(n)), hidden: !!n.hidden, skin: !!n.skin,
     world: n._world ?? null, box: n._world && n._box ? transformBox(n._world, n._box) : null,
   }));

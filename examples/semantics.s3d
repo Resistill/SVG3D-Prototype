@@ -1,10 +1,10 @@
 // 变量 · 集合 · 语义
 // 几何里没有“桥”“桥墩”“屋顶”“路灯”这些词，只有盒子、圆柱、楔形和它们之间的空间关系。
 // 这些词由下面的 concept / pattern 用集合和空间关系定义出来；求解之后，编译器按定义把它们找出来，
-// 再按语义换上外观（style）和变体（variant）。打开右下角的「语义」标签，看看识别结果。
+// 再按语义换上外观（style）和变体（variant）。文件最后一节演示不动原描述、用 over / copy 做修改。
+// 打开右下角的「语义」标签，看看识别结果。
 
 // ── 变量：改这里，整个场景跟着变 ──
-let seed = 7               // 随机数种子：换一个数，树林就换一种长法（但每次编译都一样）
 let bridge_len = 36
 let n_piers = 4
 let pier_h = 5
@@ -34,9 +34,9 @@ mirror rampE of=rampW across=slab axis=x
 repeat rails n=(12,1,2) step=bridge_len/11.5,0,5.6 center=true on=slab mat=plain {
   cyl post r=0.08 h=1.1
 }
-// 每根桥墩的正上方立一盏灯：对集合里的每个成员各做一次
-repeat lamps over=piers.*.p mat=plain {
-  cyl pole r=0.12 h=4 at=it.top+(0,0.6,2.4)
+// 每根桥墩的正上方立一盏灯：和桥墩用同一个间距
+repeat lamps n=n_piers step=(bridge_len-8)/(n_piers-1),0,0 center=true at=slab.top pin=origin mat=plain {
+  cyl pole r=0.12 h=4 at=0,0,2.4
   sphere bulb r=0.35 on=pole
 }
 
@@ -46,11 +46,16 @@ def house(w=house_w, floors=1) {
   wedge half size=w/2,2.2,w*0.8 on=body align=left mat=plain
   mirror half2 of=half across=body axis=x
   box door size=1.2,2.2,0.2 against=body.front align=bottom mat=plain
-  // 编译期的条件：两层以上的房子才有烟囱
-  if floors >= 2 { box chimney size=0.8,3,0.8 on=body[0.55,1,0.3] mat=plain }
 }
-repeat street n=(2,1,2) step=14,0,16 center=true on=ground[0.6,1,0] {
-  house h floors=1+i+k
+// 派生类型：带烟囱的房子是一种房子（kind(house) 也会选中它）
+def chimney_house : house(floors=2) {
+  box chimney size=0.8,3,0.8 on=body[0.55,1,0.3] mat=plain
+}
+group street on=ground[0.6,1,0] {
+  house         h1          at=-7,0,-8
+  chimney_house h2          at=7,0,-8
+  chimney_house h3          at=-7,0,8
+  house         h4 floors=3 at=7,0,8
 }
 
 // ── 河西：瞭望塔、树林，还有一个放错了的箱子 ──
@@ -59,10 +64,10 @@ group watch on=ground[-0.55,1,-0.45] mat=plain {
   box cabin size=4.2,2.5,4.2 on=legs
   wedge cap size=4.2,1.5,4.6 on=cabin
 }
-// 树林：位置、大小、朝向都由确定性的随机数决定
-repeat trees n=18 at=ground[-0.55,1,0.45] pin=origin mat=plain {
-  let s = uniform(0.7, 1.4)
-  cyl trunk r=0.3*s h=3*s at=uniform(-13,13),0,uniform(-9,9)
+// 树林：一片网格，越往东的树越高
+repeat trees n=(4,1,3) step=7,0,6.5 center=true on=ground[-0.55,1,0.45] mat=plain {
+  let s = 0.8 + 0.12*i
+  cyl trunk r=0.3*s h=3*s
   sphere crown r=1.6*s on=trunk
 }
 box crate size=1.5,1.5,1.5 at=ground[-0.3,1,0.3]+(0,2.5,0) mat=plain   // 悬空了，检查会把它找出来
@@ -131,3 +136,11 @@ check "每栋房子都有屋顶" kind(house) where count(descendants(it) & roof)
 check "每座房子都匹配到 home 模式" count(home) == count(kind(house))
 check "高脚屋的每根桩都落地" stilt - on(ground)
 check "没有悬空的实体" solids - on(all()) - ground
+
+// ═══ 编辑：不动上面的描述，只在后面追加修改（也可以写在另一个文件里 import 上面这份）═══
+over watch.cabin size=5,2.5,5                    // 把瞭望塔的小屋放大
+over watch.cap size=5,1.5,5.4
+copy watch2 of=watch on=ground[-0.3,1,-0.62] {   // 照着它再建一座，去掉顶棚，换成平台栏杆
+  drop cap
+  repeat rail n=(2,1,2) step=3.8,0,3.8 center=true on=cabin { cyl post r=0.06 h=1 }
+}

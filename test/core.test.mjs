@@ -433,19 +433,6 @@ test('style 按集合改材质；check 找出违反规则的对象', () => {
   assert.deepEqual(r.checks[0].violators, ['b']);
 });
 
-test('repeat over：对集合的每个成员各做一次', () => {
-  const r = compile(`
-    box p1 size=1,4,1 #pillar
-    box p2 size=1,6,1 at=5,0,0 #pillar
-    repeat lamps over=#pillar {
-      sphere bulb r=0.5 on=it
-    }
-  `);
-  assert.deepEqual(r.errors, []);
-  near(box(r, 'lamps.0.bulb').min[1], 4, '放在第一根柱子上');
-  near(box(r, 'lamps.1.bulb').min[1], 6, '放在第二根柱子上');
-});
-
 test('集合作为参照物：on=#walls 放在它们的总包围盒上', () => {
   const r = compile(`
     box w1 size=1,3,8 at=-4,0,0 #wall
@@ -486,40 +473,6 @@ test('概念与对象同名不冲突：几何里指对象，语义层里指概�
 });
 
 // ───────── 编译期的随机与条件、多对象模式、按语义替换变体 ─────────
-
-test('随机数是确定性的：同源码同结果，换种子才变，同一行的两个调用互不相同', () => {
-  const src = (seed) => `
-    let seed = ${seed}
-    repeat trees n=5 step=6,0,0 { cyl t r=0.3 h=uniform(2,6) at=0,0,uniform(-3,3) }`;
-  const hs = (r) => [0, 1, 2, 3, 4].map((i) => box(r, `trees.${i}.t`).max[1]);
-  const a = hs(compile(src(1))), b = hs(compile(src(1))), c = hs(compile(src(2)));
-  assert.deepEqual(a, b, '同源码同结果');
-  assert.notDeepEqual(a, c, '换种子结果不同');
-  assert.ok(a.every((h) => h >= 2 && h <= 6), '在范围内');
-  assert.ok(new Set(a).size === 5, '每个实例不同');
-  const r = compile(src(1));
-  const z = box(r, 'trees.0.t').min[2] + 0.3;
-  assert.ok(Math.abs(box(r, 'trees.0.t').max[1] - 2 - (z + 3) / 6 * 4) > 1e-6, '同一对象里 h 与 z 的随机数不相关');
-});
-
-test('if / else if / else 在展开时选择结构；if() 与 % ', () => {
-  const r = compile(`
-    def tower(floors=1) {
-      box base size=4,3*floors,4
-      if floors >= 3 { cone spire r=2 h=4 on=base }
-      else if floors == 2 { box flat size=4.4,0.3,4.4 on=base }
-      else { wedge roof size=4,1.5,4 on=base }
-    }
-    repeat row n=3 step=10,0,0 { tower t floors=idx+1 }
-    repeat stripes n=4 step=2,0,0 at=0,0,10 { box s size=1,if(idx % 2 == 0, 1, 2),1 }
-  `);
-  assert.deepEqual(r.errors, []);
-  const kinds = (i) => r.nodes.filter((n) => n.path.startsWith(`row.${i}.t.`)).map((n) => n.kind).sort();
-  assert.deepEqual(kinds(0), ['box', 'wedge']);
-  assert.deepEqual(kinds(1), ['box', 'box']);
-  assert.deepEqual(kinds(2), ['box', 'cone']);
-  assert.deepEqual([0, 1, 2, 3].map((i) => box(r, `stripes.${i}.s`).max[1]), [1, 2, 1, 2]);
-});
 
 test('pattern：多个角色之间的关系，换顺序不算新匹配', () => {
   const r = compile(`
@@ -667,4 +620,107 @@ test('repeat 继承参照物的朝向：转过角度的墙面上排窗', () => {
   const panes = r.facts.filter((f) => f.rel === 'against' && f.b === 'wall');
   assert.equal(panes.length, 6, '六扇窗都贴在墙的正面');
   assert.ok(panes.every((f) => f.text.endsWith('wall.front')));
+});
+
+// ───────── 精简之后：派生、覆盖、复制、层 ─────────
+
+test('已删除的生成特性给出明确的错误', () => {
+  assert.ok(compile('box a size=rand(),1,1').errors.some((e) => e.message.includes('未知函数 rand')));
+  assert.ok(compile('if 1 > 0 { box a }').errors.some((e) => e.message.includes('派生类型')));
+  assert.ok(compile('box a size=5%2,1,1').errors.some((e) => e.message.includes('%')));
+});
+
+test('def B : A：覆盖参数、删除与新增部件、is-a；同名派生就地扩展类型', () => {
+  const r = compile(`
+    def tower(floors=1) { box base size=4,3*floors,4; wedge roof size=4,1.5,4 on=base }
+    def tall : tower(floors=3) { drop roof; cone spire r=2 h=4 on=base }
+    def flat(parapet=0.3) : tower(floors=2) { over roof color=#888888; box rim size=4.4,parapet,4.4 on=base }
+    def tower : tower { box flag size=0.1,2,0.1 on=base[0.8,1,0.8] }
+    tower a
+    tall b at=10,0,0
+    flat c at=20,0,0 parapet=0.5
+    concept towers = kind(tower)
+    concept talls = kind(tall)
+  `);
+  assert.deepEqual(r.errors, []);
+  const kids = (p) => r.nodes.filter((n) => n.path.startsWith(p + '.') && n.depth === 1).map((n) => n.id).sort();
+  assert.deepEqual(kids('a'), ['base', 'flag', 'roof']);
+  assert.deepEqual(kids('b'), ['base', 'flag', 'spire']);
+  assert.deepEqual(kids('c'), ['base', 'flag', 'rim', 'roof']);
+  near(box(r, 'b.base').max[1], 9, '派生类型覆盖了 floors 的默认值');
+  near(box(r, 'c.rim').max[1] - box(r, 'c.rim').min[1], 0.5, '派生类型自己的参数');
+  assert.equal(r.items.find((i) => i.path === 'c.roof').material.color, '#888888');
+  assert.deepEqual(members(r, 'towers'), ['a', 'b', 'c'], 'kind(tower) 包含派生类型');
+  assert.deepEqual(members(r, 'talls'), ['b']);
+});
+
+test('over：改属性、换定位关系、加部件；表达式在写它的地方求值', () => {
+  const r = compile(`
+    box ground size=40,1,40 pin=top
+    box pad size=6,1,6 on=ground
+    box crate size=1,1,1 at=10,0,0 #cargo
+    box keg size=1,1,1 at=-10,0,0 #cargo
+    let lift = 3
+    over crate on=pad size=2,lift,2
+    over #cargo { sphere tag r=0.2 on=it }
+  `);
+  assert.deepEqual(r.errors, []);
+  near(box(r, 'crate').min[1], 1, '定位关系换成了 on=pad（原来的 at 作废）');
+  near(box(r, 'crate').max[1], 4, 'size 用的是写 over 处的变量 lift');
+  near(box(r, 'crate.tag').min[1], 4, '块里的新语句成为每个成员的部件');
+  near(box(r, 'keg.tag').min[1], 1);
+});
+
+test('drop 删除对象；改模板参数会按新参数重建实例；对副本的覆盖报错', () => {
+  const r = compile(`
+    def shelf(n=2) { repeat boards n=n step=0,1,0 { box b size=2,0.1,0.5 } }
+    shelf s
+    box junk size=1,1,1 at=5,0,0
+    drop junk
+    over s n=5
+    mirror s2 of=s across=(3,0,0)
+    over s2 color=#ff0000
+  `);
+  assert.ok(!r.nodes.some((n) => n.path === 'junk'));
+  assert.equal(r.nodes.filter((n) => /^s\.boards\.\d+\.b$/.test(n.path)).length, 5);
+  assert.equal(r.nodes.filter((n) => /^s2\.boards\.\d+\.b$/.test(n.path)).length, 5, '副本跟随修改后的原物体');
+  assert.ok(r.errors.length === 0, '只改外观的 over 在求解后应用，副本可以被上色');
+  const bad = compile(`box a\nmirror a2 of=a across=(3,0,0)\nover a2 size=2,2,2`);
+  assert.ok(bad.errors.some((e) => e.message.includes('副本跟随原物体')));
+});
+
+test('copy：结构派生，可以带修改；与原物体互不影响', () => {
+  const r = compile(`
+    box ground size=60,1,20 pin=top
+    def hut(w=4) { box body size=w,3,w; wedge roof size=w,1.5,w on=body; box door size=1,2,0.2 against=body.front align=bottom }
+    hut h1 on=ground[-0.5,1,0]
+    copy h2 of=h1 on=ground[0.5,1,0] {
+      drop door
+      over body color=#aa3333
+      box chimney size=0.6,2,0.6 on=body[0.6,1,0.6]
+    }
+  `);
+  assert.deepEqual(r.errors, []);
+  assert.ok(r.nodes.some((n) => n.path === 'h1.door'), '原物体不受影响');
+  assert.ok(!r.nodes.some((n) => n.path === 'h2.door'));
+  assert.ok(r.nodes.some((n) => n.path === 'h2.chimney'));
+  near((box(r, 'h2').min[0] + box(r, 'h2').max[0]) / 2, 15, '副本有自己的定位');
+  assert.equal(r.items.find((i) => i.path === 'h2.body').material.color, '#aa3333');
+});
+
+test('concept 的层级与元数据', () => {
+  const r = compile(`
+    box d1 size=1,2.1,0.1 #door ~fit=0.95 ~src="node_3"
+    box d2 size=1.8,2.1,0.1 at=5,0,0 #door ~fit=0.4
+    concept door = #door
+    concept double_door : door = where w > 1.6
+    concept doubtful = all() where fit < 0.5
+    check "低置信度的部件" doubtful
+  `);
+  assert.deepEqual(r.errors, []);
+  assert.deepEqual(members(r, 'double_door'), ['d2']);
+  assert.equal(r.concepts.find((c) => c.name === 'double_door').parent, 'door');
+  assert.deepEqual(members(r, 'doubtful'), ['d2']);
+  assert.equal(r.nodes.find((n) => n.path === 'd1').meta.src, 'node_3');
+  assert.deepEqual(r.checks[0].violators, ['d2']);
 });
