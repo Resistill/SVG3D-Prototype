@@ -6,13 +6,15 @@
 //   state/         选中状态等；renders/ 渲染图；score.json 最近一次评分
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { join, relative, resolve, dirname } from 'node:path';
+import { join, relative, resolve, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compile, FACT_EPS } from '../src/s3d.js';
 import { readParts, reverse, FIDELITY } from './reverse.mjs';
 import { SCORE_DEFAULTS, scoreCache } from './score.mjs';
 import { splitSource, joinSource, importedFiles } from './split.mjs';
 
+// 写进文件的相对路径一律用 /（Windows 上 path.relative 给的是反斜杠，浏览器与 import 都认不了）
+const rel = (from, to) => relative(from, to).split(sep).join('/');
 const LIB = resolve(dirname(fileURLToPath(import.meta.url)), '../lib/semantics.s3d');
 export const LAYERS = ['base.s3d', 'edits.s3d', 'semantics.s3d', 'style.s3d'];
 // 计入描述长度的层：语义与风格不描述几何
@@ -20,7 +22,7 @@ export const GEOMETRY_LAYERS = ['base.s3d', 'edits.s3d'];
 
 const HEADERS = {
   'edits.s3d': '// 修改层：over / drop / copy / 新物体 / def 扩展。重跑逆向后这里的路径仍然有效（稳定命名）\n',
-  'semantics.s3d': (dir) => `// 语义层：concept / pattern / check\nimport "${relative(dir, LIB)}"\n`,
+  'semantics.s3d': (dir) => `// 语义层：concept / pattern / check\nimport "${rel(dir, LIB)}"\n`,
   'style.s3d': '// 风格层：只改外观（mat / color / use=）\n',
   'decisions.s3d': '// 决定层：对逆向的约束（哪些部件是一个物体、是一个阵列、是同一个类型、保留为网格……），重跑逆向时遵守。不进 scene\n',
 };
@@ -108,7 +110,7 @@ export async function initProject(dir, source, { split = 'auto', copy = false, f
   const guess = unit == null ? guessUnit(parts) : null;
   // 档位：逆向不要求 100% 复原；它同时决定逆向的精度与分数的 δ（几何误差的单位，按米）
   const { unit: _u, ...score } = SCORE_DEFAULTS;
-  const cfg = { version: 1, source: relative(dir, src), sourceHash: sha1(src), unit: unit ?? guess.unit, split, fidelity, score: { ...score, delta: FIDELITY[fidelity].tau } };
+  const cfg = { version: 1, source: rel(dir, src), sourceHash: sha1(src), unit: unit ?? guess.unit, split, fidelity, score: { ...score, delta: FIDELITY[fidelity].tau } };
   writeCfg(join(dir, 'project.json'), cfg);
   writeFileSync(join(dir, 'scene.s3d'), '// 组合根：按顺序叠加各层（工具与界面只编译这个文件）\n' + LAYERS.map((f) => `import "${f}"`).join('\n') + '\n');
   for (const [f, h] of Object.entries(HEADERS)) if (!existsSync(join(dir, f))) writeFileSync(join(dir, f), typeof h === 'function' ? h(dir) : h);

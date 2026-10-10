@@ -4,9 +4,11 @@
 // 打开工程：http://localhost:5178/index.html?file=work/<工程>/scene.s3d
 import { createServer } from 'node:http';
 import { readFile, writeFile, stat } from 'node:fs/promises';
-import { join, normalize, extname, resolve } from 'node:path';
+import { join, normalize, extname, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = resolve(new URL('..', import.meta.url).pathname);
+// fileURLToPath：Windows 上 URL 的 pathname 是 /D:/…，直接 resolve 会得到 D:\D:\…
+const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const port = +(process.argv[2] ?? process.env.PORT ?? 5178);
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json', '.bin': 'application/octet-stream', '.s3d': 'text/plain; charset=utf-8', '.md': 'text/plain; charset=utf-8' };
 
@@ -27,7 +29,7 @@ createServer(async (req, res) => {
     let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
     if (p.endsWith('/')) p += 'index.html';
     const file = normalize(join(root, p));
-    if (!file.startsWith(root)) { res.writeHead(403).end(); return; }
+    if (file !== root && !file.startsWith(root + sep)) { res.writeHead(403).end(); return; }
     if (req.method === 'PUT') return put(req, res, file);
     if (!(await stat(file)).isFile()) throw new Error('not a file');
     // 页面本身附带 Clear-Site-Data：清掉浏览器以前按启发式规则缓存的旧模块（别的服务器留下的）

@@ -126,6 +126,8 @@ async function run() {
   const t0 = performance.now();
   const r = compile(files.get(rootFile()), { file: rootFile(), resolve: (p) => files.get(p) });
   const t1 = performance.now();
+  // 网格引用的 src 相对组合根所在的目录（工程目录；与工具的约定一致）
+  viewer.srcBase = new URL(rootFile(), location.href).href;
   const warn = viewer.setScene(r);
   const t2 = performance.now();
   last = r;

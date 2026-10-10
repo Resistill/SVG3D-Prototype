@@ -195,7 +195,8 @@ export class Viewer {
     ph.userData = { path: item.path, tags: item.tags, baseMat: ph.material };
     holder.add(ph);
     this.content.add(holder);
-    const [url, node] = item.geom.src.split('#');
+    const [rel, node] = item.geom.src.split('#');
+    const url = new URL(rel, this.srcBase ?? location.href).href;
     if (!this.gltfCache.has(url)) this.gltfCache.set(url, this.loader.loadAsync(url));
     this.gltfCache.get(url).then((gltf) => {
       // 节点可以写成 名字@k（重名节点里的第 k 个）

@@ -241,6 +241,9 @@ test('场景单位：init 按部件尺寸猜单位（厘米场景猜成 0.01）�
   assert.equal(cm.unit, 0.01, JSON.stringify(cm));
   assert.match(cm.unitNote, /0.01 米/);
   assert.equal(JSON.parse(readFileSync(join(dir, 'cm', 'project.json'), 'utf8')).unit, 0.01);
+  // 写进文件的相对路径用正斜杠（Windows 上也是）：浏览器加载源网格、语义库都靠它
+  assert.ok(!JSON.parse(readFileSync(join(dir, 'cm', 'project.json'), 'utf8')).source.includes(String.fromCharCode(92)));
+  assert.match(readFileSync(join(dir, 'cm', 'semantics.s3d'), 'utf8'), /import "[^"\\]*lib\/semantics\.s3d"/);
   assert.equal(cm.arrays, m.arrays);
   const sm = await runCommand('score', join(dir, 'm'), { objects: true }), scm = await runCommand('score', join(dir, 'cm'), { objects: true });
   assert.equal(scm.consts.delta, sm.consts.delta, 'δ 按米记录，两个工程相同');
