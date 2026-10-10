@@ -1178,12 +1178,20 @@ function detectArrays(objs, related) {
     const scale = Math.max(...g.map((o) => len(sub(o.box.max, o.box.min)))) || 1;
     const tol = (0.004 + 1e-4 * scale) * S;
     const close = (a, b) => len(sub(a, b)) < tol;
-    // 每一对给出一个候选运动，按容差聚类
+    // 每一对给出一个候选运动，按容差聚类。
+    // 规模：组很大时只和空间上最近的 10 个配对（阵列由相邻成员构成）；小组仍然两两配对，结果与原来完全一样
+    const BIG = g.length > 24;
+    const partners = new Map();
+    if (BIG) for (const a of g) { const ca = centerOf(a); partners.set(a.id, g.filter((b) => b !== a).map((b) => [len(sub(centerOf(b), ca)), b]).sort((x, y) => x[0] - y[0]).slice(0, 10).map((x) => x[1])); }
+    const partnersOf = (a) => (BIG ? partners.get(a.id) : g);
     const clusters = [];
+    // 平移运动按步长量化成哈希，查找相同运动不必线性扫描
+    const transIdx = new Map(), qk = (v) => v.map((x) => Math.round(x / (2 * tol))).join(',');
+    const findTrans = (step) => { const q = step.map((x) => Math.round(x / (2 * tol))); for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (let k = -1; k <= 1; k++) for (const c of transIdx.get(`${q[0] + i},${q[1] + j},${q[2] + k}`) ?? []) if (close(c.motion.step, step)) return c; return null; };
     const sameMotion = (m, n) => (m.delta === 0) === (n.delta === 0) && (m.delta === 0
       ? close(m.step, n.step)
       : Math.abs(m.delta - n.delta) < 0.05 && close(m.center, n.center) && Math.abs(m.dy - n.dy) < tol);
-    for (const a of g) for (const b of g) {
+    for (const a of g) for (const b of partnersOf(a)) {
       if (a === b) continue;
       const Rb = rowsOf(b.cols), Ra = rowsOf(a.cols);
       const Rm = [0, 1, 2].map((i) => [0, 1, 2].map((j) => Rb[i][0] * Ra[j][0] + Rb[i][1] * Ra[j][1] + Rb[i][2] * Ra[j][2]));
@@ -1207,14 +1215,15 @@ function detectArrays(objs, related) {
         // 只保留规范方向（平移的第一个非零分量为正；旋转角为正），这样同一组物体不会一会儿正向一会儿反向
         if (motion.delta === 0) { const f = motion.step.find((v) => Math.abs(v) > 1e-6); if (!(f > 0)) continue; }
         else if (motion.delta < 0) continue;
-        const cl = clusters.find((c) => sameMotion(c.motion, motion));
-        if (cl) cl.pairs++; else clusters.push({ motion, pairs: 1 });
+        const cl = motion.delta === 0 ? findTrans(motion.step) : clusters.find((c) => sameMotion(c.motion, motion));
+        if (cl) cl.pairs++;
+        else { const c = { motion, pairs: 1 }; clusters.push(c); if (motion.delta === 0) { const k = qk(motion.step); if (!transIdx.has(k)) transIdx.set(k, []); transIdx.get(k).push(c); } }
       }
     }
     // 一般轴的旋转（不竖直的轴，例如风车叶片）：由相对旋转求轴和角，再解轴上一点。
     // 盒子等有对称性的形状，自身坐标系有符号歧义，把对称变换都试一遍，由聚类挑出一致的那个
     const SYMS = [[1, 1, 1], [-1, -1, 1], [-1, 1, -1], [1, -1, -1]];
-    for (const a of g) for (const b of g) {
+    for (const a of g) for (const b of partnersOf(a)) {
       if (a === b || a.symY || a.axisSym) continue;
       for (const sg of a.sym180 ? SYMS : [[1, 1, 1]]) {
         const Rb = rowsOf(b.cols.map((c, k) => scl(c, sg[k]))), Ra = rowsOf(a.cols);
@@ -1285,14 +1294,21 @@ function detectArrays(objs, related) {
     findRings((n) => n !== 4);
     // 同样多的配对时，优先更简单的解释：纯平移先于旋转
     clusters.sort((x, y) => y.pairs - x.pairs || (x.motion.delta ? 1 : 0) - (y.motion.delta ? 1 : 0));
-    for (const { motion } of clusters) {
+    for (const { motion, pairs } of clusters) {
+      // 只出现过一次的运动构不成 3 个以上的链，也拼不成网格（网格的每个方向至少两对）
+      if (pairs < 2) continue;
       const free = g.filter((o) => !used.has(o.id));
       if (free.length < 2) break;
       const next = new Map();
       const orientAfter = (m, o) => (m.rot ? o.cols.map((c) => rotAbout(m.u, m.deg, [0, 0, 0], c)) : m.delta ? o.cols.map((c) => mvC(Ry(m.delta), c)) : o.cols);
+      // 按中心的空间哈希找“运动之后落在哪个成员上”
+      const cell = 2 * tol, ck = (p) => p.map((x) => Math.floor(x / cell));
+      const grid = new Map();
+      for (const o of free) { const k = ck(centerOf(o)).join(','); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(o); }
+      const near = (p) => { const q = ck(p), out = []; for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (let k = -1; k <= 1; k++) out.push(...(grid.get(`${q[0] + i},${q[1] + j},${q[2] + k}`) ?? [])); return out; };
       for (const a of free) {
         const p = apply(motion, a), oc = orientAfter(motion, a);
-        const b = free.find((x) => x !== a && close(centerOf(x), p) && sameOrientation(x, toRows(oc)));
+        const b = near(p).find((x) => x !== a && close(centerOf(x), p) && sameOrientation(x, toRows(oc)));
         if (b) next.set(a.id, b);
       }
       const hasPrev = new Set([...next.values()].map((b) => b.id));
@@ -1349,7 +1365,8 @@ function detectArrays(objs, related) {
     // 有缺口的阵列：常规检测剩下的物体按格点拟合，允许少数缺位（写成 repeat 加 drop 阵列.k）。
     // 至少 3 个成员、缺位不超过五分之一（至少允许 1 个）、第 0 个实例必须在——它决定阵列原点与部件的写法
     const holesOk = (n, present) => present >= 3 && present < n && n - present <= Math.max(1, Math.floor(n / 5));
-    const trans = clusters.filter((c) => !c.motion.delta && !c.motion.rot).map((c) => c.motion.step);
+    // 大组只用支持最多的几个平移方向（clusters 已按配对数排好）
+    const trans = clusters.filter((c) => !c.motion.delta && !c.motion.rot).slice(0, BIG ? 8 : Infinity).map((c) => c.motion.step);
     const isXv = (v) => Math.abs(v[1]) < 1e-6 && Math.abs(v[2]) < 1e-6, isZv = (v) => Math.abs(v[0]) < 1e-6 && Math.abs(v[1]) < 1e-6;
     // 已经认出的完整平移阵列可以被吸收：例如一排 6 根拆掉第 3 根，常规检测只认得出后 3 根
     for (;;) {
