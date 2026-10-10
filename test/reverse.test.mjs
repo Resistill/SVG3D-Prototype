@@ -189,3 +189,28 @@ test('由关系决定长度的阵列：轨道下垂到地面的立柱写成 span
   assert.equal((out.src.match(/^spline /gm) ?? []).length, 1, '只有一条曲线');
   assert.match(out.src, /^repeat \S+ n=12 along=\S+ \{\n  span \S+ from=\(0,-0\.3,0\) drop=\S+ r=0\.2 /m);
 });
+
+test('倾斜的物体保留站立方向：光伏阵列是一个 5×4 网格，立柱立在地上；斜塔的立柱立在环上', () => {
+  const src = `
+    box ground size=80,1,80 pin=top
+    repeat solar n=(5,1,4) step=5.5,0,4.5 center=true on=ground {
+      cyl post r=0.12 h=1.6
+      box panel size=5,0.1,2.8 on=post tilt=25
+    }
+    group pisa at=-20,0,20 roll=5 {
+      cyl core r=4 h=20
+      repeat galleries n=3 step=0,5.6,0 {
+        cyl ring r=4.8 h=0.5 at=0,5.6,0
+        rotate cols n=11 { cyl col r=0.18 h=5.1 at=4.55,0.5,0 }
+      }
+    }
+  `;
+  const out = reverse(partsOfDocument(sceneToGLB(src, { level: 'L1' }).doc), { level: 'L1' });
+  const ev = evaluate(src, out.src);
+  assert.equal(ev.errors.recon, 0);
+  assert.equal(ev.compression.array.recall, 1, JSON.stringify(ev.compression.array));
+  assert.match(out.src, /^repeat \S+ n=\(5,1,4\) step=5\.5,0,4\.5 on=/m, '一个网格，立在地上');
+  assert.equal(ev.facts.on.recall, 1, `on ${JSON.stringify(ev.facts.on)}`);
+  // 斜塔的立柱写成倾斜的 y 轴圆柱（不是 axis=x）
+  assert.doesNotMatch(out.src, /cyl \S+ r=0\.18 h=5\.1 axis=x/);
+});
