@@ -636,7 +636,10 @@ function primitiveOf(fit, part, srcFile) {
   const fitScore = Math.max(0, Math.min(1, 1 - fit.e / TOL));
   const F = fit.frame, h = F.h, [ex, ey, ez] = F.cols;
   const ref = part.name ? `${srcFile}#${part.uid ?? part.name ?? part.from}` : PARTS_FILE && part.from ? `${PARTS_FILE}#${partsNode(part.from)}` : null;
-  const toMesh = part.force === 'mesh' || roleP(part) === 'decal' ? !!ref : !part.force && (fit.e > FID.fitTol && !primCheaper(fit, part) || fit.cover < COVER_MIN) && !!ref;
+  // 引用价的角色：贴花一律引用网格；覆盖率低（大片不规则的地面、弯曲的长墙）的也引用。按真实信息量计价的写成基本体，交给板件、小场景细化
+  const refPriced = meshPriceMode(roleP(part), MESH_K) === 'ref';
+  // 按真实信息量计价的（默认）不退回网格：关掉网格引用时场景不能少东西（用户的验收）。拟合差的写成基本体，交给板件、小场景细化
+  const toMesh = part.force === 'mesh' || (refPriced && roleP(part) === 'decal') ? !!ref : !part.force && refPriced && (fit.e > FID.fitTol && !primCheaper(fit, part) || fit.cover < COVER_MIN) && !!ref;
   if (toMesh) {
     // 拟合不了：引用源网格。外包络是世界包围盒，原点在其底面中心
     // （从合并网格里拆出来的部件在源文件里没有节点可引用，只能用最接近的基本体，并如实给出低拟合度）
@@ -831,8 +834,9 @@ let JUDGES = new WeakMap();
 // 部件的角色（roles.mjs）；派生出来的部件对象（类型的局部坐标版本）带着 role 属性
 let PART_ROLE = new WeakMap();
 const roleP = (p) => p.role ?? PART_ROLE.get(p) ?? 'structure';
-// 装饰、贴花不做花时间的拆解（板件、外壳、并、扫掠）：写成基本体代理或网格引用
-const coarseRole = (p) => { const r = roleP(p); return r === 'decor' || r === 'decal'; };
+// 不做花时间的拆解（板件、外壳、并、扫掠、小场景）、只写成基本体代理或网格引用的角色：网格按引用价计的装饰、贴花。
+// 按真实信息量计价时（默认）照样拆：关掉网格引用时场景要和源模型看起来差不多，贴花写成一个厚盒子、红绿灯包成一个大盒子都算不像
+const coarseRole = (p) => { const r = roleP(p); return (r === 'decor' || r === 'decal') && meshPriceMode(r, MESH_K) === 'ref'; };
 // 网格表面的高度（heights.mjs）：发射出来的 on=地形.top[u,w] 要按它编译、校验
 let HEIGHT = null;
 function judgeOf(part) {
@@ -1207,7 +1211,8 @@ function trySubScene(ftris, part, cur, n = 1) {
   return { body: best.lines, at: add(best.c0, c1), box: { min: sub(bl, c1), max: sub(bh, c1) }, S: +best.S.toFixed(2), curS: +curS.toFixed(2), pieces: best.pieces, meanErr: best.ls.meanErr };
 }
 const fitScoreOf = (fit) => Math.max(0, Math.min(1, 1 - fit.e / TOL));
-const scatterWorth = (part) => !part.force && part.tris.length >= 6 && !['decal', 'helper'].includes(roleP(part));
+// 贴花按引用价时保留网格；按真实信息量计价时，散成几片的贴花同样拆成一组薄块
+const scatterWorth = (part) => !part.force && part.tris.length >= 6 && roleP(part) !== 'helper' && !(roleP(part) === 'decal' && meshPriceMode('decal', MESH_K) === 'ref');
 
 function panelPrim(fit, part, prim, partIndex = -1) {
   // 已经认出来的（台阶、管道、扫掠、拟合得好的基本体）不拆
@@ -1418,7 +1423,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const gb = gs && { kind: 'group', c0: gs.at, box: gs.box, body: gs.body, fit: Math.max(0, Math.min(1, 1 - (gs.meanErr * M) / (4 * FID.tau * M))), S: gs.S, curS: gs.curS, pieces: gs.pieces };
       if (subOK && !gb && !best0) sg = scatterT();
       const cb = sg ? { ...sg, kind: 'group', fit: 1 - fit.e / TOL } : [pb, ub, sb, gb].filter(Boolean).sort((x, y) => x.S - y.S)[0] ?? null;
-      if (bad && !cb) continue; // 拟合不了的（会退回网格引用）不做类型
+      // 拟合不了的：引用价时退回各实例的网格引用，不做类型；按真实信息量计价时类型体就是那个基本体（不退回网格）
+      if (bad && !cb && meshPriceMode(roleP(rep), MESH_K) === 'ref') continue;
       let prim, c0, lo, hi;
       if (cb) {
         c0 = cb.c0; lo = add(c0, cb.box.min); hi = add(c0, cb.box.max);

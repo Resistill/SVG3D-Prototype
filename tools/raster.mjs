@@ -130,7 +130,8 @@ export function rasterize(objects, { view = 'iso', size = 1024, focus = null, mo
       legend.push({ n, path: objects[id].path, pixels: c, ...(spot ? {} : { labeled: false }) });
     }
   }
-  return { png: encodePNG(rgb, W, H), legend, camera: cam, box: { min: box.min.map((v) => +v.toFixed(4)), max: box.max.map((v) => +v.toFixed(4)) } };
+  // rgb、zbuf：原始像素与深度（compare 命令用：占用遮罩、模糊后的差异）
+  return { png: encodePNG(rgb, W, H), rgb, zbuf, W, H, legend, camera: cam, box: { min: box.min.map((v) => +v.toFixed(4)), max: box.max.map((v) => +v.toFixed(4)) } };
 }
 
 // 把三角形裁剪到 y ≤ h（Sutherland–Hodgman，结果再扇形三角化）

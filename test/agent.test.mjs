@@ -433,8 +433,8 @@ test('计价规则：同一个网格只付一次；换了形的基础层语句�
   // 结构（默认角色）的网格按真实信息量：8 个顶点 × 4.5 + 12 个三角形 × 3
   const one = 4.5 * 8 + 3 * 12;
   assert.ok(Math.abs(s1.L_mesh - 2 * one) < 0.01, `a、b 共用一个网格，只付一次：${s1.L_mesh}`);
-  // 装饰的网格只是引用一个资产：c_mesh × log2(1 + 三角形数)
-  const s1d = score({ result: compile(text), files: [{ file: null, text }], sourceParts: parts.map((p) => ({ ...p, role: 'decor' })) });
+  // 工程把装饰设成引用价时：网格只是引用一个资产，c_mesh × log2(1 + 三角形数)
+  const s1d = score({ result: compile(text), files: [{ file: null, text }], sourceParts: parts.map((p) => ({ ...p, role: 'decor' })), consts: { meshPrice: { decor: 'ref' } } });
   assert.ok(Math.abs(s1d.L_mesh - 2 * 10 * Math.log2(1 + 12)) < 0.01, `装饰：${s1d.L_mesh}`);
   // 换形：box a … + over a : cyl …，基础层那一行的 size 不再计
   const base = 'box a size=1,1,1 at=0.5,0,0.5 mat=m ~src="a"', over = 'over a : cyl r=0.5 h=1';

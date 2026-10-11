@@ -3,7 +3,7 @@
 import { outline } from './outline.mjs';
 import { score, pointErrors } from './score.mjs';
 import { sceneObjects } from './worldtris.mjs';
-import { rasterize, VIEWS } from './raster.mjs';
+import { rasterize, VIEWS, encodePNG } from './raster.mjs';
 import { initProject, openProject, runReverse } from './project.mjs';
 import { reverse as reverseParts, samplePoints, pcaFrame } from './reverse.mjs';
 import { refineProposal, finer } from './refine.mjs';
@@ -319,6 +319,53 @@ export const COMMANDS = {
       const byPath = new Map(r.nodes.map((n) => [n.path, n]));
       const c0 = ctr(byPath.get(path).tight);
       return { path, signature: me, count: hits.length, matches: hits.map((i) => ({ path: i.path, center: ctr(byPath.get(i.path).tight), offset: ctr(byPath.get(i.path).tight).map((v, k) => +(v - c0[k]).toFixed(4)) })) };
+    },
+  },
+  compare: {
+    desc: '源模型与重建（默认不画网格引用）同一取景各渲一张、模糊后比：missing = 源有而重建没有的占比（少东西），extra = 重建多出来的占比，diff = 模糊后的灰度差（0–1）。差异图 renders/compare-<视角>.png：红是缺的，蓝是多的，灰是两边都有',
+    args: { views: '视角，逗号分隔（默认 iso,iso2,top）', size: '边长像素（默认 512）', blur: '模糊半径（像素，默认 size/64）', meshes: '可选：重建里也画网格引用', only: '可选：只比这些角色', box: '可选：取景范围（默认源模型的包围盒）' },
+    async run(P, a) {
+      const parts = await P.sourceParts();
+      const { trisToArray } = await import('./worldtris.mjs');
+      const only = a.only ? String(a.only).split(',').map((r) => r.trim()) : null;
+      const keep = (r) => r !== 'helper' && (!only || only.includes(r));
+      const src = parts.filter((p) => keep(p.role ?? 'structure')).map((p, i) => ({ path: p.uid ?? p.name ?? `part_${i}`, pos: trisToArray(p.tris), color: '#c9c9c9' }));
+      const result = P.compile(), roleOf = nodeRoles(result);
+      const rec = sceneObjects(result, { sourceParts: parts }).filter((o) => o.pos.length && (a.meshes || !o.mesh) && keep(roleOf(o.path))).map((o) => ({ ...o, color: '#c9c9c9' }));
+      const size = +(a.size ?? 512), r = Math.max(1, Math.round(+(a.blur ?? size / 64)));
+      const bx = a.box ? String(a.box).split(',').map(Number) : null;
+      let box = bx && { min: bx.slice(0, 3), max: bx.slice(3) };
+      // 盒式模糊（两遍一维）
+      const blur = (v, W, H) => {
+        const t = new Float32Array(W * H), o = new Float32Array(W * H);
+        for (let y = 0; y < H; y++) { let acc = 0; for (let x = -r; x < W; x++) { if (x + r < W) acc += v[y * W + x + r]; if (x - r - 1 >= 0) acc -= v[y * W + x - r - 1]; if (x >= 0) t[y * W + x] = acc / (2 * r + 1); } }
+        for (let x = 0; x < W; x++) { let acc = 0; for (let y = -r; y < H; y++) { if (y + r < H) acc += t[(y + r) * W + x]; if (y - r - 1 >= 0) acc -= t[(y - r - 1) * W + x]; if (y >= 0) o[y * W + x] = acc / (2 * r + 1); } }
+        return o;
+      };
+      const views = (a.views ? String(a.views).split(',') : ['iso', 'iso2', 'top']).map((v) => v.trim());
+      const out = {};
+      for (const view of views) {
+        if (!VIEWS[view]) throw new Error(`没有视角 ${view}`);
+        const A = rasterize(src, { view, mode: 'color', size, box });
+        box ??= A.box;
+        const B = rasterize(rec, { view, mode: 'color', size, box: A.box });
+        const { W, H } = A, n = W * H;
+        const occ = (R) => { const m = new Float32Array(n); for (let i = 0; i < n; i++) m[i] = Number.isFinite(R.zbuf[i]) ? 1 : 0; return m; };
+        const lum = (R, m) => { const g = new Float32Array(n); for (let i = 0; i < n; i++) g[i] = m[i] ? (R.rgb[3 * i] + R.rgb[3 * i + 1] + R.rgb[3 * i + 2]) / 765 : 1; return g; };
+        const ma = occ(A), mb = occ(B), ba = blur(ma, W, H), bb = blur(mb, W, H), la = blur(lum(A, ma), W, H), lb = blur(lum(B, mb), W, H);
+        let sa = 0, miss = 0, extra = 0, diff = 0;
+        for (let i = 0; i < n; i++) { sa += ba[i]; miss += Math.max(0, ba[i] - bb[i]); extra += Math.max(0, bb[i] - ba[i]); diff += Math.abs(la[i] - lb[i]); }
+        // 差异图：红 = 缺（源有、重建没有），蓝 = 多，灰 = 两边都有
+        const rgb = new Uint8Array(3 * n);
+        for (let i = 0; i < n; i++) {
+          const m = ma[i] && !mb[i], x = mb[i] && !ma[i], both = ma[i] && mb[i];
+          rgb[3 * i] = m ? 230 : both ? 170 : x ? 60 : 255; rgb[3 * i + 1] = m ? 40 : both ? 170 : x ? 90 : 255; rgb[3 * i + 2] = m ? 40 : both ? 170 : x ? 230 : 255;
+        }
+        const file = `renders/compare-${view}${a.meshes ? '-meshes' : ''}${only ? '-' + only.join('+') : ''}.png`;
+        P.write(file, encodePNG(rgb, W, H));
+        out[view] = { missing: +(miss / (sa || 1)).toFixed(4), extra: +(extra / (sa || 1)).toFixed(4), diff: +(diff / n).toFixed(4), file: P.path(file) };
+      }
+      return { meshes: !!a.meshes, only, blur: r, box: [...box.min, ...box.max].join(','), views: out };
     },
   },
   render: {

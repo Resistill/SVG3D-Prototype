@@ -50,7 +50,7 @@ test('整场判角色：白模体积（默认名、三角形少、整个包住 �
   assert.equal(scatterOf(parts[0]).scattered, false);
 });
 
-test('逆向按角色：辅助不写进几何（只在注释里）；贴花保留网格引用；角色写成 ~role；评分分角色报，辅助不计', () => {
+test('逆向按角色：辅助不写进几何（只在注释里）；贴花默认写成语言（按引用价计时保留网格引用）；角色写成 ~role；评分分角色报，辅助不计', () => {
   const parts = scene();
   const out = reverse(parts, { srcFile: 'x.glb', level: 'L0' });
   const r = compile(out.src);
@@ -63,7 +63,9 @@ test('逆向按角色：辅助不写进几何（只在注释里）；贴花保�
   const decal = bySrc('Road_Decal_01');
   assert.ok(decal, out.src);
   assert.equal(roleOf(decal.path), 'decal');
-  assert.equal(decal.kind, 'mesh');
+  assert.notEqual(decal.kind, 'mesh', '默认按真实信息量计价：关掉网格时不能少东西');
+  const outRef = reverse(scene(), { srcFile: 'x.glb', level: 'L0', meshPrice: { decal: 'ref' } });
+  assert.match(outRef.src, /^mesh Road_Decal_01 /m, '贴花按引用价计时保留网格引用');
   assert.equal(roleOf(bySrc('WallLamp_01').path), 'decor');
   assert.equal(roleOf(bySrc('Building_Wall_01').path), 'structure');
   assert.equal(bySrc('Building_Wall_01').meta.role, undefined, '结构是默认，不写 ~role');

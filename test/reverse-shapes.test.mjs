@@ -229,13 +229,15 @@ box d size=0.2,0.2,0.2 against=ball.surface[0,90]`;
 });
 
 test('地形取点：立在起伏网格地形上的物体写成 on=地形.top[u,w]，编译后落在表面上；房间这类多层的网格不算地形', async () => {
+  // 地形保留网格引用时才有曲面锚点：按引用价计（默认按真实信息量计价，地形也写成语言）
+  const meshPrice = { terrain: 'ref', structure: 'ref' };
   const { heightField } = await import('../tools/heights.mjs');
   const H = (x, z) => 2 * Math.sin(x / 9) + 1.5 * Math.cos(z / 7);
   const grid = (f, y0 = 0) => { const t = [], N = 30, S = 2; for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { const P = (a, b) => [-30 + a * S, f(-30 + a * S, -30 + b * S) + y0, -30 + b * S]; t.push([P(i, j), P(i, j + 1), P(i + 1, j)], [P(i + 1, j), P(i, j + 1), P(i + 1, j + 1)]); } return t; };
   const grey = { name: 'grey', color: '#777777' }, red = { name: 'red', color: '#cc3333' };
   const crates = [[-12, 5], [3, -8], [14, 14], [-20, -18]];
   const parts = [{ name: 'terrain', tris: grid(H), material: grey }, ...crates.map(([x, z]) => ({ name: `crate_${x}_${z}`, tris: cubeTris([x - 1, H(x, z), z - 1], [x + 1, H(x, z) + 2, z + 1]), material: red }))];
-  const out = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure' });
+  const out = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure', meshPrice });
   assert.equal((out.src.match(/ on=terrain\.top\[-?[\d.]+,-?[\d.]+\]/g) ?? []).length, 4, out.src);
   const r = compile(out.src, { heightAt: heightField(parts) });
   assert.deepEqual(r.errors, []);
@@ -247,9 +249,9 @@ test('地形取点：立在起伏网格地形上的物体写成 on=地形.top[u,
   // 但这个网格不是地形（朝上的面投影起来是两层），不写 .top[]；同样的布置换成单层的起伏地面就写
   const y3 = H(3, 3) + 3, crate2 = { name: 'crate', tris: cubeTris([2, y3, 2], [4, y3 + 2, 4]), material: red };
   const layered = [...grid(H), ...grid(H, 3), ...cubeTris([26, 0, 26], [28, 8, 28])];
-  assert.doesNotMatch(reverse([{ name: 'room', tris: layered, material: grey }, crate2], { srcFile: 'x.glb', fidelity: 'structure' }).src, /\.top\[/);
+  assert.doesNotMatch(reverse([{ name: 'room', tris: layered, material: grey }, crate2], { srcFile: 'x.glb', fidelity: 'structure', meshPrice }).src, /\.top\[/);
   const single = [...grid(H, 3), ...cubeTris([26, 0, 26], [28, 8, 28])];
-  assert.match(reverse([{ name: 'ground', tris: single, material: grey }, crate2], { srcFile: 'x.glb', fidelity: 'structure' }).src, /on=ground\.top\[/);
+  assert.match(reverse([{ name: 'ground', tris: single, material: grey }, crate2], { srcFile: 'x.glb', fidelity: 'structure', meshPrice }).src, /on=ground\.top\[/);
 });
 
 test('带内凹的旋转体：车削网格的环连成截面轮廓，水池写成 revolve profile=[(0,0); (5,0); (5.2,0.9); (4.7,0.9); (4.6,0.35); (0,0.35)]', () => {

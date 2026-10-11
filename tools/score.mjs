@@ -1,7 +1,7 @@
 // 自评分数：不依赖真值，是 AI 的目标函数，也是人的进度条（docs/PLAN2.md 第 3 节）。
 //   S = L_stmt + L_mesh + R_src + R_recon + R_vol，越低越好
 //   L_stmt  描述长度：名字、关键字、引用各 1；数字 1 + 0.5 × (小数位 − 1)；注释与 ~元数据不计
-//   L_mesh  仍以源网格引用保留的部分：结构按真实信息量（4.5 × 顶点数 + 3 × 三角形数），地形、装饰、贴花 c_mesh × log2(1 + 三角形数)（见 meshPrice）。同一个网格（享元）只在第一次出现时付，以后的实例只付那一行语句
+//   L_mesh  仍以源网格引用保留的部分：默认按真实信息量（4.5 × 顶点数 + 3 × 三角形数），工程可以按角色改成引用价 c_mesh × log2(1 + 三角形数)（见 meshPrice）。同一个网格（享元）只在第一次出现时付，以后的实例只付那一行语句
 //   长度都按米计（δ、dMax、输出的误差），场景单位不是米时按 unit 换算
 //   R_src   源模型的每个部件表面采样，到重建表面的距离 d → log2(1 + max(0, d − δ)/δ)，按 log2(1 + 面积/δ²) 加权
 //           （这块表面在当前精度下有多少个 δ 见方的格子：精度要求越细、表面越大，同样的误差越贵——评分标准随档位变化）。
@@ -29,11 +29,12 @@ const inScene = (k) => ({ ...k, delta: k.delta / k.unit, dMax: k.dMax / k.unit }
 
 // 网格引用的价钱（L_mesh），按网格所属源部件的角色（roles.mjs）：
 //   full：真实信息量——把这个网格用语言逐点写出来的长度：每个顶点 3 个数（按两位小数的数计，各 1.5），每个三角形 3 个引用（各 1）。
-//         结构默认这样计：重建场景就是要把它们写成语言，引用网格不能比拆开写便宜。
-//   ref： c_mesh × log2(1 + 三角形数)——只是引用一个现成的资产。装饰、贴花默认这样计（重建地图时可以整个去掉，用网格也可以）；
-//         地形也是：起伏的地面本来就是不规则的面，语言里没有高度场，拆成几十块斜放的盒子既不准、语义也不对（平整的路面照样拟合成盒子）。
+//         默认所有角色都这样计：重建场景就是要把它们写成语言，关掉网格引用时场景不能少东西（用户的验收：不画网格的重建与源模型
+//         模糊后看起来差不多，compare 命令量）。
+//   ref： c_mesh × log2(1 + 三角形数)——只是引用一个现成的资产。工程可以按角色改成这样（例如允许装饰保留网格）。
+//   （D9 一度让地形、装饰、贴花默认按引用价，关掉网格后宿舍区的地面、广场全没了，缺三成）
 // 工程的 project.json 里 score.meshPrice 按角色改，例如 { "decor": "full" }
-export const MESH_PRICE = { structure: 'full', terrain: 'ref', decor: 'ref', decal: 'ref', helper: 'ref' };
+export const MESH_PRICE = { structure: 'full', terrain: 'full', decor: 'full', decal: 'full', helper: 'ref' };
 const VERTS = new WeakMap();
 const vertexCount = (tris) => { let n = VERTS.get(tris); if (n == null) VERTS.set(tris, (n = uniqueVertices(tris).length)); return n; };
 export const meshPriceMode = (role, k = SCORE_DEFAULTS) => ({ ...MESH_PRICE, ...(k.meshPrice ?? {}) }[role ?? 'structure'] ?? 'full');
