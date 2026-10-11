@@ -14,7 +14,7 @@ import { compile, _curves, FACT_EPS } from '../src/s3d.js';
 import { parseDecisions, applyDecisions, applyLocks, PRIMS } from './decisions.mjs';
 import { planesOf, panelLines, shellLines } from './panels.mjs';
 import { patchesOf } from './patches.mjs';
-import { fitSweep } from './sweepfit.mjs';
+import { fitSweep, centerline } from './sweepfit.mjs';
 import { heightField } from './heights.mjs';
 
 // ───────── 小工具 ─────────
@@ -402,7 +402,7 @@ function fitSteps(part, pts, F) {
 // 旋转体：横截面接近圆形的坐标系里，沿对称轴分箱取最大半径得到外轮廓，Douglas–Peucker 简化 → revolve profile=[(r,y); …]。
 // 误差：采样点到旋转面的径向距离（端面上的点只计超出的部分），按最薄方向归一化
 // areaMesh：网格的表面积；旋转面的面积比它大很多（例如一圈螺旋扶手被当成整个圆柱面）就不算旋转体
-function fitRevolve(pts, verts, F, areaMesh) {
+function fitRevolve(pts, verts, F, areaMesh, tris = null) {
   const scale = Math.max(Math.min(...F.h), 0.02 * Math.max(...F.h), 1e-6);
   let best = null;
   for (let a = 0; a < 3; a++) {
@@ -435,9 +435,58 @@ function fitRevolve(pts, verts, F, areaMesh) {
       const cap = t < 0.02 * H || t > 0.98 * H;
       return acc + (cap ? Math.max(0, r - Rt) : Math.abs(r - Rt));
     }, 0) / pts.length / scale;
-    if (!best || e < best.e) best = { shape: 'revolve', axis: a, t0, prof, e };
+    if (!best || e < best.e) best = { shape: 'revolve', axis: a, t0, prof, e, H };
+    // 外轮廓解释不了（凹进去的碗、盆、碟形天线被填实了）：试试按截面的边界写
+    if (e > 0.02) { const sh = fitRevolveShell(pts, F, a, t0, H, scale, tol, tris); if (sh && sh.prof.length <= 16 && sh.e < (best?.e ?? Infinity)) best = sh; }
   }
   return best;
+}
+// 带内凹的旋转体（碗、盆、碟形天线）：外轮廓（每个高度取最大半径）把凹进去的部分填实了。
+// 车削出来的网格，顶点成环：每个环在截面（r, y）上是一个点，网格的边只连相邻的环——把边投到截面上，得到的图就是截面的轮廓折线
+// （从轴上出发，绕过外壁、沿口、内壁回到轴上）。环的数目要远少于顶点数（每环至少 4 个顶点），图要是一条两端的链；
+// 不是车削的网格（顶点不成环）不试。轮廓按容差简化，端点落在轴上的写成 r = 0（编译器沿轴补齐）
+function fitRevolveShell(pts, F, a, t0, H, scale, tol, tris) {
+  if (!tris) return null;
+  const [b, c] = [0, 1, 2].filter((k) => k !== a);
+  const rOf = (p) => { const x = mvT(F.cols, sub(p, F.c)); return [Math.hypot(x[b], x[c]), x[a] - t0]; };
+  const Rmax = Math.max(...pts.map((p) => rOf(p)[0])), D = Math.hypot(Rmax, H), q = 1e-3 * D;
+  const ids = new Map(), node = [], key = (rp) => `${Math.round(rp[0] / q)},${Math.round(rp[1] / q)}`;
+  const idOf = (v) => { const rp = rOf(v), k = key(rp); let id = ids.get(k); if (id === undefined) { ids.set(k, (id = node.length)); node.push(rp); } return id; };
+  const adj = [];
+  let nv = 0;
+  for (const t of tris) {
+    const ii = t.map(idOf);
+    nv += 3;
+    for (let k = 0; k < 3; k++) { const u = ii[k], v = ii[(k + 1) % 3]; if (u === v) continue; (adj[u] ??= new Set()).add(v); (adj[v] ??= new Set()).add(u); }
+  }
+  // 车削：截面上的点（环）远少于顶点
+  if (node.length < 3 || node.length > 200 || node.length * 12 > nv) return null;
+  const deg = node.map((_, i) => adj[i]?.size ?? 0);
+  if (deg.some((d) => d > 2)) return null; // 不是一条链（分叉：不是车削出来的）
+  const ends = deg.map((d, i) => (d === 1 ? i : -1)).filter((i) => i >= 0);
+  if (ends.length !== 2) return null;
+  const onAxis = Math.max(FID.tau * M, 0.02 * Rmax);
+  let [s0, s1] = ends;
+  if (node[s0][0] > node[s1][0]) [s0, s1] = [s1, s0];
+  if (node[s0][0] > onAxis) return null; // 至少一端在轴上
+  const chain = [s0];
+  for (let prev = -1, cur = s0; cur !== s1;) { const nx = [...adj[cur]].find((x) => x !== prev); if (nx === undefined) return null; prev = cur; cur = nx; chain.push(cur); }
+  if (chain.length !== node.length) return null;
+  const raw = chain.map((i) => [node[i][0] <= onAxis && (i === s0 || i === s1) ? 0 : node[i][0], node[i][1]]);
+  const dp = (ps) => {
+    if (ps.length < 3) return ps;
+    const [A, B] = [ps[0], ps[ps.length - 1]], d = [B[0] - A[0], B[1] - A[1]], L = Math.hypot(...d) || 1;
+    let iMax = 0, dMax = 0;
+    ps.forEach((p, i) => { const e = Math.abs((p[0] - A[0]) * d[1] - (p[1] - A[1]) * d[0]) / L; if (e > dMax) { dMax = e; iMax = i; } });
+    return dMax <= tol ? [A, B] : [...dp(ps.slice(0, iMax + 1)).slice(0, -1), ...dp(ps.slice(iMax))];
+  };
+  const prof = dp(raw);
+  if (prof.length > 24) return null;
+  // 误差：采样点在截面上到轮廓（加上沿轴补齐的那一段）的距离
+  const loop = prof[prof.length - 1][0] > 0 ? [...prof, [0, prof[prof.length - 1][1]]] : prof;
+  const segD = (p, A, B) => { const ex = B[0] - A[0], ey = B[1] - A[1], t = Math.max(0, Math.min(1, ((p[0] - A[0]) * ex + (p[1] - A[1]) * ey) / (ex * ex + ey * ey || 1e-30))); return Math.hypot(p[0] - A[0] - ex * t, p[1] - A[1] - ey * t); };
+  const e = pts.reduce((acc, p) => { const rp = rOf(p); let m = Infinity; for (let k = 1; k < loop.length; k++) m = Math.min(m, segD(rp, loop[k - 1], loop[k])); return acc + m; }, 0) / pts.length / scale;
+  return { shape: 'revolve', axis: a, t0, prof, e, H: Math.max(...prof.map((p) => p[1])), shell: true };
 }
 
 // 扫掠的结果整体平移
@@ -460,7 +509,7 @@ export function fitPart(part, i, only = null, basic = false) {
   // 基本体拟合得不好时，试试管道（弯管、输料管）
   if (!only && !basic && fits[0].e > 0.02) { const t = fitTube(part, i, vol, fits[0].e); if (t && t.e < fits[0].e) fits.unshift({ ...t, frame: fits[0].frame }); }
   // 拟合得不好时，试试旋转体（整流罩、天线）；语义档一律用基本体当代理（灰盒），不用旋转体
-  if (!only && !basic && FID.name !== 'semantic' && fits[0].e > 0.02) { const rv = fitRevolve(pts, verts, fits[0].frame, part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0)); if (rv && rv.e < fits[0].e && rv.prof.length <= 16) fits.unshift({ ...rv, frame: fits[0].frame }); }
+  if (!only && !basic && FID.name !== 'semantic' && fits[0].e > 0.02) { const rv = fitRevolve(pts, verts, fits[0].frame, part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0), part.tris); if (rv && rv.e < fits[0].e && rv.prof.length <= 16) fits.unshift({ ...rv, frame: fits[0].frame }); }
   // 拟合得不好时，试试扫掠（截面不变、沿一条曲线走：弯曲的路面、螺旋坡道、拱、螺旋扶手；sweepfit.mjs）
   // 两个几乎不花时间的门槛（扫掠拟合每个部件要几毫秒到上百毫秒，真实场景里拟合差的部件有几百个，大多是家具这类别的东西）：
   //   基本体拟合得很差（e > 0.15；示例里的路面、坡道、拱、扶手都在 0.16 以上）；
@@ -578,14 +627,14 @@ function primitiveOf(fit, part, srcFile) {
     const a = fit.axis, others = [0, 1, 2].filter((k) => k !== a);
     let ey = F.cols[a];
     if (ey[1] < 0) ey = scl(ey, -1);
-    const t0 = ey === F.cols[a] ? fit.t0 : -(fit.t0 + fit.prof[fit.prof.length - 1][1]);
-    const prof = ey === F.cols[a] ? fit.prof : [...fit.prof].reverse().map(([r, y]) => [r, fit.prof[fit.prof.length - 1][1] - y]);
+    const t0 = ey === F.cols[a] ? fit.t0 : -(fit.t0 + (fit.H ?? fit.prof[fit.prof.length - 1][1]));
+    const prof = ey === F.cols[a] ? fit.prof : [...fit.prof].reverse().map(([r, y]) => [r, (fit.H ?? fit.prof[fit.prof.length - 1][1]) - y]);
     let ex = F.cols[others[0]];
     const ez = cross(ex, ey);
     if (Math.abs(ey[1] - 1) < 1e-6) ex = [1, 0, 0];
     const cols = Math.abs(ey[1] - 1) < 1e-6 ? [[1, 0, 0], [0, 1, 0], [0, 0, 1]] : [ex, ey, ez];
     const at = add(F.c, scl(ey, t0));
-    const Rm = Math.max(...prof.map((p) => p[0])), Hh = prof[prof.length - 1][1];
+    const Rm = Math.max(...prof.map((p) => p[0])), Hh = Math.max(...prof.map((p) => p[1])); // 截面是封闭轮廓（带内凹）时最后一点不在顶上
     return { ...base, kind: 'revolve', props: { profile: `[${prof.map(([r, y]) => `(${fmt(r)},${fmt(y)})`).join('; ')}]` }, cols, at, box: { min: [-Rm, 0, -Rm], max: [Rm, Hh, Rm] } };
   }
   if (fit.shape === 'steps') {

@@ -248,3 +248,16 @@ test('地形取点：立在起伏网格地形上的物体写成 on=地形.top[u,
   const single = [...grid(H, 3), ...cubeTris([26, 0, 26], [28, 8, 28])];
   assert.match(reverse([{ name: 'ground', tris: single, material: grey }, crate2], { srcFile: 'x.glb', fidelity: 'structure' }).src, /on=ground\.top\[/);
 });
+
+test('带内凹的旋转体：车削网格的环连成截面轮廓，水池写成 revolve profile=[(0,0); (5,0); (5.2,0.9); (4.7,0.9); (4.6,0.35); (0,0.35)]', () => {
+  const src = `material stone color=#cfc8b8
+box ground size=40,1,40 pin=top mat=stone
+revolve basin profile=[(0,0); (5,0); (5.2,0.9); (4.7,0.9); (4.6,0.35); (0,0.35)] on=ground mat=stone`;
+  const out = reverse(partsOfDocument(sceneToGLB(src, { level: 'L0' }).doc), { srcFile: 'x.glb', level: 'L0', fidelity: 'structure' });
+  const m = /^revolve basin profile=\[([^\]]+)\]/m.exec(out.src);
+  assert.ok(m, out.src);
+  const prof = m[1].split(';').map((p) => p.replace(/[()\s]/g, '').split(',').map(Number));
+  const want = [[0, 0], [5, 0], [5.2, 0.9], [4.7, 0.9], [4.6, 0.35], [0, 0.35]];
+  assert.equal(prof.length, want.length, m[1]);
+  prof.forEach((p, i) => assert.ok(Math.hypot(p[0] - want[i][0], p[1] - want[i][1]) < 0.02, `${p} 对 ${want[i]}`));
+});
