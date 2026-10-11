@@ -603,7 +603,7 @@ function loadProgram(src, opts, errors, stack = []) {
     const sub = [];
     const subStmts = loadProgram(text, { ...opts, file: path }, sub, [...stack, path]);
     for (const e of sub) { e.file ??= path; errors.push(e); }
-    out.push(...subStmts);
+    for (const x of subStmts) out.push(x); // 不用展开：导入的文件可能有几万条语句
   }
   return out;
 }
@@ -1292,7 +1292,7 @@ function applyOpinions(elab, S, errors, fail, queue = elab.opinions, pass = 1) {
   if (dropped) {
     const keep = elab.flat.filter((n) => !n.dropped);
     elab.flat.length = 0;
-    elab.flat.push(...keep);
+    for (const x of keep) elab.flat.push(x); // 不用展开：几十万个节点时会超出参数个数的上限
   }
   // 新增或删除了节点（包括第二轮在副本里加的部件）都要重建名字索引
   S.rebuildIndex();

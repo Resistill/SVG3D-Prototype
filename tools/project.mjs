@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { compile, FACT_EPS } from '../src/s3d.js';
 import { readParts, reverse, FIDELITY, partsNode } from './reverse.mjs';
 import { heightField } from './heights.mjs';
+import { reverseTiled } from './tiles.mjs';
 import { Document, NodeIO } from '@gltf-transform/core';
 import { SCORE_DEFAULTS, scoreCache } from './score.mjs';
 import { splitSource, joinSource, importedFiles } from './split.mjs';
@@ -204,13 +205,17 @@ export async function runReverse(P, { fresh = false, fidelity = null, unit = nul
   const previous = !fresh && P.exists('base.s3d') ? joinSource(P.read) : null;
   // 决定层（decisions.s3d）：逆向必须满足的约束；满足不了的、找不到源部件的写进报告
   const decisions = P.exists('decisions.s3d') ? P.read('decisions.s3d') : null;
-  // 部件很多时先在 worker 线程里并行拟合
-  const pre = await prefit(parts, { fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit });
-  const out = reverse(parts, { srcFile: P.cfg.source, level: 'project', previous, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, decisions, prefit: pre, partsFile: 'parts.glb' });
+  // 部件非常多（project.json 的 tiles.threshold，默认 2 万）时分块逆向（tiles.mjs，各块并行；决定层要整体满足，有决定层时不分块）；
+  // 否则部件很多时先在 worker 线程里并行拟合
+  const T = { threshold: 20000, maxParts: 3000, ...(P.cfg.tiles ?? {}) };
+  const tiled = parts.length > T.threshold && !decisions?.trim();
+  const ropts = { srcFile: P.cfg.source, level: 'project', previous, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, decisions, partsFile: 'parts.glb' };
+  const out = tiled ? await reverseTiled(parts, ropts, { maxParts: T.maxParts })
+    : reverse(parts, { ...ropts, prefit: await prefit(parts, { fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit }) });
   await writePartsFile(P, parts, out.objs);
   writeBase(P, out.src);
   P.write('base.report.json', JSON.stringify(out.report, null, 2) + '\n');
   const hash = sha1(P.sourcePath());
   if (hash !== P.cfg.sourceHash) { P.cfg.sourceHash = hash; writeCfg(P.path('project.json'), P.cfg); }
-  return { fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, ...(out.report.decisions ? { decisions: { applied: out.report.decisions.applied.length, unsatisfied: out.report.decisions.unsatisfied, dangling: out.report.decisions.dangling } } : {}), parts: parts.length, arrays: out.report.arrays.length, mirrors: out.report.mirrors.length, meshes: out.objs.filter((o) => o.kind === 'mesh').length, renamed: out.report.renamed };
+  return { fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, ...(out.report.decisions ? { decisions: { applied: out.report.decisions.applied.length, unsatisfied: out.report.decisions.unsatisfied, dangling: out.report.decisions.dangling } } : {}), parts: parts.length, ...(tiled ? { tiles: out.report.tiles.length } : {}), arrays: out.report.arrays.length, mirrors: out.report.mirrors.length, meshes: out.objs.filter((o) => o.kind === 'mesh').length, renamed: out.report.renamed };
 }

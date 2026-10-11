@@ -19,6 +19,8 @@ reverse [--fidelity=…] [--unit=…] [--fresh]                               �
 | `structure`（默认） | 5 cm | 明显不是基本体时才保留网格 | 结构清楚，细节交给人 |
 | `detail` | 5 mm | 误差稍大就保留网格引用 | 尽量复原 |
 
+**规模**：部件超过 2 万个（`project.json` 的 `tiles.threshold`）时 `init` / `reverse` 自动分块逆向（各块并行，结果里的 `tiles` 是块数）；块边上的阵列、镜像不跨块。
+
 **场景单位**：表里的容差、分数的 δ 与 `dMax`、`score` 输出的误差都按米。源模型不是按米建的（厘米 0.01、stud 0.28），工程的 `unit` 记每个场景单位多少米，计算前换算。`init` 不给 `--unit` 时按部件尺寸猜，结果里的 `unitNote` 要人确认；猜错了用 `reverse --unit=… --fresh` 改。
 
 | 文件 | 内容 | 谁改 |

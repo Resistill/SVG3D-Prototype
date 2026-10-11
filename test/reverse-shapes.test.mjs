@@ -261,3 +261,21 @@ revolve basin profile=[(0,0); (5,0); (5.2,0.9); (4.7,0.9); (4.6,0.35); (0,0.35)]
   assert.equal(prof.length, want.length, m[1]);
   prof.forEach((p, i) => assert.ok(Math.hypot(p[0] - want[i][0], p[1] - want[i][1]) < 0.02, `${p} 对 ${want[i]}`));
 });
+
+test('侧面锚点：贴在罐体侧面上的接管、牌子写成 against=罐.side[θ,v]，与原文一致；插进圆柱里的不算贴着', () => {
+  const src = `material white color=#eeeeee
+material red color=#cc3333
+box ground size=60,1,60 pin=top mat=white
+cyl tank r=3 h=8 at=0,0,0 mat=white
+box nozzle size=1.2,0.8,0.8 against=tank.side[37,0.6] turn=37 mat=red
+box sign size=0.2,1,2 against=tank.side[200,0.3] turn=200 mat=red
+box rod size=2,0.4,0.4 at=0,5,-3.5 mat=red`;
+  for (const fidelity of ['structure', 'detail']) {
+    const out = reverse(partsOfDocument(sceneToGLB(src, { level: 'L0' }).doc), { srcFile: 'x.glb', level: 'L0', fidelity });
+    assert.deepEqual(compile(out.src).errors, []);
+    assert.match(out.src, /^box nozzle \S+ against=tank\.side\[37,0\.6\] /m, out.src);
+    assert.match(out.src, /^box sign \S+ against=tank\.side\[-160,0\.3\] /m);
+    assert.doesNotMatch(out.src, /^box rod .*side\[/m, '插进罐里的杆不是贴着');
+    assert.deepEqual(out.report.fallback, []);
+  }
+});

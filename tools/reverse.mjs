@@ -489,6 +489,8 @@ function fitRevolveShell(pts, F, a, t0, H, scale, tol, tris) {
   return { shape: 'revolve', axis: a, t0, prof, e, H: Math.max(...prof.map((p) => p[1])), shell: true };
 }
 
+// 网格编号 → 采样种子（分块逆向的类型）
+const meshSeed = (m) => { let h = 2166136261; for (const ch of String(m)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return (h >>> 0) % 1000003; };
 // 扫掠的结果整体平移
 const moveSweep = (sw, d) => ({ ...sw, curve: sw.curve.kind === 'spline' ? { ...sw.curve, ctrl: sw.curve.ctrl.map((p) => add(p, d)) } : { ...sw.curve, c: add(sw.curve.c, d) } });
 let SWEEP_SEEN = new Map(), SWEEP_FAILED = new Set();
@@ -583,6 +585,7 @@ export const partsNode = (from) => String(from).replace(/#/g, '~');
 //   Cube / Plane / Object 这类建模软件的默认名当作没有名字，交给语义命名（按识别出的概念起名）
 const GENERIC = /^(cube|plane|cylinder|sphere|box|object|mesh|node|group|default|material|geometry|polysurface|p?cube|p?plane|untitled)(_?\d+)*$/i;
 const nameTokens = (n) => String(n).split('/').pop().replace(/^SM_/i, '').split(/[_\s.\-()]+/).filter(Boolean);
+export function nameCleanerOf(names) { return nameCleaner(names); }
 function nameCleaner(names) {
   const uniq = [...new Set(names.filter(Boolean).map((n) => String(n).split('/').pop()))];
   const freq = new Map();
@@ -1110,7 +1113,7 @@ function unifyBoxLabels(objs) {
 }
 
 // ───────── 3 & 4. 关系与校验 ─────────
-export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null, prefit = null, partsFile = null, defaultMaterial = true, panels = true, unions = true, shells = true } = {}) {
+export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null, prefit = null, partsFile = null, defaultMaterial = true, panels = true, unions = true, shells = true, nameStats = null, typeSeed = null } = {}) {
   setFidelity(fidelity, sceneUnit);
   PARTS_FILE = partsFile;
   PANELS = panels;
@@ -1129,7 +1132,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   let decided = null;
   const decs = decisions ? parseDecisions(decisions) : [];
   if (decs.length) { decided = applyDecisions(parts, decs); parts = decided.parts; }
-  cleanName = nameCleaner(parts.map((p) => p.name));
+  // 分块逆向（tiles.mjs）：名字清理按全场的名字统计，各块一致
+  cleanName = nameCleaner(nameStats ?? parts.map((p) => p.name));
   // 计时：S3D_TIMING=1 时把各阶段耗时打到 stderr（实战里定位瓶颈用）
   const T0 = performance.now(), lap = (what) => process.env.S3D_TIMING && console.error(`[reverse] ${what} ${Math.round(performance.now() - T0)}ms`);
   // ── 享元：同一个网格（加同样的缩放、同样的镜像）被多个节点用到 → 一个类型（def），只拟合一次 ──
@@ -1155,7 +1159,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       // 类型坐标系 = 网格自己的坐标系（含缩放）：world = R·local + t
       const local = rep.tris.map((tri) => tri.map((v) => mvT(R, sub(v, t))));
       // 局部坐标：不带矩阵（并的缓存按矩阵认同一个网格的世界坐标实例）；类型的代表不试扫掠（扫掠写在世界坐标里，做不成类型，享元就散了）
-      const fit = fitPart({ ...rep, tris: local, matrix: null, noSweep: true }, ms[0].i);
+      // 采样种子：默认取第一个实例的序号；分块逆向时取网格编号的哈希（各块里同一个网格写出同样的类型体，合并时去重）
+      const fit = fitPart({ ...rep, tris: local, matrix: null, noSweep: true }, typeSeed === 'mesh' ? meshSeed(rep.mesh) : ms[0].i);
       const bad = fit.e > FID.fitTol || fit.cover < COVER_MIN || fit.shape === 'tube' || fit.shape === 'sweep';
       // 板件：拟合差的类型（一栋楼被多处使用）在类型坐标系里拆成墙板、楼板，和现在的写法（基本体，或各实例引用网格）比
       const typePart = { ...rep, tris: local, matrix: null };
@@ -1243,7 +1248,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   for (const o of objs) matCount.set(o.mat, (matCount.get(o.mat) ?? 0) + 1);
   const [defMat, defN] = [...matCount].sort((a, b) => b[1] - a[1])[0] ?? [null, 0];
   // 嵌进别处的输出（细化的子块、detect）不用：省掉的 mat= 在那里会继承外层物体的材质
-  const defaultMat = defaultMaterial && defN * 2 >= objs.length && objs.length >= 4 ? defMat : null;
+  // 分块逆向：全场一致的默认材质（defaultMaterial 是材质的键）
+  const defaultMat = typeof defaultMaterial === 'string' ? mats.get(defaultMaterial)?.name ?? null : defaultMaterial && defN * 2 >= objs.length && objs.length >= 4 ? defMat : null;
   for (const m of mats.values()) header.push(`material ${m.name} color=${m.color}${m.metal != null ? ` metal=${fmt(m.metal)}` : ''}${m.rough != null ? ` rough=${fmt(m.rough)}` : ''}${m.name === defaultMat ? ' default=true' : ''}`);
   header.push('');
   if (typeLines.length) header.push('// 类型：源模型里同一个网格被多处使用（引擎的享元）', ...typeLines, '');
@@ -1342,6 +1348,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   const shorter = (...alts) => alts.reduce((a, b) => (lineCost(b) < lineCost(a) ? b : a));
   // 地形判定（网格才有）：竖直方向的范围不到占地短边的 30%，朝上的面投影到水平面上大约只有一层（0.5–1.3 倍包围盒的占地）——
   // 起伏的地面、路面是；房间的网格（地板、天花板两层）、楼不是
+  // 竖直的圆柱、圆台（against=B.side[θ,v] 的候选）
+  const CYLS = objs.filter((o) => (o.kind === 'cyl' || o.kind === 'cone') && !o.props.axis && Math.abs(o.cols[1][1] - 1) < 1e-6);
   const TERRAIN = new Map();
   const terrainLike = (B) => {
     if (TERRAIN.has(B.id)) return TERRAIN.get(B.id);
@@ -1393,6 +1401,38 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
         if (dy <= boxTol && (!best || dy < best.dy)) best = { B, dy, place: `on=${name(B)}.top[${txt[0]},${txt[2]}]` };
       }
       if (best) return { place: best.place, ref: best.B, kind: 'on' };
+    }
+    // 贴在竖直的圆柱、圆台侧面上（罐体上的接管、柱子上的牌子）：A 朝向轴的那个侧面的中心正好落在侧面上 →
+    // against=B.side[θ,v]（θ 按 arc 的约定，v 是高度比例；编译器把 A 那一面的中心放到这一点，法线沿径向）
+    // 候选不靠接触事实（多边形近似的圆柱与贴上去的面差一点，常常没有事实）：中心离得够近的竖直圆柱、圆台
+    if (!frame && Math.abs(A.cols[1][1] - 1) < 1e-6 && CYLS.length) {
+      const cA0 = centerOf(A), dA = len(sub(A.box.max, A.box.min));
+      for (const B0 of CYLS) {
+        if (B0 === A || !cand(B0)) continue;
+        const cB = centerOf(B0), rB = Math.max(+B0.props.r, +(B0.props.r2 ?? 0)), hB = +B0.props.h;
+        if (Math.hypot(cA0[0] - cB[0], cA0[2] - cB[2]) > rB + dA || Math.abs(cA0[1] - cB[1]) > hB / 2 + dA) continue;
+        const B = poseOf(B0);
+        if (Math.abs(B.cols[1][1] - 1) > 1e-6) continue;
+        const r1 = +B.props.r, r2 = B0.kind === 'cone' ? +B.props.r2 : r1, h = +B.props.h;
+        const cA = add(A.at, mvC(A.cols, scl(add(A.box.min, A.box.max), 0.5))), l = toB(B, cA);
+        const th = Math.atan2(-l[2], l[0]), out = [Math.cos(th), 0, -Math.sin(th)];
+        // A 朝向轴的那个侧面（局部 ±x、±z 里法线与径向最相反的）
+        let best = null;
+        for (const [k, sg] of [[0, 1], [0, -1], [2, 1], [2, -1]]) {
+          const dir = [0, 0, 0]; dir[k] = sg;
+          const nB = mvT(B.cols, mvC(A.cols, dir)), s2 = dot(nB, out);
+          if (!best || s2 < best.s) best = { s: s2, k, sg, nB };
+        }
+        if (best.s > -0.95) continue; // 那一面不是朝着轴的
+        const half = (A.box.max[best.k] - A.box.min[best.k]) / 2, F = add(l, scl(best.nB, half));
+        const v = F[1] / h, rho = Math.hypot(F[0], F[2]), rv = r1 + (r2 - r1) * v;
+        if (v < 0 || v > 1 || Math.abs(rho - rv) > 0.5 * tau) continue; // 贴面要贴实：插进去、离开都不算（摆臂插进火箭里的不是贴着）
+        const thF = Math.atan2(-F[2], F[0]) * 180 / Math.PI;
+        // 位数：弧长误差 r·Δθ、高度误差 h·Δv 都不超过 τ
+        const dTh = Math.max(0, Math.min(4, Math.ceil(Math.log10((0.5 * Math.PI / 180 * Math.max(rv, 1e-9)) / tau)))), dV = Math.max(0, Math.min(4, Math.ceil(Math.log10(0.5 * h / tau))));
+        const rnd = (x, d) => { const y = Math.round(x * 10 ** d) / 10 ** d; return Object.is(y, -0) ? '0' : String(y); };
+        return { place: `against=${name(B)}.side[${rnd(thF, dTh)},${rnd(v, dV)}]`, ref: B, kind: 'against' };
+      }
     }
     // 贴着的那个面：A 的包围盒上朝向 B 那一面的中心（B 自身坐标、归一化）；它必须真的落在 B 的包围盒那一面上
     const againstAt = (x) => {
