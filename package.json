@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "SVG3D：面向 AI 的三维空间描述语言（原型）",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "node --test \"test/*.test.mjs\"",
     "serve": "node bin/serve.mjs 5178",

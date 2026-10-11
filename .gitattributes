@@ -1,0 +1,5 @@
+# 统一用 LF：换机器（或 core.autocrlf 不同）时不产生整文件的换行差异
+* text=auto eol=lf
+*.png binary
+*.glb binary
+*.bin binary

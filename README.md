@@ -18,6 +18,14 @@ SVG3D 用这种方式描述场景，帮助 AI **理解场景**、从源模型**�
 
 ## 跑起来
 
+需要 Node.js 22 以上。克隆或拷过来之后先装依赖：
+
+```bash
+npm ci
+```
+
+实战工程（`work/`）与示例产物（`out/`）不进仓库，要单独拷；`work/` 下工程的旁路表用相对路径指向同级目录 `../SpaceCenter_Rebuild/blockout/layout.csv`，所以换机器时两个目录要放在同一个父目录下。工程的 `state/cache/` 可以不拷，第一次运行会重建。
+
 ```bash
 npm run serve
 ```
