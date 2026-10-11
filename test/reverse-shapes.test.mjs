@@ -89,7 +89,7 @@ box slab size=19.4,0.3,11.4 at=0,4,0
   const tris = [];
   for (const o of sceneObjectsOf(r)) for (let i = 0; i < o.pos.length; i += 9) tris.push([0, 3, 6].map((k) => [o.pos[i + k], o.pos[i + k + 1], o.pos[i + k + 2]]));
   const white = { name: 'white', color: '#ffffff' }, grey = { name: 'grey', color: '#808080' };
-  const cube = (a, b) => { const v = (i) => [i & 1 ? b[0] : a[0], i & 2 ? b[1] : a[1], i & 4 ? b[2] : a[2]]; return [[0, 1, 3, 2], [4, 6, 7, 5], [0, 4, 5, 1], [2, 3, 7, 6], [0, 2, 6, 4], [1, 5, 7, 3]].flatMap(([p, q, s, t]) => [[v(p), v(q), v(s)], [v(p), v(s), v(t)]]); };
+  const cube = (a, b) => { const v = (i) => [i & 1 ? b[0] : a[0], i & 2 ? b[1] : a[1], i & 4 ? b[2] : a[2]]; return [[0, 1, 3, 2], [4, 6, 7, 5], [0, 4, 5, 1], [2, 3, 7, 6], [0, 2, 6, 4], [1, 5, 7, 3]].flatMap(([p, q, s, t]) => [[v(p), v(s), v(q)], [v(p), v(t), v(s)]]); }; // 法线朝外
   const shift = (ts, d) => ts.map((t) => t.map((p) => [p[0] + d[0], p[1] + d[1], p[2] + d[2]]));
   const ground = { name: 'ground', tris: cube([-30, -1, -30], [60, 0, 30]), material: grey };
   // 屋顶上的一个箱子：立在板件拼成的楼上
@@ -124,7 +124,7 @@ const trisOf = (text) => {
   for (const o of sceneObjectsOf(compile(text))) for (let i = 0; i < o.pos.length; i += 9) tris.push([0, 3, 6].map((k) => [o.pos[i + k], o.pos[i + k + 1], o.pos[i + k + 2]]));
   return tris;
 };
-const cubeTris = (a, b) => { const v = (i) => [i & 1 ? b[0] : a[0], i & 2 ? b[1] : a[1], i & 4 ? b[2] : a[2]]; return [[0, 1, 3, 2], [4, 6, 7, 5], [0, 4, 5, 1], [2, 3, 7, 6], [0, 2, 6, 4], [1, 5, 7, 3]].flatMap(([p, q, s, t]) => [[v(p), v(q), v(s)], [v(p), v(s), v(t)]]); };
+const cubeTris = (a, b) => { const v = (i) => [i & 1 ? b[0] : a[0], i & 2 ? b[1] : a[1], i & 4 ? b[2] : a[2]]; return [[0, 1, 3, 2], [4, 6, 7, 5], [0, 4, 5, 1], [2, 3, 7, 6], [0, 2, 6, 4], [1, 5, 7, 3]].flatMap(([p, q, s, t]) => [[v(p), v(s), v(q)], [v(p), v(t), v(s)]]); }; // 法线朝外
 
 test('外壳 − 空腔 − 开口：空心的楼第一遍就写成 subtract shell { outer ; cavity ; opening }，楼里的楼板另写；拱门写成矩形 + 横放的圆柱', () => {
   const white = { name: 'white', color: '#ffffff' }, grey = { name: 'grey', color: '#808080' };

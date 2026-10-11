@@ -1446,8 +1446,9 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const gb = gs && { kind: 'group', c0: gs.at, box: gs.box, body: gs.body, fit: Math.max(0, Math.min(1, 1 - (gs.meanErr * M) / (4 * FID.tau * M))), S: gs.S, curS: gs.curS, pieces: gs.pieces };
       if (subOK && !gb && !best0) sg = scatterT();
       const cb = sg ? { ...sg, kind: 'group', fit: 1 - fit.e / TOL } : [pb, ub, sb, gb].filter(Boolean).sort((x, y) => x.S - y.S)[0] ?? null;
-      // 拟合不了的：引用价时退回各实例的网格引用，不做类型；按真实信息量计价时类型体就是那个基本体（不退回网格）
-      if (bad && !cb && meshPriceMode(roleP(rep), MESH_K) === 'ref') continue;
+      // 拟合不了、也没有组合写法的：不做类型，各实例按普通部件处理（引用价时退回各自的网格引用；按真实信息量计价时各自拟合、拆解——
+      // 类型体只用基本体且不试扫掠，留下一个很差的基本体还不如各自拆：H1 的桁架塔成了一根“管”）
+      if (bad && !cb) continue;
       let prim, c0, lo, hi;
       if (cb) {
         c0 = cb.c0; lo = add(c0, cb.box.min); hi = add(c0, cb.box.max);
