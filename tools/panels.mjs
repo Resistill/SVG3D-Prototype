@@ -108,45 +108,50 @@ function rects(nu, nv, want) {
   return out;
 }
 
-// 斜边：连续 ≥ 3 列，每列的格子连续、一头对齐、另一头逐列单调变化且大致在一条直线上（坡顶的墙、楼梯旁的墙、切角的楼板）。
-// 按格子覆盖成矩形会是一串台阶状的窄条；写成一个矩形 + 一个楔形。
-// 返回 [{ i0, i1, kind: 'top'（底边对齐、顶边斜）| 'bottom'（顶边对齐、底边斜）, fixed（对齐那一头的格子行号）, e0, e1（斜边在 i0、i1 + 1 处的位置，格子单位）}]，
-// 用掉的列在 taken 里标出（taken[i] = true）
+// 斜边：连续 ≥ 3 列，每列的格子连续；底边、顶边各自大致在一条直线上（不变，或逐列单调变化），至少一边在变
+// （坡顶的墙、楼梯旁的墙、切角的楼板、六边形平台两侧的斜切边——上下同时斜）。按格子覆盖成矩形会是一串台阶状的窄条；
+// 写成中间一个矩形 + 顶边斜时上面一个楔形 + 底边斜时下面一个倒挂的楔形。两条边交叉的不算。
+// 返回 [{ i0, i1, b0, b1（底边在 i0、i1 + 1 处的位置，格子单位）, t0, t1（顶边，同上）}]，用掉的列在 taken 里标出
 function slopeRuns(nu, nv, occ) {
   const col = [];
   for (let i = 0; i < nu; i++) {
     let b = -1, t = -1, gap = false;
     for (let j = 0; j < nv; j++) if (occ(i, j)) { if (b < 0) b = j; else if (j !== t + 1) gap = true; t = j; }
-    col.push(b < 0 || gap ? null : { b, t });
+    col.push(b < 0 || gap ? null : { b, t: t + 1 });
   }
+  // 一组位置是否大致在一条直线上（偏离不超过一格），返回两端（x 与 x + n 处）的位置
+  const line = (es, x0) => {
+    const n = es.length, xs = es.map((_, k) => x0 + k + 0.5), mx = xs.reduce((a, x) => a + x, 0) / n, me = es.reduce((a, e) => a + e, 0) / n;
+    const sxx = xs.reduce((a, x) => a + (x - mx) ** 2, 0), beta = xs.reduce((a, x, k) => a + (x - mx) * (es[k] - me), 0) / sxx;
+    if (!es.every((e, k) => Math.abs(e - (me + beta * (xs[k] - mx))) <= 1)) return null;
+    return [me + beta * (x0 - mx), me + beta * (x0 + n - mx)];
+  };
   const runs = [], taken = new Uint8Array(nu);
-  for (const kind of ['top', 'bottom']) {
-    const fixedOf = (c) => (kind === 'top' ? c.b : c.t), edgeOf = (c) => (kind === 'top' ? c.t + 1 : c.b);
-    for (let i0 = 0; i0 < nu; ) {
-      const c0 = col[i0];
-      if (!c0 || taken[i0]) { i0++; continue; }
-      let i1 = i0, dir = 0;
-      while (i1 + 1 < nu && col[i1 + 1] && !taken[i1 + 1] && fixedOf(col[i1 + 1]) === fixedOf(c0)) {
-        const d = Math.sign(edgeOf(col[i1 + 1]) - edgeOf(col[i1]));
-        if (d && dir && d !== dir) break;
-        if (d) dir = d;
-        i1++;
-      }
-      const n = i1 - i0 + 1, xs = [], es = [];
-      for (let i = i0; i <= i1; i++) { xs.push(i + 0.5); es.push(edgeOf(col[i])); }
-      if (n >= 3 && dir && Math.abs(es[n - 1] - es[0]) >= 2) {
-        // 最小二乘直线；台阶偏离直线不超过一格才算斜边
-        const mx = xs.reduce((a, x) => a + x, 0) / n, me = es.reduce((a, e) => a + e, 0) / n;
-        const sxx = xs.reduce((a, x) => a + (x - mx) ** 2, 0), sxe = xs.reduce((a, x, k) => a + (x - mx) * (es[k] - me), 0), beta = sxe / sxx;
-        if (es.every((e, k) => Math.abs(e - (me + beta * (xs[k] - mx))) <= 1)) {
-          runs.push({ i0, i1, kind, fixed: fixedOf(c0), e0: me + beta * (i0 - mx), e1: me + beta * (i1 + 1 - mx) });
-          for (let i = i0; i <= i1; i++) taken[i] = 1;
-          i0 = i1 + 1;
-          continue;
-        }
-      }
-      i0++;
+  for (let i0 = 0; i0 < nu; ) {
+    if (!col[i0]) { i0++; continue; }
+    // 尽量往后伸：两条边各自不折返（单调或不变）
+    let i1 = i0, db = 0, dt = 0;
+    while (i1 + 1 < nu && col[i1 + 1]) {
+      const sb = Math.sign(col[i1 + 1].b - col[i1].b), st = Math.sign(col[i1 + 1].t - col[i1].t);
+      if ((sb && db && sb !== db) || (st && dt && st !== dt)) break;
+      if (sb) db = sb;
+      if (st) dt = st;
+      i1++;
     }
+    const n = i1 - i0 + 1, bs = col.slice(i0, i1 + 1).map((c) => c.b), ts = col.slice(i0, i1 + 1).map((c) => c.t);
+    const varies = (es) => Math.abs(es[n - 1] - es[0]) >= 2;
+    if (n >= 3 && (varies(bs) || varies(ts))) {
+      const B = varies(bs) ? line(bs, i0) : [bs[0], bs[0]], T = varies(ts) ? line(ts, i0) : [ts[0], ts[0]];
+      // 不变的那条边要真的不变（逐列相同）；两条边不能交叉
+      const flat = (es) => es.every((e) => e === es[0]);
+      if (B && T && (varies(bs) || flat(bs)) && (varies(ts) || flat(ts)) && Math.max(B[0], B[1]) <= Math.min(T[0], T[1]) + 0.5) {
+        runs.push({ i0, i1, b0: B[0], b1: B[1], t0: T[0], t1: T[1] });
+        for (let i = i0; i <= i1; i++) taken[i] = 1;
+        i0 = i1 + 1;
+        continue;
+      }
+    }
+    i0++;
   }
   return { runs, taken };
 }
@@ -156,9 +161,19 @@ export function panelSlabs(tris, { cell, thick, maxThick, maxCells = 160, minFra
   const planes = planesOf(tris, { tol: Math.max(cell / 2, thick / 4), minFrac });
   planes.sort((x, y) => y.area - x.area);
   const paired = new Set(), slabs = [];
+  // 已有的板的侧面（窄条）：顶点都落在某块配好对的板的厚度里、并且在它覆盖的格子上（差一格以内）——板本身已经包含了它，
+  // 再单独写会是一串细条（带厚度的斜板四周都是）
+  const inSlab = (S, v) => {
+    const h = dot(v, S.P.n), tol = cell;
+    if (h > S.P.d + tol || h < S.P.d - S.th - tol) return false;
+    const { g, nu, nv, lo, cell: c } = S.R, i = Math.floor((dot(v, S.F.a) - lo[0]) / c), j = Math.floor((dot(v, S.F.b) - lo[1]) / c);
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const x = i + di, y = j + dj; if (x >= 0 && y >= 0 && x < nu && y < nv && g[y * nu + x]) return true; }
+    return false;
+  };
   for (const P of planes) {
     if (paired.has(P)) continue;
     paired.add(P);
+    if (slabs.some((S) => S.paired && P.tris.every((t) => t.every((v) => inSlab(S, v))))) continue;
     const F = frameOf(P.n);
     // 配对：Q 的法线与 P 相反，P 的外表面在 n·x = d，材料在它后面（n·x 更小），Q 在 n·x = d − gap
     let best = null;
@@ -171,7 +186,7 @@ export function panelSlabs(tris, { cell, thick, maxThick, maxCells = 160, minFra
     if (best) paired.add(best.Q);
     const th = best ? best.gap : thick;
     const R = rasterize(best ? [...P.tris, ...best.Q.tris] : P.tris, F, cell, maxCells);
-    slabs.push({ P, F, th, R, kind: F.kind });
+    slabs.push({ P, F, th, R, kind: F.kind, paired: !!best });
   }
   return slabs;
 }
@@ -273,22 +288,27 @@ export function panelLines(tris, { cell, thick, maxThick, maxBoxes = 60, digits 
         for (const p of runs) {
           // X：斜边延伸的方向，Y：斜边变化的方向；u、v 是板内二维坐标（沿 F.a、F.b）
           const [X, Y, x0, y0] = p.axis === 'u' ? [F.a, F.b, lo[0], lo[1]] : [F.b, F.a, lo[1], lo[0]];
-          const xa = x0 + p.i0 * c, xb = x0 + (p.i1 + 1) * c, E0 = y0 + p.e0 * c, E1 = y0 + p.e1 * c;
-          const top = p.kind === 'top', base = top ? Math.min(E0, E1) : Math.max(E0, E1), far = top ? y0 + p.fixed * c : y0 + (p.fixed + 1) * c;
-          // 矩形：对齐的那一头到斜边较近的一端
-          const [r0, r1] = top ? [far, base] : [base, far];
+          const xa = x0 + p.i0 * c, xb = x0 + (p.i1 + 1) * c, B0 = y0 + p.b0 * c, B1 = y0 + p.b1 * c, T0 = y0 + p.t0 * c, T1 = y0 + p.t1 * c;
+          // 矩形：底边较高的一端到顶边较低的一端
+          const r0 = Math.max(B0, B1), r1 = Math.min(T0, T1);
           if (r1 - r0 > 1e-9) {
             const B = p.axis === 'u' ? placeAB({ a0: xa, a1: xb, b0: r0, b1: r1 }) : placeAB({ a0: r0, a1: r1, b0: xa, b1: xb });
             out.push(`box ${name(kind)} size=${vec(B.size)} at=${vec(B.at)}${orient ? ' ' + orient : ''}`);
             boxes++;
           }
-          // 楔形（+x 一侧高）：斜边朝上、高端在 +X 时轴就是 (X, Y, X×Y)；高端在 −X 绕 Y 转半圈；斜边朝下（挂在矩形下面）绕 X 转半圈，深的一端同理
-          const Z = cross(X, Y), neg = (v) => scl(v, -1), up = top ? E1 > E0 : E1 < E0;
-          const wc = top ? (up ? [X, Y, Z] : [neg(X), Y, neg(Z)]) : (up ? [X, neg(Y), neg(Z)] : [neg(X), neg(Y), Z]);
-          const at = add(p.axis === 'u' ? add(scl(F.a, (xa + xb) / 2), scl(F.b, base)) : add(scl(F.a, base), scl(F.b, (xa + xb) / 2)), thick);
-          const wo = orientText(wc);
-          out.push(`wedge ${name(kind)} size=${vec([xb - xa, Math.abs(E1 - E0), th])} at=${vec(at)}${wo ? ' ' + wo : ''}`);
-          boxes++;
+          // 楔形（+x 一侧高）：顶边斜、高端在 +X 时轴就是 (X, Y, X×Y)；高端在 −X 绕 Y 转半圈；底边斜（挂在矩形下面）绕 X 转半圈，深的一端同理
+          const Z = cross(X, Y), neg = (v) => scl(v, -1);
+          const wedge = (top, E0, E1) => {
+            if (Math.abs(E1 - E0) < 1e-9) return;
+            const base = top ? Math.min(E0, E1) : Math.max(E0, E1), up = top ? E1 > E0 : E1 < E0;
+            const wc = top ? (up ? [X, Y, Z] : [neg(X), Y, neg(Z)]) : (up ? [X, neg(Y), neg(Z)] : [neg(X), neg(Y), Z]);
+            const at = add(p.axis === 'u' ? add(scl(F.a, (xa + xb) / 2), scl(F.b, base)) : add(scl(F.a, base), scl(F.b, (xa + xb) / 2)), thick);
+            const wo = orientText(wc);
+            out.push(`wedge ${name(kind)} size=${vec([xb - xa, Math.abs(E1 - E0), th])} at=${vec(at)}${wo ? ' ' + wo : ''}`);
+            boxes++;
+          };
+          wedge(true, T0, T1);
+          wedge(false, B0, B1);
         }
       }
     }

@@ -783,7 +783,7 @@ const PANEL_MIN_TRIS = 24, PANEL_MIN_SIZE = 2; // 一个空心盒子至少 24 �
 const PANEL_PLANAR = 0.8; // 表面至少这么多落在大平面上才试（宿舍区的楼、棚、门框都在 0.88 以上）
 // hollow：现在的基本体把空的地方填实了（hollowSolid），不管拟合好坏都要试
 function panelsWorth(fit, part, hollow = false) {
-  if (!PANELS || coarseRole(part) || FID.name !== 'structure' || part.force || part.tris.length < PANEL_MIN_TRIS) return false;
+  if (!PANELS || coarseRole(part) || FID.name !== 'structure' || part.force || part.tris.length < (hollow ? 2 : PANEL_MIN_TRIS)) return false; // 实心块必须拆时三角形少也试（一块倾斜的平地只有十几个三角形）
   if (!hollow && 1 - fit.e / TOL >= 0.5 && fit.cover >= COVER_MIN) return false;
   const { min, max } = fit.aabb;
   return Math.max(...sub(max, min)) >= PANEL_MIN_SIZE * M;
@@ -814,7 +814,9 @@ function tryPanels(tris, cols, t, part, cur, n = 1) {
   const tau = FID.tau * M, opts = { thick: Math.max(2 * FID.tau, 0.1) * M, maxThick: 1 * M, digits: DIGITS };
   const orient = orientText(cols), head = `group g at=${vec(add(t, mvC(cols, c0)))} pin=origin${orient ? ' ' + orient : ''} {`; // 评分时按原点放（容器默认按包络的底面中心放）
   let best = null;
-  for (const [cell, maxBoxes] of [[2 * tau, 120], [4 * tau, 60], [8 * tau, 30]]) {
+  // 现在的写法是必须换掉的实心块（curS 无穷大）：块数上限放宽、多试一种更粗的格子——宁可写长一点，也不能把空的地方填实
+  const cells = curS === Infinity ? [[2 * tau, 400], [4 * tau, 200], [8 * tau, 100], [16 * tau, 60]] : [[2 * tau, 120], [4 * tau, 60], [8 * tau, 30]];
+  for (const [cell, maxBoxes] of cells) {
     const p = panelLines(local, { ...opts, cell, maxBoxes });
     if (!p) continue;
     const lines = [head, ...p.lines.map((l) => '  ' + l), '}'];
@@ -1423,7 +1425,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       // 板件：拟合差的类型（一栋楼被多处使用）在类型坐标系里拆成墙板、楼板，和现在的写法（基本体，或各实例引用网格）比
       const typePart = { ...rep, tris: local, matrix: null, role: roleP(rep) };
       const prim0T = primitiveOf(fit, { ...rep, name: null }, srcFile), hollowT = !bad && hollowSolid(prim0T, typePart);
-      const curT = hollowT ? { S: Infinity } : bad ? { mesh: meshPrice(rep.tris, roleP(typePart), MESH_K) + ms.length * lineCost('src="x" size=1,1,1 pivot=1,1,1') } : { line: primLineOf(prim0T) };
+      // 拟合差的：引用价时现在的写法是各实例引用网格；按真实信息量计价时不退回网格，现在的写法就是那个（差的）基本体
+      const curT = hollowT ? { S: Infinity } : bad && meshPriceMode(roleP(typePart), MESH_K) === 'ref' ? { mesh: meshPrice(rep.tris, roleP(typePart), MESH_K) + ms.length * lineCost('src="x" size=1,1,1 pivot=1,1,1') } : { line: primLineOf(prim0T) };
       const I3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
       // 分散的类型体：能当小场景拆的先试小场景（同普通部件），没有结果时才退回分散的写法（见下）
       const subOK = subSceneWorth(fit, typePart, hollowT);

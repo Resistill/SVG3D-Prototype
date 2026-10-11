@@ -213,7 +213,9 @@ export async function runReverse(P, { fresh = false, fidelity = null, unit = nul
   // 部件非常多（project.json 的 tiles.threshold，默认 2 万）时分块逆向（tiles.mjs，各块并行；决定层要整体满足，有决定层时不分块）；
   // 否则部件很多时先在 worker 线程里并行拟合
   const T = { threshold: 20000, maxParts: 3000, ...(P.cfg.tiles ?? {}) };
-  const tiled = parts.length > T.threshold && !decisions?.trim();
+  // 决定层只有文件头的注释时算没有（新建的工程都带注释，以前因此从不分块：整张 SpaceCenter 单进程逆向了 57 分钟）
+  const hasDecisions = !!decisions?.replace(/\/\/.*$/gm, '').trim();
+  const tiled = parts.length > T.threshold && !hasDecisions;
   const ropts = { srcFile: P.cfg.source, level: 'project', previous, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, decisions, partsFile: 'parts.glb', meshPrice: P.cfg.score?.meshPrice ?? null };
   const out = tiled ? await reverseTiled(parts, ropts, { maxParts: T.maxParts })
     : reverse(parts, { ...ropts, prefit: await prefit(parts, { fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, meshPrice: P.cfg.score?.meshPrice ?? null, composite: { srcFile: ropts.srcFile, partsFile: ropts.partsFile } }) });
