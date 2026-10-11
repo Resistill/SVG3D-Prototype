@@ -14,6 +14,7 @@ import { compile, _curves, FACT_EPS } from '../src/s3d.js';
 import { parseDecisions, applyDecisions, applyLocks, PRIMS } from './decisions.mjs';
 import { planesOf, panelLines, shellLines } from './panels.mjs';
 import { patchesOf } from './patches.mjs';
+import { fitSweep } from './sweepfit.mjs';
 
 // ───────── 小工具 ─────────
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -438,6 +439,9 @@ function fitRevolve(pts, verts, F, areaMesh) {
   return best;
 }
 
+// 扫掠的结果整体平移
+const moveSweep = (sw, d) => ({ ...sw, curve: sw.curve.kind === 'spline' ? { ...sw.curve, ctrl: sw.curve.ctrl.map((p) => add(p, d)) } : { ...sw.curve, c: add(sw.curve.c, d) } });
+let SWEEP_SEEN = new Map(), SWEEP_FAILED = new Set();
 // only：只在这种形状里挑（决定层指定了形状）；basic：只用盒、圆柱、圆台、球、楔形（“基本体之并”里的每一块）
 export function fitPart(part, i, only = null, basic = false) {
   // 拼“基本体之并”时每个部件要拟合几十次：采样少一些（顶点总在采样里，包络仍是准的）
@@ -456,6 +460,24 @@ export function fitPart(part, i, only = null, basic = false) {
   if (!only && !basic && fits[0].e > 0.02) { const t = fitTube(part, i, vol, fits[0].e); if (t && t.e < fits[0].e) fits.unshift({ ...t, frame: fits[0].frame }); }
   // 拟合得不好时，试试旋转体（整流罩、天线）；语义档一律用基本体当代理（灰盒），不用旋转体
   if (!only && !basic && FID.name !== 'semantic' && fits[0].e > 0.02) { const rv = fitRevolve(pts, verts, fits[0].frame, part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0)); if (rv && rv.e < fits[0].e && rv.prof.length <= 16) fits.unshift({ ...rv, frame: fits[0].frame }); }
+  // 拟合得不好时，试试扫掠（截面不变、沿一条曲线走：弯曲的路面、螺旋坡道、拱、螺旋扶手；sweepfit.mjs）
+  // 两个几乎不花时间的门槛（扫掠拟合每个部件要几毫秒到上百毫秒，真实场景里拟合差的部件有几百个，大多是家具这类别的东西）：
+  //   基本体拟合得很差（e > 0.15；示例里的路面、坡道、拱、扶手都在 0.16 以上）；
+  //   封闭网格要细长：V / A^1.5 < 0.04（扫掠体 = 截面 × 长度，示例里最大 0.03；立方体 0.068，10:1 的长条 0.037）
+  const areaP = part.tris.length >= 16 && fits[0].e > 0.15 ? part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0) : 0;
+  if (!only && !basic && !part.noSweep && areaP > 0 && !(vol > 0 && vol / areaP ** 1.5 >= 0.04)) {
+    // 同一个网格、同样的旋转与缩放的部件（没成类型的享元）只差一个平移：结果平移过去（只在主线程上遇到——worker 只预先拟合不共用网格的部件，
+    // 所以有没有 worker 结果都一样）
+    const Mx = part.matrix, key = part.mesh != null && Mx && (MESH_USE.get(part.mesh) ?? 0) > 1 ? `${part.mesh}|${[0, 1, 2, 4, 5, 6, 8, 9, 10].map((q) => Math.round(Mx[q] * 1e6)).join()}` : null;
+    let sw;
+    // 不是扫掠与旋转无关：同一个网格（同样的缩放）失败过一次，别的实例不再试。采样的种子由几何决定（三角形数与面积），
+    // 不随部件的序号变：源模型改了别处、重跑逆向时，这个部件的结果不变
+    const fkey = key && `${part.mesh}|${[0, 4, 8].map((q) => Math.round(Math.hypot(Mx[q], Mx[q + 1], Mx[q + 2]) * 1e6)).join()}`;
+    if (key && SWEEP_SEEN.has(key)) { const c = SWEEP_SEEN.get(key); sw = c.sw && moveSweep(c.sw, sub([Mx[12], Mx[13], Mx[14]], c.t)); }
+    else if (fkey && SWEEP_FAILED.has(fkey)) sw = null;
+    else { sw = fitSweep(part.tris, { tau: FID.tau * M, seed: 1 + ((part.tris.length * 7919 + Math.round(areaP * 1000)) % 1000003) }); if (key) SWEEP_SEEN.set(key, { sw, t: [Mx[12], Mx[13], Mx[14]] }); if (!sw && fkey) SWEEP_FAILED.add(fkey); }
+    if (sw && sw.e < fits[0].e) fits.unshift({ shape: 'sweep', ...sw, frame: fits[0].frame });
+  }
   // 拟合得不好时，试试台阶（楼梯）
   if (!only && !basic && fits[0].e > 0.05) { const st = fitSteps(part, pts, fits[0].frame); if (st && st.e < fits[0].e) fits.unshift({ ...st, frame: fits[0].frame }); }
   const best = fits[0];
@@ -465,7 +487,7 @@ export function fitPart(part, i, only = null, basic = false) {
   const h = best.frame.h, R = Math.max(best.r0 ?? 0, best.r1 ?? 0);
   const areaPrim = best.shape === 'sphere' ? 4 * Math.PI * best.r * best.r
     : best.shape === 'cyl' || best.shape === 'cone' ? 2 * Math.PI * R * R + 2 * Math.PI * R * 2 * h[best.axis]
-      : best.shape === 'tube' || best.shape === 'steps' || best.shape === 'revolve' ? areaMesh : 8 * (h[0] * h[1] + h[0] * h[2] + h[1] * h[2]);
+      : best.shape === 'tube' || best.shape === 'steps' || best.shape === 'revolve' || best.shape === 'sweep' ? areaMesh : 8 * (h[0] * h[1] + h[0] * h[2] + h[1] * h[2]);
   const cover = areaPrim > 0 ? areaMesh / areaPrim : 1;
   const lo = [0, 1, 2].map((k) => Math.min(...pts.map((p) => p[k]))), hi = [0, 1, 2].map((k) => Math.max(...pts.map((p) => p[k])));
   const vc = scl(verts.reduce((s, v) => add(s, v), [0, 0, 0]), 1 / Math.max(1, verts.length));
@@ -569,6 +591,30 @@ function primitiveOf(fit, part, srcFile) {
     // 台阶：两个端点在父坐标系里（顶层就是世界坐标），不再加定位关系；包围盒取源网格的
     const { min, max } = fit.aabb;
     return { ...base, kind: 'span', props: { from: vec(fit.from), to: vec(fit.to), steps: String(fit.n), section: `${fmt(fit.w)},${fmt(fit.th)}` }, cols: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], at: [0, 0, 0], box: { min, max }, absolute: true };
+  }
+  if (fit.shape === 'sweep') {
+    // 扫掠：曲线在父坐标系里（顶层就是世界坐标），不再加定位关系；包围盒取源网格的。
+    // 样条直接写进 path=[…]（圆截面写成 pipe）；圆弧、螺旋另写一条曲线语句（名字在发射时取物体名加 _path），sweep 引用它
+    const { min, max } = fit.aabb, cv = fit.curve;
+    const sec = fit.profile === 'circle' ? { r: fmt(fit.r) } : { section: `${fmt(fit.w)},${fmt(fit.th)}` };
+    const at0 = { cols: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], at: [0, 0, 0], box: { min, max }, absolute: true };
+    if (cv.kind === 'spline') {
+      const path = `[${cv.ctrl.map((p) => `(${p.map(fmt).join(',')})`).join('; ')}]`;
+      return fit.profile === 'circle' ? { ...base, ...at0, kind: 'pipe', props: { path, ...sec, smooth: 'true' } } : { ...base, ...at0, kind: 'sweep', props: { path, ...sec, smooth: 'true' } };
+    }
+    const norm = (a) => ((a % 360) + 540) % 360 - 180; // (−180, 180]
+    let props, turn = 0;
+    if (cv.kind === 'helix') { props = { r: fmt(cv.r), pitch: fmtStep(cv.pitch, Math.abs(cv.turns)), turns: String(Math.round(cv.turns * 1000) / 1000) }; turn = norm(cv.phase); }
+    else {
+      let { a0, a1, yaw = 0 } = cv;
+      // 竖直面里的圆弧：起止角从小到大写（平面绕竖直轴转 180°，角 θ 变成 180° − θ），拱写成 angle=0,180 而不是 angle=180,0 turn=180
+      if (cv.plane === 'xy' && a1 < a0) { a0 = 180 - a0; a1 = 180 - a1; yaw += 180; }
+      const d = norm(a0) - a0;
+      props = { r: fmt(cv.r), angle: `${fmtA(a0 + d)},${fmtA(a1 + d)}` };
+      if (cv.plane === 'xy') { props.plane = 'xy'; turn = norm(yaw); }
+    }
+    const turnTxt = Math.abs(+fmtA(turn)) > 1e-9 ? `turn=${fmtA(turn)}` : '';
+    return { ...base, ...at0, kind: 'sweep', props: { path: '@curve', ...sec }, curve: { kind: cv.kind, props, at: cv.c, turn: turnTxt } };
   }
   if (fit.shape === 'tube') {
     // 管道：点列在父坐标系里（顶层就是世界坐标），不再加定位关系；包围盒取源网格的
@@ -799,7 +845,7 @@ export function unionGeometry(tris) {
     const f = fitOf(b.ids);
     // 不是基本体的一块再试旋转体（火箭的整流罩）；管道、台阶的位置写在父坐标系里，不放进来
     if (f.fit && f.fit.e > tKeep && FID.name !== 'semantic') {
-      const rv = fitPart({ tris: f.ts.map((k) => local[k]) }, f.ts[0]);
+      const rv = fitPart({ tris: f.ts.map((k) => local[k]), noSweep: true }, f.ts[0]);
       if (rv.shape === 'revolve' && rv.e <= tKeep) { kept.push({ ...f, fit: rv }); continue; }
     }
     if (f.fit && f.fit.e <= tKeep) kept.push(f);
@@ -892,7 +938,9 @@ const unionWorth = (fit, part) => UNIONS && FID.name !== 'semantic' && !part.for
 const meshCostOf = (prim, part) => lineCost(`mesh x src=${prim.props.src} size=${prim.props.size} pivot=${prim.props.pivot}`) + (SCORE_DEFAULTS.cMesh * Math.log2(1 + part.tris.length)) / Math.max(1, MESH_USE.get(part.mesh) ?? 1);
 // 有内容的物体（板件、基本体之并）：内容接在这一行后面，按缩进写
 const bodyOf = (o, ind = '') => (o.body ? [' {', ...o.body.map((l) => ind + '  ' + l), ind + '}'].join('\n') : '');
-const primLineOf = (prim) => [prim.kind, 'cur', ...Object.entries(prim.props).map(([k, v]) => `${k}=${v}`), prim.absolute ? '' : `at=${vec(prim.at)}`, prim.absolute ? '' : orientText(prim.cols)].filter(Boolean).join(' ');
+const primLineOf0 = (prim) => [prim.kind, 'cur', ...Object.entries(prim.props).map(([k, v]) => `${k}=${v}`), prim.absolute ? '' : `at=${vec(prim.at)}`, prim.absolute ? '' : orientText(prim.cols)].filter(Boolean).join(' ');
+// 沿圆弧、螺旋的扫掠：曲线语句一起写（两行），名字是临时的
+const primLineOf = (prim) => (prim.curve ? [[prim.curve.kind, 'cur_path', ...Object.entries(prim.curve.props).map(([k, v]) => `${k}=${v}`), `at=${vec(prim.curve.at)}`, 'pin=origin', prim.curve.turn].filter(Boolean).join(' '), primLineOf0({ ...prim, props: { ...prim.props, path: 'cur_path' } })].join('\n') : primLineOf0(prim));
 // 普通部件换成板件：物体坐标系取拟合的偏航（拟合坐标系直立时），否则世界朝向
 // 基本体之并同样（物体坐标系取世界朝向：每一块有自己的朝向）；两种都成立时取分数低的
 function panelPrim(fit, part, prim, partIndex = -1) {
@@ -1019,6 +1067,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   SHELLS = shells;
   COMPOSITE_MS = { panels: 0, unions: 0, shells: 0 };
   UNION_SEEN = new Map();
+  SWEEP_SEEN = new Map();
+  SWEEP_FAILED = new Set();
   MESH_USE = new Map();
   JUDGES = new WeakMap();
   for (const p of parts) if (p.mesh != null) MESH_USE.set(p.mesh, (MESH_USE.get(p.mesh) ?? 0) + 1);
@@ -1051,10 +1101,11 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const rep = parts[ms[0].i], { R, t } = ms[0];
       // 类型坐标系 = 网格自己的坐标系（含缩放）：world = R·local + t
       const local = rep.tris.map((tri) => tri.map((v) => mvT(R, sub(v, t))));
-      const fit = fitPart({ ...rep, tris: local }, ms[0].i);
-      const bad = fit.e > FID.fitTol || fit.cover < COVER_MIN || fit.shape === 'tube';
+      // 局部坐标：不带矩阵（并的缓存按矩阵认同一个网格的世界坐标实例）；类型的代表不试扫掠（扫掠写在世界坐标里，做不成类型，享元就散了）
+      const fit = fitPart({ ...rep, tris: local, matrix: null, noSweep: true }, ms[0].i);
+      const bad = fit.e > FID.fitTol || fit.cover < COVER_MIN || fit.shape === 'tube' || fit.shape === 'sweep';
       // 板件：拟合差的类型（一栋楼被多处使用）在类型坐标系里拆成墙板、楼板，和现在的写法（基本体，或各实例引用网格）比
-      const typePart = { ...rep, tris: local };
+      const typePart = { ...rep, tris: local, matrix: null };
       const curT = bad ? { mesh: SCORE_DEFAULTS.cMesh * Math.log2(1 + rep.tris.length) + ms.length * lineCost('src="x" size=1,1,1 pivot=1,1,1') } : { line: primLineOf(primitiveOf(fit, { ...rep, name: null }, srcFile)) };
       const I3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
       const pb = panelsWorth(fit, typePart) ? tryPanels(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
@@ -1145,12 +1196,14 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   if (typeLines.length) header.push('// 类型：源模型里同一个网格被多处使用（引擎的享元）', ...typeLines, '');
   const line = (o, place, orient) => {
     if (o.absolute) { place = ''; orient = ''; } // 管道的点列本身就是位置
-    const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
+    const props = Object.entries(o.props).map(([k, v]) => `${k}=${v === '@curve' ? `${o.id}_path` : v}`).join(' ');
+    // 沿圆弧、螺旋的扫掠：曲线语句写在前面
+    const curve = o.curve ? [o.curve.kind, `${o.id}_path`, ...Object.entries(o.curve.props).map(([k, v]) => `${k}=${v}`), `at=${vec(o.curve.at)}`, 'pin=origin', o.curve.turn].filter(Boolean).join(' ') + '\n' : '';
     // 旁路信息（sidecar 表里对上的列）也写成 ~元数据：不计描述长度，可以在 where 里读
     const meta = Object.entries(o.meta ?? {}).filter(([, v]) => v !== '').map(([k, v]) => `~${k}=${/^-?\d+(\.\d+)?$/.test(v) ? v : JSON.stringify(String(v))}`);
     const head = [o.kind, o.id, props, place, orient, o.mat === defaultMat ? '' : (o.mat === defaultMat ? '' : `mat=${o.mat}`), `~fit=${fmt(o.fit)}`, o.src ? `~src=${JSON.stringify(o.src)}` : '', ...meta].filter(Boolean).join(' ');
     // 板件、基本体之并：内容写在物体自己的坐标系里（原点在包络的底面中心）
-    return head + bodyOf(o);
+    return curve + head + bodyOf(o);
   };
   const absLine = (o) => line(o, `at=${vec(o.at)}`, orientText(o.cols));
   const absSrc = header.concat(objs.map(absLine)).join('\n');
@@ -1507,6 +1560,11 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   // 给了上一次的结果（previous）时，对得上的物体沿用上一次的名字
   lap('校验结束');
   const named = names ? semanticNames(out.text, { previous, metre: M }) : { text: out.text, map: {}, renamed: 0 };
+  // 扫掠的曲线（物体名_path）跟着物体改名
+  for (const [a, b] of Object.entries(named.map)) {
+    const re = new RegExp(`(?<![\\p{L}\\p{N}_.])${a}_path(?![\\p{L}\\p{N}_])`, 'gu');
+    if (a !== b && re.test(named.text) && !new RegExp(`(?<![\\p{L}\\p{N}_.])${b}_path(?![\\p{L}\\p{N}_])`, 'u').test(named.text)) named.text = named.text.replace(re, `${b}_path`);
+  }
   lap('语义命名');
   // 锁定：沿用上一次基础层里的定位 / 形状 / 整行；锁定之后编译出错的撤回，记进 unsatisfied
   let decisionReport = null;
@@ -1610,7 +1668,7 @@ function detectMirrors(objs, units, unitOf) {
   // 参考点用全部成员的质心（网格反射后原点会换到另一个角上，质心不会）
   const centroid = (u) => scl(u.children.flatMap((c) => c.members.map(centerOf)).reduce((s2, p) => add(s2, p), [0, 0, 0]), 1 / u.children.reduce((s2, c) => s2 + c.members.length, 0));
   for (const u of units) ents.push({ id: u.id, unit: u, ref: centroid(u), members: u.children.flatMap((c) => c.members.map((o, k) => ({ o, child: c.id, k: instOf(u, k) }))), key: 'U' + u.children.map((c) => sizeKey(c.members[0])).join('/') + '|' + c_n(u) + '|' + (u.holes ?? []).join(',') });
-  for (const o of objs) if (!unitOf.has(o.id) && !o.body) ents.push({ id: o.id, obj: o, ref: centerOf(o), members: [{ o, child: null, k: null }], key: 'O' + sizeKey(o) });
+  for (const o of objs) if (!unitOf.has(o.id) && !o.body && !o.curve) ents.push({ id: o.id, obj: o, ref: centerOf(o), members: [{ o, child: null, k: null }], key: 'O' + sizeKey(o) });
   function c_n(u) { return JSON.stringify(u.n); }
   // 一个成员反射后是否与另一个物体重合（位置；朝向考虑形状自身的对称）
   const matches = (a, b, n, d) => {
@@ -1680,7 +1738,7 @@ function detectMirrors(objs, units, unitOf) {
     // 镜像面：找一个中心落在面上、某根水平轴垂直于面的物体；找不到就写成点 + 法线
     let across = null;
     for (const o of objs) {
-      if (o.kind === 'mesh' || o.body) continue;
+      if (o.kind === 'mesh' || o.body || o.curve) continue;
       const c = centerOf(o);
       if (Math.abs(dot(c, pl.n) - pl.d) > 1e-3 * M) continue;
       const ax = ['x', 'z'].find((a) => Math.abs(Math.abs(dot(o.cols[a === 'x' ? 0 : 2], pl.n)) - 1) < 1e-6);

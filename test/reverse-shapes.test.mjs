@@ -176,3 +176,28 @@ repeat tanks n=3 step=10,0,0 at=0,0,0 mat=white {
   const plain = reverse(parts, { srcFile: 'x.glb', level: 'L2', fidelity: 'structure', unions: false });
   assert.ok(S(out) < 0.5 * S(plain), `${S(out)} 对 ${S(plain)}`);
 });
+
+test('扫掠：弯曲的路面、拱写成圆弧 + sweep，螺旋扶手、坡道写成螺旋 + sweep；凹的水池不当扫掠', () => {
+  const rev = (file) => reverse(partsOfDocument(sceneToGLB(readFileSync(new URL(`../examples/${file}`, import.meta.url), 'utf8'), { level: 'L0' }).doc), { srcFile: 'x.glb', level: 'L0', fidelity: 'structure' }).src;
+  const cv = rev('curves.s3d');
+  assert.deepEqual(compile(cv).errors, []);
+  const num = (re, s) => { const m = re.exec(s); assert.ok(m, `${re} 在\n${s.split('\n').filter((l) => /_path|^sweep/.test(l)).join('\n')}`); return m.slice(1).map(Number); };
+  // 300° 的环形车道：r=40，截面 8 × 0.1
+  const [r, a0, a1] = num(/^arc lane_path r=([\d.]+) angle=(-?[\d.]+),(-?[\d.]+) at=/m, cv);
+  assert.ok(Math.abs(r - 40) < 0.2 && Math.abs(Math.abs(a1 - a0) - 300) < 6, `${r} ${a0} ${a1}`);
+  const [w, t] = num(/^sweep lane path=lane_path section=([\d.]+),([\d.]+)/m, cv);
+  assert.ok(Math.abs(w - 8) < 0.3 && Math.abs(t - 0.1) < 0.05, `${w} ${t}`);
+  // 3 圈的螺旋扶手：r=9.4，螺距 4.5，圆截面 0.08
+  const [hr, hp, ht] = num(/^helix garage_rail_path r=([\d.]+) pitch=([\d.]+) turns=(-?[\d.]+)/m, cv);
+  assert.ok(Math.abs(hr - 9.4) < 0.1 && Math.abs(hp - 4.5) < 0.05 && Math.abs(Math.abs(ht) - 3) < 0.1, `${hr} ${hp} ${ht}`);
+  assert.match(cv, /^sweep garage_rail path=garage_rail_path r=0\.08 /m);
+  assert.match(cv, /^helix garage_ramp_path r=7(\.0\d)? /m, '螺旋坡道');
+  // 竖直面里的半圆拱：起止角从小到大
+  const [ar, b0, b1] = num(/^arc arch_path r=([\d.]+) angle=(-?[\d.]+),(-?[\d.]+) plane=xy /m, cv);
+  assert.ok(Math.abs(ar - 8) < 0.1 && b0 < 5 && b1 > 175, `${ar} ${b0} ${b1}`);
+  assert.doesNotMatch(cv, /^sweep plaza_basin /m, '凹的水池不是扫掠');
+  // spaceport 的螺旋楼梯扶手：1 圈，r=2.1
+  const sp = rev('spaceport.s3d');
+  assert.match(sp, /^helix spiral_rail_path r=2\.1 pitch=6\.2\d* turns=(1|0\.99\d)/m);
+  assert.match(sp, /^sweep spiral_rail path=spiral_rail_path r=0\.05 /m);
+});
