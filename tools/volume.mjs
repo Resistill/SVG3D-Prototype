@@ -71,16 +71,19 @@ export function insideSource(q, x, y, z) {
 }
 
 // 一组内部点的平均代价（k 已换算成场景单位：delta、dMax）
-export function volumeResidual(pts, q, k) {
+export const volumeResidual = (pts, q, k) => volumeStats(pts, q, k).r;
+// 同上，另给错填的比例 wrong（离源表面超过 δ、又不在源模型实体里的点占多少）：逆向判“实心体块把空的地方填实了”用
+export function volumeStats(pts, q, k) {
   const n = pts.length / 3;
-  if (!n || !q) return 0;
-  let sum = 0;
+  if (!n || !q) return { r: 0, wrong: 0 };
+  let sum = 0, bad = 0;
   for (let j = 0; j < n; j++) {
     const x = pts[3 * j], y = pts[3 * j + 1], z = pts[3 * j + 2];
     q.closest(x, y, z, k.dMax);
     const d = Math.min(q.distance, k.dMax);
     if (d <= k.delta || insideSource(q, x, y, z)) continue;
     sum += Math.log2(1 + (d - k.delta) / k.delta);
+    bad++;
   }
-  return sum / n;
+  return { r: sum / n, wrong: bad / n };
 }

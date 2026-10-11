@@ -781,9 +781,10 @@ function snapUpright(prim) {
 let PANELS = true;
 const PANEL_MIN_TRIS = 24, PANEL_MIN_SIZE = 2; // 一个空心盒子至少 24 个三角形；小于 2 m 的部件不试
 const PANEL_PLANAR = 0.8; // 表面至少这么多落在大平面上才试（宿舍区的楼、棚、门框都在 0.88 以上）
-function panelsWorth(fit, part) {
+// hollow：现在的基本体把空的地方填实了（hollowSolid），不管拟合好坏都要试
+function panelsWorth(fit, part, hollow = false) {
   if (!PANELS || coarseRole(part) || FID.name !== 'structure' || part.force || part.tris.length < PANEL_MIN_TRIS) return false;
-  if (1 - fit.e / TOL >= 0.5 && fit.cover >= COVER_MIN) return false;
+  if (!hollow && 1 - fit.e / TOL >= 0.5 && fit.cover >= COVER_MIN) return false;
   const { min, max } = fit.aabb;
   return Math.max(...sub(max, min)) >= PANEL_MIN_SIZE * M;
 }
@@ -801,7 +802,8 @@ function tryPanels(tris, cols, t, part, cur, n = 1) {
   const { evalLines } = judgeOf(part);
   const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon + ls.R_vol);
   let curS = Infinity;
-  if (cur.mesh != null) curS = cur.mesh;
+  if (cur.S != null) curS = cur.S;
+  else if (cur.mesh != null) curS = cur.mesh;
   else {
     const ls = evalLines([cur.line]);
     if (ls) curS = total(ls);
@@ -971,7 +973,7 @@ function tryUnion(tris, cols, t, part, cur, n = 1, pre = undefined) {
   const { lines, c0 } = g;
   const { evalLines } = judgeOf(part);
   const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon + ls.R_vol);
-  const curS = cur.mesh != null ? cur.mesh : (() => { const ls = evalLines([cur.line]); return ls ? total(ls) : Infinity; })();
+  const curS = cur.S ?? (cur.mesh != null ? cur.mesh : (() => { const ls = evalLines([cur.line]); return ls ? total(ls) : Infinity; })());
   const orient = orientText(cols), head = `group g at=${vec(add(t, mvC(cols, c0)))} pin=origin${orient ? ' ' + orient : ''} {`;
   const L = [head, ...lines.map((l) => '  ' + l), '}'];
   if (L.reduce((s2, l) => s2 + lineCost(l), 0) >= curS) return null;
@@ -997,7 +999,7 @@ function tryShell(tris, cols, t, part, cur, n = 1) {
   if (!sh) return null;
   const { evalLines } = judgeOf(part);
   const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon + ls.R_vol);
-  const curS = cur.mesh != null ? cur.mesh : (() => { const ls = evalLines([cur.line]); return ls ? total(ls) : Infinity; })();
+  const curS = cur.S ?? (cur.mesh != null ? cur.mesh : (() => { const ls = evalLines([cur.line]); return ls ? total(ls) : Infinity; })());
   const shellBlock = [`subtract shell at=${vec(sh.at)} {`, ...sh.shell.map((l) => '  ' + l), '}'];
   // 楼里没有别的东西：物体本身就是 subtract；有楼板、内墙：group { subtract shell … ; 板件 }
   const kind = sh.extra.length ? 'group' : 'subtract';
@@ -1013,9 +1015,9 @@ function tryShell(tris, cols, t, part, cur, n = 1) {
   return { kind, body, c0: add(c0, shift), box, fit: Math.max(0, Math.min(1, 1 - meanErr / (4 * tau))), meanErr: ls.meanErr, S: +total(ls).toFixed(2), curS: +curS.toFixed(2), openings: sh.openings, arches: sh.arches, interior: sh.extra.length > 0 };
 }
 let SHELLS = true;
-const shellWorth = (fit, part) => {
+const shellWorth = (fit, part, hollow = false) => {
   if (!SHELLS || coarseRole(part) || FID.name === 'semantic' || part.force || part.tris.length < PANEL_MIN_TRIS) return false;
-  if (1 - fit.e / TOL >= 0.5 && fit.cover >= COVER_MIN) return false;
+  if (!hollow && 1 - fit.e / TOL >= 0.5 && fit.cover >= COVER_MIN) return false;
   const { min, max } = fit.aabb;
   return Math.max(...sub(max, min)) >= PANEL_MIN_SIZE * M;
 };
@@ -1059,7 +1061,7 @@ function scatterGeometry(tris) {
 function scatterAccept(g, part, cur, n = 1) {
   const { evalLines } = judgeOf(part);
   const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon + ls.R_vol);
-  const curS = cur.mesh != null ? cur.mesh : (() => { const ls = evalLines([cur.line]); return ls ? total(ls) : Infinity; })();
+  const curS = cur.S ?? (cur.mesh != null ? cur.mesh : (() => { const ls = evalLines([cur.line]); return ls ? total(ls) : Infinity; })());
   const ls = evalLines([`group g at=${vec(g.c0)} {`, ...g.body.map((l) => '  ' + l), '}']);
   return !!ls && total(ls) <= SCATTER_SLACK * curS;
 }
@@ -1075,8 +1077,20 @@ let SCATTERED = new WeakMap();
 const SUB_MAX_PIECES = 400, SUB_MIN_S = 120;
 // SUB_WHOLE：正在拆的大部件的表面积（子场景里各块的局部评分按面积分到这个部件的那一份权重，见 neighborhoodScorer 的 whole）
 let SUB_DEPTH = 0, SUBS = true, SUB_WHOLE = null;
-const subSceneWorth = (fit, part) => SUBS && SUB_DEPTH === 0 && !['steps', 'tube', 'sweep', 'revolve'].includes(fit.shape) && !coarseRole(part) && !part.force && FID.name !== 'semantic' && meshPriceMode(roleP(part), MESH_K) === 'full'
-  && part.tris.length >= PANEL_MIN_TRIS && !(1 - fit.e / TOL >= 0.5 && fit.cover >= COVER_MIN) && Math.max(...sub(fit.aabb.max, fit.aabb.min)) >= PANEL_MIN_SIZE * M;
+const subSceneWorth = (fit, part, hollow = false) => SUBS && SUB_DEPTH === 0 && !['steps', 'tube', 'sweep', 'revolve'].includes(fit.shape) && !coarseRole(part) && !part.force && FID.name !== 'semantic' && meshPriceMode(roleP(part), MESH_K) === 'full'
+  && part.tris.length >= PANEL_MIN_TRIS && (hollow || !(1 - fit.e / TOL >= 0.5 && fit.cover >= COVER_MIN)) && Math.max(...sub(fit.aabb.max, fit.aabb.min)) >= PANEL_MIN_SIZE * M;
+// 结构与功能的硬规则：大的实心基本体（盒、圆柱、楔形……体积超过 8 m³）里，超过 30% 落在源模型的实体外面（空心楼的内部、
+// 坡道下面的空间被填实了）就不能用——人、AI 都会以为那里走不进去。这时板件、外壳、小场景都要试（不管拟合好坏），
+// 现在的写法按分数无穷大算：拆得出来就用拆出来的。分数本身也会罚它（R_vol），但大部件拆开写很长，单凭分数实心盒子有时还是赢
+const HOLLOW_FRAC = 0.3, HOLLOW_MIN_VOL = 8;
+const SOLID_KINDS = new Set(['box', 'cyl', 'cone', 'wedge', 'sphere']);
+function hollowSolid(prim, part) {
+  if (!SOLID_KINDS.has(prim.kind) || coarseRole(part) || part.force || !prim.box) return false;
+  const b = prim.box, vol = (b.max[0] - b.min[0]) * (b.max[1] - b.min[1]) * (b.max[2] - b.min[2]);
+  if (!(vol >= HOLLOW_MIN_VOL * M * M * M)) return false;
+  const ls = judgeOf(part).evalLines([primLineOf(prim)]);
+  return !!ls && ls.volWrong > HOLLOW_FRAC;
+}
 // 一组块（每块一组三角形，坐标在 frame 里）→ 子场景的语句（相对 c0：全部块的包络底面中心）。模块里的状态（各种缓存、当前设置）存下、做完恢复
 // ctx（同一种拆法的几个变体共用）：c0 用全部块的；area 是整个部件的表面积——全场评分里这个部件是一个整体，各块的局部评分按它分权重
 function subSceneLines(pieces, part, ctx) {
@@ -1171,12 +1185,16 @@ function trySubScene(ftris, part, cur, n = 1) {
   const areaOfT = (ts) => ts.reduce((a, [p, q, r]) => a + len(cross(sub(q, p), sub(r, p))) / 2, 0);
   // 每组（一种拆法）里的变体从粗到细；同一组里细的块更多、描述只会更长：描述长度已经超过最好的分数、
   // 或者总分比上一个（更粗的）还差，更细的就不再试（子场景的逆向是这里的大头）
+  // 只有小块（最大尺寸不到 1 m）可以舍：面积小、却又高又显眼的块（高架下的支柱）舍掉就“少东西”了（compare 的验收）
+  const extentOf = (ts) => { const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity]; for (const t of ts) for (const v of t) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], v[k]); hi[k] = Math.max(hi[k], v[k]); } return Math.max(...sub(hi, lo)); };
   const lists = tries.map((pieces) => {
-    const byArea = pieces.map((ts) => ({ ts, a: areaOfT(ts) })).sort((x, y) => y.a - x.a), all = byArea.reduce((a, x) => a + x.a, 0), vs = [];
+    const big = pieces.filter((ts) => extentOf(ts) >= 1 * M), small = pieces.filter((ts) => extentOf(ts) < 1 * M);
+    const byArea = small.map((ts) => ({ ts, a: areaOfT(ts) })).sort((x, y) => y.a - x.a), all = byArea.reduce((a, x) => a + x.a, 0) + big.reduce((a, ts) => a + areaOfT(ts), 0), vs = [];
+    const bigArea = all - byArea.reduce((a, x) => a + x.a, 0);
     for (const q of [0.75, 0.9, 0.97]) {
-      let acc = 0, k = 0;
+      let acc = bigArea, k = 0;
       while (k < byArea.length && acc < q * all) acc += byArea[k++].a;
-      if (k >= 1 && k < pieces.length && !vs.some((v) => v.length === k)) vs.push(byArea.slice(0, k).map((x) => x.ts));
+      if (big.length + k >= 1 && k < small.length && !vs.some((v) => v.length === big.length + k)) vs.push([...big, ...byArea.slice(0, k).map((x) => x.ts)]);
     }
     vs.push(pieces);
     return vs;
@@ -1218,29 +1236,30 @@ function panelPrim(fit, part, prim, partIndex = -1) {
   // 已经认出来的（台阶、管道、扫掠、拟合得好的基本体）不拆
   // 分散的模型拆成一组基本体（每个分量一块）；能当小场景拆的（结构的大部件）先试小场景——它按分量拆、每块完整地拟合、再比分数，
   // 包括了这种写法——没有结果时才退回这里（见函数末尾）
-  const subOK = subSceneWorth(fit, part);
+  const hollow = hollowSolid(prim, part);
+  const subOK = subSceneWorth(fit, part, hollow);
   const tryScatter = () => {
-    if (!(scatterWorth(part) && !['steps', 'tube', 'sweep'].includes(fit.shape) && (fit.e > TOL || fit.cover < COVER_MIN))) return null;
+    if (!(scatterWorth(part) && !['steps', 'tube', 'sweep'].includes(fit.shape) && (hollow || fit.e > TOL || fit.cover < COVER_MIN))) return null;
     const g = scatterGeometry(part.tris);
     if (!g) return null;
-    const cur0 = prim.kind === 'mesh' ? { mesh: meshCostOf(prim, part) } : { line: primLineOf(prim) };
+    const cur0 = hollow ? { S: Infinity } : prim.kind === 'mesh' ? { mesh: meshCostOf(prim, part) } : { line: primLineOf(prim) };
     if (scatterAccept(g, part, cur0)) return { kind: 'group', props: {}, body: g.body, cols: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], at: g.c0, box: g.box, fit: fitScoreOf(fit), err: fit.e, scatter: { blocks: g.n } };
     SCATTERED.set(part, g.n);
     return null;
   };
   if (!subOK) { const sc = tryScatter(); if (sc) return sc; }
-  const cur = prim.kind === 'mesh' ? { mesh: meshCostOf(prim, part) } : { line: primLineOf(prim) };
+  const cur = hollow ? { S: Infinity } : prim.kind === 'mesh' ? { mesh: meshCostOf(prim, part) } : { line: primLineOf(prim) };
   let out = null;
   const better = (S) => !out || S < (out.panels ?? out.union ?? out.shell ?? out.sub).S;
   const up = fit.frame.cols[1];
   const fcols = up[1] > 0.999 ? fit.frame.cols : [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-  const ftris = panelsWorth(fit, part) || shellWorth(fit, part) || subSceneWorth(fit, part) ? part.tris.map((tri) => tri.map((v) => mvT(fcols, v))) : null;
-  if (panelsWorth(fit, part)) {
+  const ftris = panelsWorth(fit, part, hollow) || shellWorth(fit, part, hollow) || subOK ? part.tris.map((tri) => tri.map((v) => mvT(fcols, v))) : null;
+  if (panelsWorth(fit, part, hollow)) {
     const t0 = performance.now(), pb = tryPanels(ftris, fcols, [0, 0, 0], part, cur);
     COMPOSITE_MS.panels += performance.now() - t0;
     if (pb) out = { kind: 'group', props: {}, body: pb.body, cols: fcols, at: mvC(fcols, pb.c0), box: pb.box, fit: pb.fit, err: fit.e, panels: { S: pb.S, was: pb.curS, kind: prim.kind } };
   }
-  if (shellWorth(fit, part)) {
+  if (shellWorth(fit, part, hollow)) {
     const t0 = performance.now(), sb = tryShell(ftris, fcols, [0, 0, 0], part, cur);
     COMPOSITE_MS.shells += performance.now() - t0;
     if (sb && better(sb.S)) out = { kind: sb.kind, props: {}, body: sb.body, cols: fcols, at: mvC(fcols, sb.c0), box: sb.box, fit: sb.fit, err: fit.e, shell: { S: sb.S, was: sb.curS, kind: prim.kind, openings: sb.openings, arches: sb.arches, interior: sb.interior } };
@@ -1261,7 +1280,7 @@ function panelPrim(fit, part, prim, partIndex = -1) {
     COMPOSITE_MS.unions += performance.now() - t0;
     if (ub && better(ub.S)) out = { kind: 'group', props: {}, body: ub.body, cols: I, at: ub.c0, box: ub.box, fit: ub.fit, err: fit.e, union: { S: ub.S, was: ub.curS, kind: prim.kind, prims: ub.prims } };
   }
-  if (subSceneWorth(fit, part)) {
+  if (subOK) {
     const t0 = performance.now(), gb = trySubScene(ftris, part, out ? { line: null, S: (out.panels ?? out.union ?? out.shell).S } : cur);
     COMPOSITE_MS.subs = (COMPOSITE_MS.subs ?? 0) + performance.now() - t0;
     COMPOSITE_MS.subTried = (COMPOSITE_MS.subTried ?? 0) + 1;
@@ -1403,20 +1422,21 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const bad = fit.e > FID.fitTol || fit.cover < COVER_MIN || fit.shape === 'tube' || fit.shape === 'sweep';
       // 板件：拟合差的类型（一栋楼被多处使用）在类型坐标系里拆成墙板、楼板，和现在的写法（基本体，或各实例引用网格）比
       const typePart = { ...rep, tris: local, matrix: null, role: roleP(rep) };
-      const curT = bad ? { mesh: meshPrice(rep.tris, roleP(typePart), MESH_K) + ms.length * lineCost('src="x" size=1,1,1 pivot=1,1,1') } : { line: primLineOf(primitiveOf(fit, { ...rep, name: null }, srcFile)) };
+      const prim0T = primitiveOf(fit, { ...rep, name: null }, srcFile), hollowT = !bad && hollowSolid(prim0T, typePart);
+      const curT = hollowT ? { S: Infinity } : bad ? { mesh: meshPrice(rep.tris, roleP(typePart), MESH_K) + ms.length * lineCost('src="x" size=1,1,1 pivot=1,1,1') } : { line: primLineOf(prim0T) };
       const I3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
       // 分散的类型体：能当小场景拆的先试小场景（同普通部件），没有结果时才退回分散的写法（见下）
-      const subOK = subSceneWorth(fit, typePart);
+      const subOK = subSceneWorth(fit, typePart, hollowT);
       const scatterT = () => {
-        const g = scatterWorth(typePart) && !['steps', 'tube', 'sweep'].includes(fit.shape) && (fit.e > TOL || fit.cover < COVER_MIN) ? scatterGeometry(local) : null;
+        const g = scatterWorth(typePart) && !['steps', 'tube', 'sweep'].includes(fit.shape) && (hollowT || fit.e > TOL || fit.cover < COVER_MIN) ? scatterGeometry(local) : null;
         if (g && !scatterAccept(g, typePart, curT, ms.length)) { for (const m of ms) SCATTERED.set(parts[m.i], g.n); return null; }
         return g;
       };
       let sg = subOK ? null : scatterT();
-      const pb = !sg && panelsWorth(fit, typePart) ? tryPanels(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
+      const pb = !sg && panelsWorth(fit, typePart, hollowT) ? tryPanels(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
       // 基本体之并（类型体是几个基本体）：两种都成立时取分数低的
       const ub = !sg && unionWorth(fit, typePart) ? tryUnion(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
-      const sb = !sg && shellWorth(fit, typePart) ? tryShell(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
+      const sb = !sg && shellWorth(fit, typePart, hollowT) ? tryShell(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
       // 大部件当小场景（同普通部件）：和板件、并、外壳里最好的那个比
       const best0 = [pb, ub, sb].filter(Boolean).sort((x, y) => x.S - y.S)[0];
       const gs = !sg && subOK ? trySubScene(local, typePart, best0 ? { S: best0.S } : curT, ms.length) : null;

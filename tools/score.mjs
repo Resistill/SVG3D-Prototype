@@ -19,7 +19,7 @@ import { samplePoints, sourceSamples, uniqueVertices } from './parts.mjs';
 import { colorKey, surfaces, sourceSurfaces, saveSurfaces, loadSurfaces } from './surfaces.mjs';
 import { sceneObjects, trisToArray } from './worldtris.mjs';
 import { nodeRoles } from '../src/roles-view.js';
-import { interiorSamples, volumeResidual, solidStats } from './volume.mjs';
+import { interiorSamples, volumeResidual, volumeStats, solidStats } from './volume.mjs';
 import { assignRoles } from './roles.mjs';
 
 // 长度常数（delta、dMax）按米给出，unit 是每个场景单位多少米；计算前换算成场景单位（inScene），输出的误差（meanErr、maxErr）再换回米。
@@ -543,15 +543,16 @@ export function neighborhoodScorer({ parts, near, others, reconColors, consts = 
     const GA = A + (group?.area ?? 0);
     const Rrecon = A > 0 ? k.cRes * Math.log2(1 + GA / (k.delta * k.delta)) * (acc / GA) : 0;
     // R_vol：候选物体的内部 → 邻域里的源部件（同全场：一组候选共享一个体积权重，内部按体积分摊）
-    let V = 0, accV = 0;
-    for (const o of recon) { if (o.mesh) continue; const inner = interiorSamples(o.pos, k, seedOf(o.path ?? '')); if (inner) { V += inner.vol; accV += inner.vol * volumeResidual(inner.pts, srcSurf.all?.q, k); } }
+    let V = 0, accV = 0, wrongV = 0;
+    for (const o of recon) { if (o.mesh) continue; const inner = interiorSamples(o.pos, k, seedOf(o.path ?? '')); if (inner) { const st = volumeStats(inner.pts, srcSurf.all?.q, k); V += inner.vol; accV += inner.vol * st.r; wrongV += inner.vol * st.wrong; } }
     const GV = V + (group?.vol ?? 0);
     const Rvol = V > 0 ? k.cRes * Math.log2(1 + GV / k.delta ** 3) * (accV / GV) : 0;
     // 网格引用（现在的写法可能就是一块网格）：c_mesh × log2(1 + 三角形数)，与全场的 L_mesh 一样
     const seen = new Set(sharedMeshes);
     const L = lines.reduce((s, l) => s + lineCost(l), 0) + recon.reduce((s, o) => { const key = o.mesh && (o.mesh.key ?? o.mesh.src); if (!o.mesh || seen.has(key)) return s; seen.add(key); return s + meshPriceOf(o.mesh, k); }, 0);
     const r3 = (x) => +x.toFixed(2);
-    return { S: r3(L + Rsrc + Rrecon + Rvol), L: r3(L), R_src: r3(Rsrc), R_recon: r3(Rrecon), R_vol: r3(Rvol), meanErr: +((own?.mean ?? 0) * k0.unit).toFixed(4), maxErr: +((own?.max ?? 0) * k0.unit).toFixed(4) };
+    // volWrong：候选的实体里错填（源模型那里是空的）的体积比例
+    return { S: r3(L + Rsrc + Rrecon + Rvol), L: r3(L), R_src: r3(Rsrc), R_recon: r3(Rrecon), R_vol: r3(Rvol), volWrong: V > 0 ? +(wrongV / V).toFixed(4) : 0, meanErr: +((own?.mean ?? 0) * k0.unit).toFixed(4), maxErr: +((own?.max ?? 0) * k0.unit).toFixed(4) };
   };
 }
 
