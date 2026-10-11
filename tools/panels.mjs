@@ -108,6 +108,49 @@ function rects(nu, nv, want) {
   return out;
 }
 
+// 斜边：连续 ≥ 3 列，每列的格子连续、一头对齐、另一头逐列单调变化且大致在一条直线上（坡顶的墙、楼梯旁的墙、切角的楼板）。
+// 按格子覆盖成矩形会是一串台阶状的窄条；写成一个矩形 + 一个楔形。
+// 返回 [{ i0, i1, kind: 'top'（底边对齐、顶边斜）| 'bottom'（顶边对齐、底边斜）, fixed（对齐那一头的格子行号）, e0, e1（斜边在 i0、i1 + 1 处的位置，格子单位）}]，
+// 用掉的列在 taken 里标出（taken[i] = true）
+function slopeRuns(nu, nv, occ) {
+  const col = [];
+  for (let i = 0; i < nu; i++) {
+    let b = -1, t = -1, gap = false;
+    for (let j = 0; j < nv; j++) if (occ(i, j)) { if (b < 0) b = j; else if (j !== t + 1) gap = true; t = j; }
+    col.push(b < 0 || gap ? null : { b, t });
+  }
+  const runs = [], taken = new Uint8Array(nu);
+  for (const kind of ['top', 'bottom']) {
+    const fixedOf = (c) => (kind === 'top' ? c.b : c.t), edgeOf = (c) => (kind === 'top' ? c.t + 1 : c.b);
+    for (let i0 = 0; i0 < nu; ) {
+      const c0 = col[i0];
+      if (!c0 || taken[i0]) { i0++; continue; }
+      let i1 = i0, dir = 0;
+      while (i1 + 1 < nu && col[i1 + 1] && !taken[i1 + 1] && fixedOf(col[i1 + 1]) === fixedOf(c0)) {
+        const d = Math.sign(edgeOf(col[i1 + 1]) - edgeOf(col[i1]));
+        if (d && dir && d !== dir) break;
+        if (d) dir = d;
+        i1++;
+      }
+      const n = i1 - i0 + 1, xs = [], es = [];
+      for (let i = i0; i <= i1; i++) { xs.push(i + 0.5); es.push(edgeOf(col[i])); }
+      if (n >= 3 && dir && Math.abs(es[n - 1] - es[0]) >= 2) {
+        // 最小二乘直线；台阶偏离直线不超过一格才算斜边
+        const mx = xs.reduce((a, x) => a + x, 0) / n, me = es.reduce((a, e) => a + e, 0) / n;
+        const sxx = xs.reduce((a, x) => a + (x - mx) ** 2, 0), sxe = xs.reduce((a, x, k) => a + (x - mx) * (es[k] - me), 0), beta = sxe / sxx;
+        if (es.every((e, k) => Math.abs(e - (me + beta * (xs[k] - mx))) <= 1)) {
+          runs.push({ i0, i1, kind, fixed: fixedOf(c0), e0: me + beta * (i0 - mx), e1: me + beta * (i1 + 1 - mx) });
+          for (let i = i0; i <= i1; i++) taken[i] = 1;
+          i0 = i1 + 1;
+          continue;
+        }
+      }
+      i0++;
+    }
+  }
+  return { runs, taken };
+}
+
 // 板件：平面配对（方向相反、相距 0 < gap ≤ maxThick、投影有重叠）后栅格化、合并矩形
 export function panelSlabs(tris, { cell, thick, maxThick, maxCells = 160, minFrac = 0.005 }) {
   const planes = planesOf(tris, { tol: Math.max(cell / 2, thick / 4), minFrac });
@@ -151,8 +194,9 @@ export function panelLines(tris, { cell, thick, maxThick, maxBoxes = 60, digits 
       const fill = occ / ((bi1 - bi0 + 1) * (bj1 - bj0 + 1));
       const toAB = (r) => ({ a0: lo[0] + r.i0 * c, a1: lo[0] + (r.i1 + 1) * c, b0: lo[1] + r.j0 * c, b1: lo[1] + (r.j1 + 1) * c });
       // 矩形在物体坐标系里的底面中心、尺寸、朝向
-      const place = (r) => {
-        const { a0, a1, b0, b1 } = toAB(r), am = (a0 + a1) / 2, bm = (b0 + b1) / 2;
+      const place = (r) => placeAB(toAB(r));
+      const placeAB = ({ a0, a1, b0, b1 }) => {
+        const am = (a0 + a1) / 2, bm = (b0 + b1) / 2;
         if (F.kind === 'wall') {
           // 材料在外表面后面：厚度中心在 n·x = d − thk/2
           const at = add(add(scl(F.a, am), scl(F.b, b0)), scl(n, d - th / 2));
@@ -179,8 +223,37 @@ export function panelLines(tris, { cell, thick, maxThick, maxBoxes = 60, digits 
         out.push(`subtract ${name(kind)} at=${vec(B.at)}${orient ? ' ' + orient : ''} {`, `  box body size=${vec(B.size)}`, ...lines, '}');
         boxes += 1 + holes.length;
       } else {
-        for (const r of full) { const B = place(r); out.push(`box ${name(kind)} size=${vec(B.size)} at=${vec(B.at)}${orient ? ' ' + orient : ''}`); }
-        boxes += full.length;
+        // 斜边先写成矩形 + 楔形（先按列找，再在剩下的格子里按行找），剩下的格子照常合并成矩形
+        const cu = slopeRuns(nu, nv, (i, j) => g[j * nu + i]);
+        const rest0 = (i, j) => g[j * nu + i] && !cu.taken[i];
+        const cv = slopeRuns(nv, nu, (j, i) => rest0(i, j));
+        const rest = (i, j) => rest0(i, j) && !cv.taken[j];
+        const runs = [...cu.runs.map((r) => ({ ...r, axis: 'u' })), ...cv.runs.map((r) => ({ ...r, axis: 'v' }))];
+        const rs = runs.length ? rects(nu, nv, rest) : full;
+        for (const r of rs) { const B = place(r); out.push(`box ${name(kind)} size=${vec(B.size)} at=${vec(B.at)}${orient ? ' ' + orient : ''}`); }
+        boxes += rs.length;
+        // 厚度方向的中心（墙：外表面后面 th/2；楼板、坡道：同 place 里盒子的厚度中心）
+        const thick = F.kind === 'wall' ? scl(n, d - th / 2) : scl(F.t, (F.up ? d - th : -d) + th / 2);
+        for (const p of runs) {
+          // X：斜边延伸的方向，Y：斜边变化的方向；u、v 是板内二维坐标（沿 F.a、F.b）
+          const [X, Y, x0, y0] = p.axis === 'u' ? [F.a, F.b, lo[0], lo[1]] : [F.b, F.a, lo[1], lo[0]];
+          const xa = x0 + p.i0 * c, xb = x0 + (p.i1 + 1) * c, E0 = y0 + p.e0 * c, E1 = y0 + p.e1 * c;
+          const top = p.kind === 'top', base = top ? Math.min(E0, E1) : Math.max(E0, E1), far = top ? y0 + p.fixed * c : y0 + (p.fixed + 1) * c;
+          // 矩形：对齐的那一头到斜边较近的一端
+          const [r0, r1] = top ? [far, base] : [base, far];
+          if (r1 - r0 > 1e-9) {
+            const B = p.axis === 'u' ? placeAB({ a0: xa, a1: xb, b0: r0, b1: r1 }) : placeAB({ a0: r0, a1: r1, b0: xa, b1: xb });
+            out.push(`box ${name(kind)} size=${vec(B.size)} at=${vec(B.at)}${orient ? ' ' + orient : ''}`);
+            boxes++;
+          }
+          // 楔形（+x 一侧高）：斜边朝上、高端在 +X 时轴就是 (X, Y, X×Y)；高端在 −X 绕 Y 转半圈；斜边朝下（挂在矩形下面）绕 X 转半圈，深的一端同理
+          const Z = cross(X, Y), neg = (v) => scl(v, -1), up = top ? E1 > E0 : E1 < E0;
+          const wc = top ? (up ? [X, Y, Z] : [neg(X), Y, neg(Z)]) : (up ? [X, neg(Y), neg(Z)] : [neg(X), neg(Y), Z]);
+          const at = add(p.axis === 'u' ? add(scl(F.a, (xa + xb) / 2), scl(F.b, base)) : add(scl(F.a, base), scl(F.b, (xa + xb) / 2)), thick);
+          const wo = orientText(wc);
+          out.push(`wedge ${name(kind)} size=${vec([xb - xa, Math.abs(E1 - E0), th])} at=${vec(at)}${wo ? ' ' + wo : ''}`);
+          boxes++;
+        }
       }
     }
     if (boxes && boxes <= maxBoxes) return { lines: out, boxes, cell, planes: slabs.length };

@@ -1062,20 +1062,34 @@ function subSceneLines(pieces, part) {
   const c0 = [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2];
   // 材质同这个部件，设成默认材质：组里的语句不写 mat=，继承组的材质
   // 名字：板件分解出来的块带着 wall、slab 这类名字（挂在三角形数组的 name 上）；分量没有名字
-  const subParts = pieces.map((tris) => ({ name: tris.name ?? null, tris: tris.map((tri) => tri.map((v) => sub(v, c0))), role: roleP(part), material: part.material ?? { name: null, color: '#c9c9c9' } }));
-  const saved = [SUB_WHOLE, FID, S, M, DIGITS, SUBS, PARTS_FILE, PANELS, UNIONS, PREFIT, SHELLS, COMPOSITE_MS, UNION_SEEN, SWEEP_SEEN, SWEEP_FAILED, MESH_USE, JUDGES, SCATTERED, PART_ROLE, HEIGHT, cleanName, MESH_K];
-  SUB_DEPTH++;
-  SUB_WHOLE = { area: pieces.reduce((a, ts) => a + ts.reduce((b, [p, q, r]) => b + len(cross(sub(q, p), sub(r, p))) / 2, 0), 0) };
-  let out;
-  try {
-    out = reverse(subParts, { srcFile: 'x', level: 'L1', fidelity: FID.name, unit: 1 / M, types: false, defaultMaterial: true, names: false, meshPrice: MESH_K.meshPrice, panels: PANELS, shells: SHELLS, unions: UNIONS });
-  } finally {
-    [SUB_WHOLE, FID, S, M, DIGITS, SUBS, PARTS_FILE, PANELS, UNIONS, PREFIT, SHELLS, COMPOSITE_MS, UNION_SEEN, SWEEP_SEEN, SWEEP_FAILED, MESH_USE, JUDGES, SCATTERED, PART_ROLE, HEIGHT, cleanName, MESH_K] = saved;
-    SUB_DEPTH--;
+  // 原样保留的块（tris.keep：板件已经写好的“大矩形挖洞”，重新拟合会丢掉洞）不交给逆向
+  const kept = pieces.filter((t) => t.keep), fitted = pieces.filter((t) => !t.keep);
+  const subParts = fitted.map((tris) => ({ name: tris.name ?? null, tris: tris.map((tri) => tri.map((v) => sub(v, c0))), role: roleP(part), material: part.material ?? { name: null, color: '#c9c9c9' } }));
+  let lines = [];
+  if (subParts.length) {
+    const saved = [SUB_WHOLE, FID, S, M, DIGITS, SUBS, PARTS_FILE, PANELS, UNIONS, PREFIT, SHELLS, COMPOSITE_MS, UNION_SEEN, SWEEP_SEEN, SWEEP_FAILED, MESH_USE, JUDGES, SCATTERED, PART_ROLE, HEIGHT, cleanName, MESH_K];
+    SUB_DEPTH++;
+    SUB_WHOLE = { area: pieces.reduce((a, ts) => a + ts.reduce((b, [p, q, r]) => b + len(cross(sub(q, p), sub(r, p))) / 2, 0), 0) };
+    let out;
+    try {
+      out = reverse(subParts, { srcFile: 'x', level: 'L1', fidelity: FID.name, unit: 1 / M, types: false, defaultMaterial: true, names: false, meshPrice: MESH_K.meshPrice, panels: PANELS, shells: SHELLS, unions: UNIONS });
+    } finally {
+      [SUB_WHOLE, FID, S, M, DIGITS, SUBS, PARTS_FILE, PANELS, UNIONS, PREFIT, SHELLS, COMPOSITE_MS, UNION_SEEN, SWEEP_SEEN, SWEEP_FAILED, MESH_USE, JUDGES, SCATTERED, PART_ROLE, HEIGHT, cleanName, MESH_K] = saved;
+      SUB_DEPTH--;
+    }
+    // 去掉材质声明与 mat=（各块的材质都同这个部件，继承组的材质）、拟合度这类元数据
+    lines = out.src.split('\n').filter((l) => l.trim() && !/^\s*\/\//.test(l) && !/^material /.test(l)).map((l) => l.replace(/ ~(fit|err|src|scatter)=("[^"]*"|\S+)/g, '').replace(/ mat=\S+/g, ''));
+    if (lines.some((l) => /^\s*mesh /.test(l))) return null;
   }
-  // 去掉材质声明与 mat=（各块的材质都同这个部件，继承组的材质）、拟合度这类元数据
-  let lines = out.src.split('\n').filter((l) => l.trim() && !/^\s*\/\//.test(l) && !/^material /.test(l)).map((l) => l.replace(/ ~(fit|err|src|scatter)=("[^"]*"|\S+)/g, '').replace(/ mat=\S+/g, ''));
-  if (lines.some((l) => /^\s*mesh /.test(l))) return null;
+  // 原样保留的块接在后面：顶层的 at= 平移到 c0；名字和别的语句冲突时改名
+  const used = new Set(lines.filter((l) => /^\S/.test(l)).map((l) => l.split(/\s+/)[1]));
+  for (const t of kept) {
+    const [head, ...body] = t.keep, nm = head.split(/\s+/)[1];
+    let nn = nm;
+    for (let k = 2; used.has(nn); k++) nn = `${nm}_${k}`;
+    used.add(nn);
+    lines.push(head.replace(` ${nm} `, ` ${nn} `).replace(/ at=(-?[\d.e-]+),(-?[\d.e-]+),(-?[\d.e-]+)/, (_, x, y, z) => ` at=${vec(sub([+x, +y, +z], c0))}`), ...body);
+  }
   // 摊平：顶层放在原点、不带别的属性的组（板件、并写出来的组，内容已按包络的底面中心摆好）把内容提上来；名字冲突时不摊平
   const names = () => new Set(lines.filter((l) => /^\S/.test(l)).map((l) => l.split(/\s+/)[1]));
   for (let i = 0; i < lines.length; i++) {
@@ -1108,8 +1122,23 @@ function trySubScene(ftris, part, cur) {
     for (const cell of [2 * tau, 4 * tau, 8 * tau]) {
       const p = panelLines(ftris, { ...opts, cell, maxBoxes: SUB_MAX_PIECES });
       if (!p) continue;
-      const objs = sceneObjects(compile(p.lines.join('\n'), { factEps: FACT_EPS * M }));
-      if (objs.length >= 2) tries.push(objs.map((o) => { const t = []; for (let i = 0; i < o.pos.length; i += 9) t.push([[o.pos[i], o.pos[i + 1], o.pos[i + 2]], [o.pos[i + 3], o.pos[i + 4], o.pos[i + 5]], [o.pos[i + 6], o.pos[i + 7], o.pos[i + 8]]]); t.name = o.path.replace(/_\d+$/, ''); return t; }));
+      // 按语句分块：单行的盒子、楔形各是一块（交给子场景找阵列、关系）；多行的（subtract：大矩形挖洞）原样保留
+      const blocks = [];
+      for (let i = 0; i < p.lines.length; i++) {
+        if (!p.lines[i].endsWith('{')) { blocks.push([p.lines[i]]); continue; }
+        let j = i;
+        while (j < p.lines.length && p.lines[j] !== '}') j++;
+        blocks.push(p.lines.slice(i, j + 1));
+        i = j;
+      }
+      const pieces = blocks.map((b) => {
+        const t = [];
+        for (const o of sceneObjects(compile(b.join('\n'), { factEps: FACT_EPS * M }))) for (let i = 0; i < o.pos.length; i += 9) t.push([[o.pos[i], o.pos[i + 1], o.pos[i + 2]], [o.pos[i + 3], o.pos[i + 4], o.pos[i + 5]], [o.pos[i + 6], o.pos[i + 7], o.pos[i + 8]]]);
+        t.name = b[0].split(/\s+/)[1].replace(/_\d+$/, '');
+        if (b.length > 1) t.keep = b;
+        return t;
+      }).filter((t) => t.length);
+      if (pieces.length >= 2) tries.push(pieces);
     }
   }
   // 按面积只留大块（同 refine 的候选）：外墙壳的主体是几面墙、屋顶与楼板，细碎的小板、小洞写出来不划算的，比分数时自然舍掉。
