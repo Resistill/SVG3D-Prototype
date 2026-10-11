@@ -651,13 +651,7 @@ M0（最小闭环）、M0c（E1 之后的修正）、逆向档位完成；实战
 
 工具命令（宿舍区）：outline / inspect / select / check 0.5–1.4 s，render 1.4 s，propose / preview / score 约 3–3.7 s（每个进程第一次都要全量评分）。
 
-- **源模型一侧的磁盘缓存**（，工程的 ）：读入的源部件（parts.bin）、源表面的树（surfaces.bin，存节点与重排后的索引，恢复时不建树）、源部件的采样点（samples.bin）。它们只取决于源文件与少数几个稳定的模块，为此把读部件、拆分量、采样从 reverse.mjs 挪到 （reverse.mjs 照旧导出），把按颜色分组的建树从 score.mjs 挪到 。键 = 源文件与旁路表的内容哈希 + 拆分方式与旁路表配置 + **产生这份数据的模块文件的内容哈希**（parts / sidecar / surfaces / nearest / worldtris / srccache 与 package-lock）+ 参数：改了这些文件就自动重算，改拟合、计价、编译的代码不影响缓存。读不到、坏了都当作没有；写入先写临时文件再改名；目录里自带 。宿舍区约 86 MB（部件 32、采样 37、树 19），随时可以删。效果：评分 3.1 s → 1.8 s，逆向 3.6 s → 3.0 s（命令行每次调用）；冷、热两种情况与改动前的输出逐字节相同（测试“源模型一侧的磁盘缓存”覆盖冷启动、读缓存、缓存损坏、换源文件）。
-- **测试文件拆分**：reverse.test.mjs 拆成 reverse / reverse-scale / reverse-shapes，calibration.test.mjs 的自动细化那条拆到 calibration-refine；Unknown command: "test"
-
-
-Did you mean this?
-  npm test # Test a package
-To see a list of supported npm commands, run:
-  npm help 并行跑各文件，墙钟 15 s → 9.6 s。
+- **源模型一侧的磁盘缓存**（`tools/srccache.mjs`，工程的 `state/cache/`）：读入的源部件（parts.bin）、源表面的树（surfaces.bin，存节点与重排后的索引，恢复时不建树）、源部件的采样点（samples.bin）。它们只取决于源文件与少数几个稳定的模块，为此把读部件、拆分量、采样从 reverse.mjs 挪到 `tools/parts.mjs`（reverse.mjs 照旧导出），把按颜色分组的建树从 score.mjs 挪到 `tools/surfaces.mjs`。键 = 源文件与旁路表的内容哈希 + 拆分方式与旁路表配置 + **产生这份数据的模块文件的内容哈希**（parts / sidecar / surfaces / nearest / worldtris / srccache 与 package-lock）+ 参数：改了这些文件就自动重算，改拟合、计价、编译的代码不影响缓存。读不到、坏了都当作没有；写入先写临时文件再改名；目录里自带 `.gitignore`。宿舍区约 86 MB（部件 32、采样 37、树 19），随时可以删。效果：评分 3.1 s → 1.8 s，逆向 3.6 s → 3.0 s（命令行每次调用）；冷、热两种情况与改动前的输出逐字节相同（测试“源模型一侧的磁盘缓存”覆盖冷启动、读缓存、缓存损坏、换源文件）。
+- **测试文件拆分**：reverse.test.mjs 拆成 reverse / reverse-scale / reverse-shapes，calibration.test.mjs 的自动细化那条拆到 calibration-refine；`npm test` 并行跑各文件，墙钟 15 s → 9.6 s。
 - **没做**：跨进程的评分缓存（D6：重建一侧随代码与工程变化，失效条件复杂）；WebAssembly（剩下的热点要么已经是紧凑的数值循环——最近点查询，换成 WASM 每次评分省不到 0.5 s；要么经常改、又用到 hypot / atan2 这类 WASM 里没有、自带实现会差最后几位的函数——拟合，换了以后输出不再逐字节相同）；BVH 建树（重建一侧仍要建，宿舍区约 0.2 s）；编译（宿舍区约 0.4 s）。
 - **怎么核对**：改动性能相关的代码后，按上面的清单与改动前的代码对比输出（同样的输入、`--fresh`）；`S3D_TIMING=1` 打出逆向与评分各阶段的耗时。
