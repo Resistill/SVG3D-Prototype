@@ -110,12 +110,32 @@ export function splitComponents(part) {
 }
 
 // ───────── 2. 拟合基本体 ─────────
+// 三角形的顶点按 toFixed(4) 去重，保留第一次出现的。逐个算字符串键很慢：先按精确数值去重（同一个顶点在相邻的
+// 三角形里重复出现，数值完全相同，键也一定相同），只给第一次出现的数值算键——结果与逐个算键相同
+const F64 = new Float64Array(1), U32 = new Uint32Array(F64.buffer);
+const bitsHash = (h, x) => { F64[0] = x; return Math.imul(Math.imul(h ^ U32[0], 16777619) ^ U32[1], 16777619); };
+export function uniqueVertices(tris) {
+  const n = tris.length * 3;
+  let cap = 16;
+  while (cap < 2 * n) cap *= 2;
+  const table = new Int32Array(cap).fill(-1), vs = new Array(n);
+  const out = [], seen = new Set();
+  let m = 0;
+  for (const t of tris) for (const v of t) {
+    const x = v[0], y = v[1], z = v[2];
+    let h = (bitsHash(bitsHash(bitsHash(2166136261, x), y), z) >>> 0) & (cap - 1), dup = false;
+    for (let j; (j = table[h]) >= 0; h = (h + 1) & (cap - 1)) { const w = vs[j]; if (w[0] === x && w[1] === y && w[2] === z) { dup = true; break; } }
+    if (dup) continue;
+    table[h] = m; vs[m++] = v;
+    const k = v.map((c) => c.toFixed(4)).join();
+    if (!seen.has(k)) { seen.add(k); out.push(v); }
+  }
+  return out;
+}
 export function samplePoints(tris, n, seed) {
   const areas = tris.map(([a, b, c]) => len(cross(sub(b, a), sub(c, a))) / 2);
   const total = areas.reduce((s, x) => s + x, 0) || 1;
-  const pts = [];
-  const seen = new Set();
-  for (const t of tris) for (const v of t) { const k = v.map((x) => x.toFixed(4)).join(); if (!seen.has(k)) { seen.add(k); pts.push(v); } }
+  const pts = uniqueVertices(tris);
   const r = rng(seed);
   const cum = [];
   areas.reduce((s, x, i) => (cum[i] = s + x), 0);
@@ -218,19 +238,30 @@ function frameFrom(pts, cols, yaw) {
 
 // 有符号距离（局部坐标，中心在原点）
 const sd2 = (dx, dy) => Math.hypot(Math.max(dx, 0), Math.max(dy, 0)) + Math.min(Math.max(dx, dy), 0);
-const sdBox = (q, h) => { const d = [Math.abs(q[0]) - h[0], Math.abs(q[1]) - h[1], Math.abs(q[2]) - h[2]]; return len(d.map((x) => Math.max(x, 0))) + Math.min(Math.max(...d), 0); };
-function sdFrustum(q, a, r0, r1, ha) {
+// （拟合里每个采样点要算很多次：写成不分配数组的标量形式，算术与逐项建数组的写法相同）
+const sdBox = (q, h) => { const d0 = Math.abs(q[0]) - h[0], d1 = Math.abs(q[1]) - h[1], d2 = Math.abs(q[2]) - h[2]; return Math.hypot(Math.max(d0, 0), Math.max(d1, 0), Math.max(d2, 0)) + Math.min(Math.max(d0, d1, d2), 0); };
+// 圆台（轴 a，两端半径 r0、r1，半高 ha）的距离函数；与点无关的量先算好
+function frustumSD(a, r0, r1, ha) {
   const [b, c] = [0, 1, 2].filter((k) => k !== a);
-  const t = (q[a] + ha) / (2 * ha), r = r0 + (r1 - r0) * Math.max(0, Math.min(1, t));
   const k = Math.cos(Math.atan2(Math.abs(r0 - r1), 2 * ha));
-  return sd2((Math.hypot(q[b], q[c]) - r) * k, Math.abs(q[a]) - ha);
+  return (q) => {
+    const t = (q[a] + ha) / (2 * ha), r = r0 + (r1 - r0) * Math.max(0, Math.min(1, t));
+    return sd2((Math.hypot(q[b], q[c]) - r) * k, Math.abs(q[a]) - ha);
+  };
 }
+let edgeCr = 0;
+const edgeD2 = (px, py, a, b) => {
+  const ex = b[0] - a[0], ey = b[1] - a[1], wx = px - a[0], wy = py - a[1];
+  const t = Math.max(0, Math.min(1, (wx * ex + wy * ey) / (ex * ex + ey * ey)));
+  const x = wx - ex * t, y = wy - ey * t;
+  edgeCr = ex * wy - ey * wx;
+  return x * x + y * y;
+};
 function sdTri2(px, py, A, B, C) {
-  const edge = (a, b) => { const ex = b[0] - a[0], ey = b[1] - a[1], wx = px - a[0], wy = py - a[1]; const t = Math.max(0, Math.min(1, (wx * ex + wy * ey) / (ex * ex + ey * ey))); return [wx - ex * t, wy - ey * t, ex * wy - ey * wx]; };
-  const es = [edge(A, B), edge(B, C), edge(C, A)];
-  const d = Math.min(...es.map(([x, y]) => x * x + y * y));
+  const d0 = edgeD2(px, py, A, B), c0 = edgeCr, d1 = edgeD2(px, py, B, C), c1 = edgeCr, d2 = edgeD2(px, py, C, A), c2 = edgeCr;
+  const d = Math.min(d0, d1, d2);
   const s = Math.sign((B[0] - A[0]) * (C[1] - A[1]) - (B[1] - A[1]) * (C[0] - A[0]));
-  const inside = es.every(([, , cr]) => cr * s >= 0);
+  const inside = c0 * s >= 0 && c1 * s >= 0 && c2 * s >= 0;
   return (inside ? -1 : 1) * Math.sqrt(d);
 }
 
@@ -272,11 +303,11 @@ function fitInFrame(F, pts, vol = null, verts = [], only = null) {
     const vr = vq.map(radial).filter((x) => x > 0.5 * (h[b] + h[c]) / 2);
     const side = q.filter((x) => Math.abs(x[a]) < 0.8 * h[a]).map(radial).sort((u, v) => u - v);
     const r = vr.length ? Math.max(...vr) : side.length ? side[Math.floor(side.length * 0.75)] : (h[b] + h[c]) / 2;
-    push({ shape: 'cyl', axis: a, r0: r, r1: r, e: err((x) => sdFrustum(x, a, r, r, h[a])) }, Math.PI * r * r * 2 * h[a]);
+    push({ shape: 'cyl', axis: a, r0: r, r1: r, e: err(frustumSD(a, r, r, h[a])) }, Math.PI * r * r * 2 * h[a]);
     // 圆台：两端的最大半径
     const near = (s) => q.filter((x) => Math.abs(x[a] - s * h[a]) < 0.02 * h[a] + 1e-6).map(radial);
     const r0 = Math.max(0, ...near(-1)), r1 = Math.max(0, ...near(1));
-    if (Math.abs(r0 - r1) > 0.05 * r) push({ shape: 'cone', axis: a, r0, r1, e: err((x) => sdFrustum(x, a, r0, r1, h[a])) }, (Math.PI * 2 * h[a] / 3) * (r0 * r0 + r0 * r1 + r1 * r1));
+    if (Math.abs(r0 - r1) > 0.05 * r) push({ shape: 'cone', axis: a, r0, r1, e: err(frustumSD(a, r0, r1, h[a])) }, (Math.PI * 2 * h[a] / 3) * (r0 * r0 + r0 * r1 + r1 * r1));
   }
   if (only === 'sphere' || Math.max(...h) - Math.min(...h) < 0.08 * Math.max(...h)) {
     // 球：顶点到顶点质心的平均距离（顶点都在球面上）

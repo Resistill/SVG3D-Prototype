@@ -117,16 +117,16 @@ export function nearestQuery(data) {
 }
 
 // ── 批量查询 ──
-// 一批活：qs（查询数据）、jobs [{ q（qs 里的序号）, pts, max, d, t }]、chunks（每 3 个数一段：job, start, end）、
+// 一批活：qs（查询数据）、jobs [{ q（qs 里的序号）, pts, max 或 maxs（逐点的封顶）, d, t }]、chunks（每 3 个数一段：job, start, end）、
 // ctrl [下一段, 做完的段数]。主线程与 worker 从同一个计数器领段，谁领到谁算
 export function runChunks(task, queries = task.qs.map(nearestQuery)) {
   const { ctrl, chunks, jobs } = task, n = chunks.length / 3;
   for (;;) {
     const c = Atomics.add(ctrl, 0, 1);
     if (c >= n) return;
-    const job = jobs[chunks[3 * c]], q = queries[job.q], { pts, d, t, max } = job;
+    const job = jobs[chunks[3 * c]], q = queries[job.q], { pts, d, t, max, maxs } = job;
     for (let i = chunks[3 * c + 1], end = chunks[3 * c + 2]; i < end; i++) {
-      const k = q.closest(pts[3 * i], pts[3 * i + 1], pts[3 * i + 2], max);
+      const k = q.closest(pts[3 * i], pts[3 * i + 1], pts[3 * i + 2], maxs ? maxs[i] : max);
       t[i] = k; d[i] = k >= 0 ? q.distance : Infinity;
     }
     Atomics.add(ctrl, 1, 1);
@@ -134,7 +134,7 @@ export function runChunks(task, queries = task.qs.map(nearestQuery)) {
   }
 }
 
-const CHUNK = 4096, PARALLEL_MIN = 100000;
+const CHUNK = 4096, PARALLEL_MIN = 16384;
 let pool = null;
 function workers() {
   if (pool) return pool;
@@ -151,14 +151,15 @@ function workers() {
 
 // 点的扁平数组（每 3 个数一个点）；需要并行时放在共享内存里
 export const pointArray = (n) => alloc(Float64Array, 3 * n);
+export const sharedArray = (n) => alloc(Float64Array, n);
 
-// items：[{ q（nearestQuery 的结果）, pts（pointArray）, max }] → 每项 { d（距离，没找到为 Infinity）, t（三角形序号或 −1） }
+// items：[{ q（nearestQuery 的结果）, pts（pointArray）, max，或逐点的 maxs（与 pts 一样放在共享内存里） }] → 每项 { d（距离，没找到为 Infinity）, t（三角形序号或 −1） }
 export function closestMany(items) {
   const qs = [], qIndex = new Map();
-  const jobs = items.map(({ q, pts, max }) => {
+  const jobs = items.map(({ q, pts, max, maxs }) => {
     if (!qIndex.has(q)) { qIndex.set(q, qs.length); qs.push(q); }
     const n = pts.length / 3;
-    return { q: qIndex.get(q), pts, max, d: alloc(Float64Array, n), t: alloc(Int32Array, n) };
+    return { q: qIndex.get(q), pts, max, maxs, d: alloc(Float64Array, n), t: alloc(Int32Array, n) };
   });
   const segs = [];
   let total = 0;

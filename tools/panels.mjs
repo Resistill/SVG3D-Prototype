@@ -27,12 +27,13 @@ export function planesOf(tris, { tol, minFrac = 0.005 } = {}) {
   }
   items.sort((x, y) => y.a - x.a);
   const COS = Math.cos((8 * Math.PI) / 180), SNAP = Math.cos((3 * Math.PI) / 180);
+  // 每个方向簇的单位方向 u = unit(sum) 只在 sum 变了时重算（数值与每次现算相同）
   const dirs = [];
   for (const it of items) {
-    let best = null;
-    for (const d of dirs) if (dot(unit(d.sum), it.n) > COS && (!best || dot(unit(d.sum), it.n) > dot(unit(best.sum), it.n))) best = d;
+    let best = null, bestDot = 0;
+    for (const d of dirs) { const c = dot(d.u, it.n); if (c > COS && (!best || c > bestDot)) { best = d; bestDot = c; } }
     if (!best) dirs.push((best = { sum: [0, 0, 0], area: 0, items: [] }));
-    best.sum = add(best.sum, scl(it.n, it.a)); best.area += it.a; best.items.push(it);
+    best.sum = add(best.sum, scl(it.n, it.a)); best.u = unit(best.sum); best.area += it.a; best.items.push(it);
   }
   const planes = [];
   for (const g of dirs) {
@@ -80,11 +81,12 @@ function rasterize(trisList, F, cell, maxCells) {
     if (Math.abs(den) < 1e-18) continue;
     const i0 = idx(Math.min(p[0], q[0], r[0]), 0, nu), i1 = idx(Math.max(p[0], q[0], r[0]), 0, nu);
     const j0 = idx(Math.min(p[1], q[1], r[1]), 1, nv), j1 = idx(Math.max(p[1], q[1], r[1]), 1, nv);
-    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) SUB.forEach(([su, sv], s) => {
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) for (let s = 0; s < 4; s++) {
+      const su = SUB[s][0], sv = SUB[s][1];
       const x = lo[0] + (i + su) * cell, y = lo[1] + (j + sv) * cell;
       const l1 = ((q[1] - r[1]) * (x - r[0]) + (r[0] - q[0]) * (y - r[1])) / den, l2 = ((r[1] - p[1]) * (x - r[0]) + (p[0] - r[0]) * (y - r[1])) / den;
       if (l1 >= -1e-9 && l2 >= -1e-9 && l1 + l2 <= 1 + 1e-9) bits[j * nu + i] |= 1 << s;
-    });
+    }
   }
   const g = bits.map((b) => +(((b & 1) + ((b >> 1) & 1) + ((b >> 2) & 1) + ((b >> 3) & 1)) >= 2));
   return { g, nu, nv, lo, cell };

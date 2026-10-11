@@ -133,9 +133,11 @@ function voxelLines(tris, { voxel, maxBoxes, digits }) {
 
 // 一组分量 → 在物体自己的坐标系里跑一遍逆向（逐块拟合、找关系、找阵列与镜像）；
 // 面积大、又拟合不好的分量（一整栋楼的外壳）换成同名的一组体素盒子（substitute='voxel'）或板件（'panel'：墙板、楼板、开洞）。
-// 每个子块记下来源 ~src="部件#分量"，以后还能逐层细化
-function nestedLines(comps, { to, unit, digits, voxel, panel, substitute = 'voxel' }) {
-  const out = reverseParts(comps.map((c) => ({ ...c, name: null })), { srcFile: 'refine', fidelity: to, unit, types: false, names: false, defaultMaterial: false, panels: false });
+// 每个子块记下来源 ~src="部件#分量"，以后还能逐层细化。
+// reversed：同一组分量的逆向结果（只取决于分量、档位与单位）；几种替换方式共用一次逆向
+function nestedLines(comps, { to, unit, digits, voxel, panel, substitute = 'voxel', reversed = new Map() }) {
+  if (!reversed.has(comps.length)) reversed.set(comps.length, reverseParts(comps.map((c) => ({ ...c, name: null })), { srcFile: 'refine', fidelity: to, unit, types: false, names: false, defaultMaterial: false, panels: false }));
+  const out = reversed.get(comps.length);
   setFidelity(to, unit);
   const total = comps.reduce((s2, c) => s2 + c.area, 0);
   const bySrc = new Map(comps.map((c) => [c.from, c]));
@@ -256,7 +258,7 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
   const comps = splitComponents(part).map((c) => { const tris = toLocal(c.tris, n.world); return { ...c, tris, area: areaOf(tris) }; }).sort((a, b) => b.area - a.area);
   if (comps.length > 1) {
     const total = comps.reduce((s2, c) => s2 + c.area, 0);
-    const kept = new Set();
+    const kept = new Set(), reversed = new Map();
     for (const frac of [1, 0.99, 0.97, 0.9]) {
       let acc = 0, k = 0;
       while (k < comps.length && acc < frac * total * (1 - 1e-9)) acc += comps[k++].area;
@@ -264,10 +266,10 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
       if (kept.has(k)) continue;
       kept.add(k);
       const label = frac === 1 ? `全部 ${comps.length} 块` : `面积前 ${Math.round(frac * 100)}%（${k}/${comps.length} 块）`;
-      add(label, { ...nestedLines(comps.slice(0, k), { to, unit, digits, voxel, substitute: null }), parts: k });
-      const v = nestedLines(comps.slice(0, k), { to, unit, digits, voxel });
+      add(label, { ...nestedLines(comps.slice(0, k), { to, unit, digits, voxel, substitute: null, reversed }), parts: k });
+      const v = nestedLines(comps.slice(0, k), { to, unit, digits, voxel, reversed });
       if (v.voxelized) add(`${label}，拟合差的 ${v.voxelized} 块换成体素`, { ...v, parts: k });
-      const w = nestedLines(comps.slice(0, k), { to, unit, digits, voxel, panel, substitute: 'panel' });
+      const w = nestedLines(comps.slice(0, k), { to, unit, digits, voxel, panel, substitute: 'panel', reversed });
       if (w.voxelized) add(`${label}，拟合差的 ${w.voxelized} 块换成板件`, { ...w, parts: k });
     }
   }

@@ -14,7 +14,7 @@
 // 解释率 explain = 1 − S / S_mesh，S_mesh 是“全部写成 mesh 引用、世界坐标定位”的基线。
 import { MeshBVH } from 'three-mesh-bvh';
 import { BufferGeometry, BufferAttribute } from 'three';
-import { nearestData, nearestQuery, closestMany, pointArray } from './nearest.mjs';
+import { nearestData, nearestQuery, closestMany, pointArray, sharedArray } from './nearest.mjs';
 import { samplePoints } from './reverse.mjs';
 import { sceneObjects, trisToArray } from './worldtris.mjs';
 
@@ -120,16 +120,17 @@ function nearest(target, k) {
     };
   };
 }
+const flatPoints = (pts) => {
+  const a = pointArray(pts.length);
+  pts.forEach((p, i) => { a[3 * i] = p[0]; a[3 * i + 1] = p[1]; a[3 * i + 2] = p[2]; });
+  return a;
+};
 // 一批点集各自到一组表面的距离（与逐点调用 nearest 的结果逐位相同，点多时分给 worker 线程）：
 //   sets [{ pts（samplePoints 的结果）, color }] → 每项 { d: Float64Array, own: Int32Array（最近的物体，−1 表示没有） }
 function nearestMany(target, k, sets) {
   const items = [], picks = sets.map(({ pts, color }) => {
     const pk = pick(target, k, color);
-    if (pk.bvh && pts.length) {
-      const a = pointArray(pts.length);
-      pts.forEach((p, i) => { a[3 * i] = p[0]; a[3 * i + 1] = p[1]; a[3 * i + 2] = p[2]; });
-      pk.item = items.push({ q: pk.bvh.q, pts: a, max: k.dMax }) - 1;
-    }
+    if (pk.bvh && pts.length) pk.item = items.push({ q: pk.bvh.q, pts: flatPoints(pts), max: k.dMax }) - 1;
     return pk;
   });
   const res = closestMany(items);
@@ -400,15 +401,31 @@ export function neighborhoodScorer({ parts, near, others, reconColors, consts = 
   const srcColors = new Set(parts.map((p) => colorKey(p.material?.color)));
   const ents = near.map((i) => {
     const p = parts[i], color = p.material?.color;
-    return { i, color, c: colorKey(color), pts: samplePoints(p.tris, k.samples, i + 1), w: k.cRes * Math.log2(1 + areaOf(p.tris) / (k.delta * k.delta)), rest: new Map() };
+    return { i, color, c: colorKey(color), pts: flatPoints(samplePoints(p.tris, k.samples, i + 1)), w: k.cRes * Math.log2(1 + areaOf(p.tris) / (k.delta * k.delta)), rest: new Map() };
   });
   const otherSurf = others.length ? surfaces(others) : null;
   const srcSurf = surfaces(near.map((i) => ({ pos: trisToArray(parts[i].tris), color: parts[i].material?.color })));
-  // 到一组表面里某种颜色（same）或全部表面的距离，封顶 limit
-  const dist = (surf, c, same, pen, p, limit) => {
-    const g = surf && (same ? surf.byColor.get(c) : surf.all);
-    if (!g || limit - pen <= 0) return limit;
-    return g.q.closest(p[0], p[1], p[2], limit - pen) >= 0 ? Math.min(g.q.distance + pen, limit) : limit;
+  // 一批点集各自到一组表面里某种颜色（same）或全部表面的距离，封顶 limit（一个数，或逐点的数组）：
+  //   sets [{ pts（扁平）, c, same, pen, limit }] → 每项 Float64Array。逐点的规则：limit − pen ≤ 0 或没碰到表面时取 limit，
+  //   否则 min(距离 + pen, limit)（点多时分给 worker 线程，结果与逐点查询相同）
+  const distMany = (surf, sets) => {
+    const items = [], at = sets.map(({ pts, c, same, pen, limit }) => {
+      const g = surf && (same ? surf.byColor.get(c) : surf.all), n = pts.length / 3;
+      if (!g || !n) return null;
+      if (typeof limit === 'number') return limit - pen > 0 ? items.push({ q: g.q, pts, max: limit - pen }) - 1 : null;
+      const maxs = sharedArray(n);
+      for (let j = 0; j < n; j++) maxs[j] = limit[j] - pen;
+      return items.push({ q: g.q, pts, maxs }) - 1;
+    });
+    const res = closestMany(items);
+    return sets.map(({ pts, pen, limit }, m) => {
+      const n = pts.length / 3, out = new Float64Array(n), r = at[m] == null ? null : res[at[m]];
+      for (let j = 0; j < n; j++) {
+        const lim = typeof limit === 'number' ? limit : limit[j];
+        out[j] = !r || lim - pen <= 0 || r.t[j] < 0 ? lim : Math.min(r.d[j] + pen, lim);
+      }
+      return out;
+    });
   };
   return (objs, lines = []) => {
     const recon = objs.filter((o) => o.pos.length);
@@ -416,24 +433,23 @@ export function neighborhoodScorer({ parts, near, others, reconColors, consts = 
     const candSurf = recon.length ? surfaces(recon) : null;
     // R_src：邻域里的每个源部件
     let Rsrc = 0, own = null;
-    for (const e of ents) {
-      const same = e.color != null && colorsNow.has(e.c), pen = !same && e.color != null ? k.delta : 0, mode = same ? 'same' : 'all';
-      if (!e.rest.has(mode)) e.rest.set(mode, Float64Array.from(e.pts, (p) => dist(otherSurf, e.c, same, pen, p, k.dMax)));
-      const rest = e.rest.get(mode), d = new Float64Array(e.pts.length);
-      e.pts.forEach((p, j) => { d[j] = dist(candSurf, e.c, same, pen, p, rest[j]); });
-      const res = aggregate(d, k);
+    const modes = ents.map((e) => { const same = e.color != null && colorsNow.has(e.c); return { e, c: e.c, pts: e.pts, same, pen: !same && e.color != null ? k.delta : 0, mode: same ? 'same' : 'all' }; });
+    // 邻居源点到“其余物体”的距离：每种模式只算一次
+    const miss = modes.filter((m) => !m.e.rest.has(m.mode));
+    distMany(otherSurf, miss.map((m) => ({ ...m, limit: k.dMax }))).forEach((d, j) => miss[j].e.rest.set(miss[j].mode, d));
+    const ds = distMany(candSurf, modes.map((m) => ({ ...m, limit: m.e.rest.get(m.mode) })));
+    modes.forEach(({ e }, j) => {
+      const res = aggregate(ds[j], k);
       Rsrc += e.w * res.r;
       own ??= res;
-    }
+    });
     // R_recon：候选物体 → 邻域里的源部件（离它更远的源部件在 dMax 之外，不影响距离）
     let A = 0, acc = 0;
-    for (const o of recon) {
-      const tris = triList(o.pos), area = areaOf(tris), c = colorKey(o.color);
-      const same = o.color != null && srcColors.has(c), pen = !same && o.color != null ? k.delta : 0;
-      const pts = samplePoints(tris, k.samples, seedOf(o.path ?? ''));
-      const res = aggregate(Float64Array.from(pts, (p) => dist(srcSurf, c, same, pen, p, k.dMax)), k);
-      A += area; acc += area * res.r;
-    }
+    const objSets = recon.map((o) => {
+      const tris = triList(o.pos), c = colorKey(o.color), same = o.color != null && srcColors.has(c);
+      return { area: areaOf(tris), c, same, pen: !same && o.color != null ? k.delta : 0, pts: flatPoints(samplePoints(tris, k.samples, seedOf(o.path ?? ''))), limit: k.dMax };
+    });
+    distMany(srcSurf, objSets).forEach((d, j) => { const res = aggregate(d, k); A += objSets[j].area; acc += objSets[j].area * res.r; });
     const Rrecon = A > 0 ? k.cRes * Math.log2(1 + A / (k.delta * k.delta)) * (acc / A) : 0;
     // 网格引用（现在的写法可能就是一块网格）：c_mesh × log2(1 + 三角形数)，与全场的 L_mesh 一样
     const seen = new Set(sharedMeshes);
