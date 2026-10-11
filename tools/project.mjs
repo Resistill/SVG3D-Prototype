@@ -3,7 +3,7 @@
 //   scene.s3d      组合根：import 各层（工具与界面只编译它）
 //   base.s3d       逆向基础层（机器生成，重跑逆向会重写；人和 AI 不直接改）；大的时候是索引，内容拆在 base/ 下
 //   edits.s3d      修改层；semantics.s3d 语义层；style.s3d 风格层；decisions.s3d 决定层（逆向的约束，不进 scene）
-//   state/         选中状态等；renders/ 渲染图；score.json 最近一次评分
+//   state/         选中状态等（state/cache/：源模型一侧的磁盘缓存，可以随时删）；renders/ 渲染图；score.json 最近一次评分
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, relative, resolve, dirname, sep } from 'node:path';
@@ -15,6 +15,8 @@ import { SCORE_DEFAULTS, scoreCache } from './score.mjs';
 import { splitSource, joinSource, importedFiles } from './split.mjs';
 import { loadSidecar, attachSidecar } from './sidecar.mjs';
 import { prefit } from './fitpool.mjs';
+import { packParts, unpackParts } from './parts.mjs';
+import { codeHash, readCache, writeCache, sha1 as sha1Of } from './srccache.mjs';
 
 // 写进文件的相对路径一律用 /（Windows 上 path.relative 给的是反斜杠，浏览器与 import 都认不了）
 const rel = (from, to) => relative(from, to).split(sep).join('/');
@@ -35,6 +37,27 @@ const HEADERS = {
 const SESSIONS = new Map();
 
 const sha1 = (path) => createHash('sha1').update(readFileSync(path)).digest('hex');
+
+// 源模型一侧的磁盘缓存（srccache.mjs）：每种数据由哪些模块产生——这些文件的内容变了，缓存就失效
+const CACHE_CODE = { parts: ['parts.mjs', 'sidecar.mjs', 'srccache.mjs'] };
+CACHE_CODE.surfaces = [...CACHE_CODE.parts, 'surfaces.mjs', 'nearest.mjs', 'worldtris.mjs'];
+CACHE_CODE.samples = CACHE_CODE.parts;
+// 源模型的键：源文件与旁路表的内容、拆分方式、旁路表的配置；读不到文件时返回 null（不用缓存，照常读、照常报错）
+function sourceKey(dir, cfg, path) {
+  try {
+    const side = cfg.sidecar ? sha1(resolve(dir, cfg.sidecar.file)) : null;
+    return sha1Of(JSON.stringify({ source: sha1(path), split: cfg.split ?? 'auto', sidecar: cfg.sidecar ?? null, side }));
+  } catch { return null; }
+}
+function sourcePersist(dir, key) {
+  if (!key) return null;
+  const file = (kind) => join(dir, 'state', 'cache', `${kind}.bin`);
+  const k = (kind, params) => sha1Of(JSON.stringify([key, codeHash(CACHE_CODE[kind]), params]));
+  return {
+    load: (kind, params, alloc) => readCache(file(kind), k(kind, params), alloc),
+    save: (kind, params, meta, blobs) => writeCache(file(kind), k(kind, params), meta, blobs),
+  };
+}
 
 export function openProject(dir) {
   dir = resolve(dir);
@@ -67,10 +90,17 @@ export function openProject(dir) {
       const path = P.sourcePath(), st = statSync(path), key = `${path}|${st.size}|${st.mtimeMs}|${cfg.split ?? 'auto'}`;
       let ses = SESSIONS.get(dir);
       if (!ses || ses.key !== key) {
-        const parts = await readParts(path, { split: cfg.split ?? 'auto' });
-        // 旁路表（project.json 的 sidecar）：对上的列挂到部件上，逆向写成 ~元数据
-        const sidecar = cfg.sidecar ? attachSidecar(parts, loadSidecar(resolve(dir, cfg.sidecar.file)), cfg.sidecar) : null;
-        SESSIONS.set(dir, (ses = { key, parts, sidecar, cache: scoreCache() }));
+        // 磁盘缓存里有这个源模型（同样的源文件、旁路表与读取代码）就直接恢复，否则读 GLB 并存一份
+        const persist = sourcePersist(dir, sourceKey(dir, cfg, path)), saved = persist?.load('parts', {});
+        let parts, sidecar;
+        if (saved) { parts = unpackParts({ meta: saved.meta.parts, blobs: saved.blobs }); sidecar = saved.meta.sidecar; }
+        else {
+          parts = await readParts(path, { split: cfg.split ?? 'auto' });
+          // 旁路表（project.json 的 sidecar）：对上的列挂到部件上，逆向写成 ~元数据
+          sidecar = cfg.sidecar ? attachSidecar(parts, loadSidecar(resolve(dir, cfg.sidecar.file)), cfg.sidecar) : null;
+          if (persist) { const pk = packParts(parts); persist.save('parts', {}, { parts: pk.meta, sidecar }, pk.blobs); }
+        }
+        SESSIONS.set(dir, (ses = { key, parts, sidecar, cache: scoreCache(persist) }));
       }
       P.sidecar = ses.sidecar;
       return (P._parts = ses.parts);

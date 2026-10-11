@@ -1,7 +1,7 @@
 // 协作工具：自评分数、离屏渲染、工程与命令（docs/PLAN2.md M0a）
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync, mkdtempSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, existsSync, cpSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { compile } from '../src/s3d.js';
@@ -457,4 +457,35 @@ test('语义库的长度阈值按米：metre（一米是多少个场景单位）
   assert.ok(!concepts(m, 'crate').includes('prop'), '按米读：10 米的箱子不是小件');
   assert.ok(concepts(st, 'crate').includes('prop'), '按 stud 读：2.8 米的箱子是小件');
   assert.ok(concepts(st, 'hall').includes('volume'));
+});
+
+test('源模型一侧的磁盘缓存：冷启动、读缓存、缓存损坏时分数逐位相同；源文件变了就重读', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 's3d-srccache-'));
+  const src = readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8');
+  const glb = async (text, name) => { const { doc, io } = sceneToGLB(text, { level: 'L2' }); writeFileSync(join(dir, name), await io.writeBinary(doc)); };
+  await glb(src, 'world.glb');
+  await runCommand('init', join(dir, 'a'), { source: join(dir, 'world.glb'), fidelity: 'structure', unit: 1 });
+  // 第一次评分：读 GLB、建树、采样，并写进 state/cache/
+  const a = await runCommand('score', join(dir, 'a'), {});
+  for (const k of ['parts', 'surfaces', 'samples']) assert.ok(existsSync(join(dir, 'a', 'state', 'cache', k + '.bin')), k);
+  assert.ok(existsSync(join(dir, 'a', 'state', 'cache', '.gitignore')));
+  // 另一个工程目录带着同样的缓存（同一个进程里按目录区分，所以会读磁盘）：结果逐位相同
+  cpSync(join(dir, 'a'), join(dir, 'b'), { recursive: true });
+  assert.deepEqual(await runCommand('score', join(dir, 'b'), {}), a);
+  // 缓存文件坏了：当作没有，照常算
+  cpSync(join(dir, 'a'), join(dir, 'c'), { recursive: true });
+  writeFileSync(join(dir, 'c', 'state', 'cache', 'parts.bin'), readFileSync(join(dir, 'c', 'state', 'cache', 'parts.bin')).subarray(0, 100));
+  writeFileSync(join(dir, 'c', 'state', 'cache', 'surfaces.bin'), 'garbage');
+  assert.deepEqual(await runCommand('score', join(dir, 'c'), {}), a);
+  // 换了源文件（发射台小了一圈）：键对不上，重读重算，与没有缓存的工程相同
+  await glb(src.replace('box pad size=26,2,26', 'box pad size=24,2,24'), 'other.glb');
+  for (const d of ['d', 'e']) {
+    cpSync(join(dir, 'a'), join(dir, d), { recursive: true });
+    const cfg = JSON.parse(readFileSync(join(dir, d, 'project.json'), 'utf8'));
+    writeFileSync(join(dir, d, 'project.json'), JSON.stringify({ ...cfg, source: '../other.glb' }));
+  }
+  rmSync(join(dir, 'e', 'state', 'cache'), { recursive: true });
+  const d = await runCommand('score', join(dir, 'd'), {});
+  assert.notEqual(d.S, a.S);
+  assert.deepEqual(d, await runCommand('score', join(dir, 'e'), {}));
 });

@@ -12,10 +12,9 @@
 //           那一行只计名字、定位与材质（形状参数作废了）
 //   R_recon 重建物体表面到源表面的距离，同样计价；复杂度权重以顶层语句为单位、内部按面积分摊（惩罚凭空多出来的东西，但不惩罚拆分）
 // 解释率 explain = 1 − S / S_mesh，S_mesh 是“全部写成 mesh 引用、世界坐标定位”的基线。
-import { MeshBVH } from 'three-mesh-bvh';
-import { BufferGeometry, BufferAttribute } from 'three';
-import { nearestData, nearestQuery, closestMany, pointArray, sharedArray } from './nearest.mjs';
-import { samplePoints } from './reverse.mjs';
+import { closestMany, pointArray, sharedArray } from './nearest.mjs';
+import { samplePoints, sourceSamples } from './parts.mjs';
+import { colorKey, surfaces, sourceSurfaces, saveSurfaces, loadSurfaces } from './surfaces.mjs';
 import { sceneObjects, trisToArray } from './worldtris.mjs';
 
 // 长度常数（delta、dMax）按米给出，unit 是每个场景单位多少米；计算前换算成场景单位（inScene），输出的误差（meanErr、maxErr）再换回米。
@@ -81,28 +80,9 @@ const cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], 
 const len3 = (a) => Math.hypot(a[0], a[1], a[2]);
 const triList = (pos) => { const out = []; for (let i = 0; i < pos.length; i += 9) out.push([[pos[i], pos[i + 1], pos[i + 2]], [pos[i + 3], pos[i + 4], pos[i + 5]], [pos[i + 6], pos[i + 7], pos[i + 8]]]); return out; };
 
-// 把若干物体合成一棵 BVH，记住每个三角形属于哪个物体
-function bvhOf(objs, ids = objs.map((_, k) => k)) {
-  const n = objs.reduce((s, o) => s + o.pos.length, 0);
-  const pos = new Float32Array(n), owner = new Int32Array(n / 9);
-  let off = 0;
-  objs.forEach((o, k) => { pos.set(o.pos, off); owner.fill(ids[k], off / 9, (off + o.pos.length) / 9); off += o.pos.length; });
-  if (!n) return null;
-  const g = new BufferGeometry();
-  g.setAttribute('position', new BufferAttribute(pos, 3));
-  return { q: nearestQuery(nearestData(new MeshBVH(g), g.index.array, pos)), owner };
-}
-
-// 按材质颜色分组的表面集合：{ byColor: Map(颜色 → BVH), all: BVH }
-const colorKey = (c) => String(c ?? '').toLowerCase();
+// 表面集合（按材质颜色分组的树，见 surfaces.mjs）：{ byColor: Map(颜色 → 树), all: 树 }
 // 重建物体的采样种子取自路径（不取序号）：语句挪了位置、换了文件，分数不变
 const seedOf = (s) => { let h = 2166136261; for (let j = 0; j < s.length; j++) h = Math.imul(h ^ s.charCodeAt(j), 16777619); return 1000 + ((h >>> 0) % 1000003); };
-function surfaces(objs) {
-  const groups = new Map();
-  objs.forEach((o, k) => { const c = colorKey(o.color); if (!groups.has(c)) groups.set(c, []); groups.get(c).push(k); });
-  const byColor = new Map([...groups].map(([c, ids]) => [c, bvhOf(ids.map((k) => objs[k]), ids)]));
-  return { byColor, all: bvhOf(objs) };
-}
 
 // 到一组表面的最近距离：nearest(target, k)(color) 给出 p → [d, 最近的物体]（没有目标、或 dMax 以内没有表面：[dMax, −1]）。
 // 距离优先量到同材质的表面；没有同材质的表面时量到全部表面，并多计一个 δ
@@ -120,22 +100,44 @@ function nearest(target, k) {
     };
   };
 }
+// 源部件的采样点（扁平数组，按部件序号）：同一组源部件只采一次，工程里还存进磁盘缓存
+function srcSamples(shared, n) {
+  if (shared.samples.has(n)) return shared.samples.get(n);
+  let out;
+  const saved = shared.persist?.load('samples', { n }, (T, m) => (T === Float64Array ? sharedArray(m) : new T(m)));
+  if (saved) {
+    const { pts, offsets } = saved.blobs;
+    out = Array.from({ length: offsets.length - 1 }, (_, i) => pts.subarray(offsets[i], offsets[i + 1]));
+  } else {
+    out = shared.src.map((s) => flatPoints(sourceSamples(s.tris, s.i, n)));
+    if (shared.persist) {
+      const offsets = new Int32Array(out.length + 1);
+      out.forEach((a, i) => { offsets[i + 1] = offsets[i] + a.length; });
+      const pts = new Float64Array(offsets[out.length]);
+      out.forEach((a, i) => pts.set(a, offsets[i]));
+      shared.persist.save('samples', { n }, {}, { pts, offsets });
+    }
+  }
+  shared.samples.set(n, out);
+  return out;
+}
+const toPoints = (a) => Array.from({ length: a.length / 3 }, (_, i) => [a[3 * i], a[3 * i + 1], a[3 * i + 2]]);
 const flatPoints = (pts) => {
   const a = pointArray(pts.length);
   pts.forEach((p, i) => { a[3 * i] = p[0]; a[3 * i + 1] = p[1]; a[3 * i + 2] = p[2]; });
   return a;
 };
 // 一批点集各自到一组表面的距离（与逐点调用 nearest 的结果逐位相同，点多时分给 worker 线程）：
-//   sets [{ pts（samplePoints 的结果）, color }] → 每项 { d: Float64Array, own: Int32Array（最近的物体，−1 表示没有） }
+//   sets [{ pts（扁平的点数组，pointArray）, color }] → 每项 { d: Float64Array, own: Int32Array（最近的物体，−1 表示没有） }
 function nearestMany(target, k, sets) {
   const items = [], picks = sets.map(({ pts, color }) => {
     const pk = pick(target, k, color);
-    if (pk.bvh && pts.length) pk.item = items.push({ q: pk.bvh.q, pts: flatPoints(pts), max: k.dMax }) - 1;
+    if (pk.bvh && pts.length) pk.item = items.push({ q: pk.bvh.q, pts, max: k.dMax }) - 1;
     return pk;
   });
   const res = closestMany(items);
   return sets.map(({ pts }, j) => {
-    const { bvh, penalty, item } = picks[j], n = pts.length, d = new Float64Array(n), own = new Int32Array(n);
+    const { bvh, penalty, item } = picks[j], n = pts.length / 3, d = new Float64Array(n), own = new Int32Array(n);
     if (item == null) { d.fill(k.dMax); own.fill(-1); return { d, own }; }
     const { d: raw, t } = res[item];
     for (let i = 0; i < n; i++) { if (t[i] >= 0) { d[i] = Math.min(raw[i] + penalty, k.dMax); own[i] = bvh.owner[t[i]]; } else { d[i] = k.dMax; own[i] = -1; } }
@@ -168,7 +170,8 @@ const boxDist = (p, b) => Math.hypot(...[0, 1, 2].map((j) => Math.max(b.lo[j] - 
 //   新增的物体只会让距离变小，只影响比现在的距离离它更近的点（同材质的目标存在时只看同材质的新增物体）；
 //   某种颜色的重建物体整组出现或消失时，这种颜色的源部件全部重算（同材质优先的目标变了）；改动太多时全部重算。
 // 常数不同（细化时用目标档位的 δ）各自一份状态
-export function scoreCache() { return { parts: null, shared: null, states: new Map() }; }
+// persist：源模型一侧的磁盘缓存（工程给，见 project.mjs）：{ load(种类, 参数, alloc) → { meta, blobs } | null, save(种类, 参数, meta, blobs) }
+export function scoreCache(persist = null) { return { parts: null, shared: null, states: new Map(), persist }; }
 
 const hashPos = (pos) => {
   const u32 = new Uint32Array(pos.buffer, pos.byteOffset, pos.length);
@@ -190,9 +193,13 @@ function sharedOf(sourceParts, cache) {
     // 包围盒按原始坐标取（基线里的数字要和全量评分一模一样）
     const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
     for (const t of p.tris) for (const v of t) for (let j = 0; j < 3; j++) { if (v[j] < lo[j]) lo[j] = v[j]; if (v[j] > hi[j]) hi[j] = v[j]; }
-    return { i, name: p.uid ?? p.name ?? p.from ?? `part_${i}`, meshKey: p.mesh != null ? `m:${p.mesh}` : null, tris: p.tris, pos: trisToArray(p.tris), color: p.material?.color, area: areaOf(p.tris), box: { lo, hi } };
+    return { i, name: p.uid ?? p.name ?? p.from ?? `part_${i}`, meshKey: p.mesh != null ? `m:${p.mesh}` : null, tris: p.tris, color: p.material?.color, area: areaOf(p.tris), box: { lo, hi } };
   });
-  const shared = { src, srcBVH: surfaces(src) };
+  // 源表面的树：磁盘缓存里有就直接恢复（不重新建树）
+  const persist = cache?.persist, saved = persist?.load('surfaces', {});
+  const srcBVH = sourceSurfaces(sourceParts, saved ? loadSurfaces(saved) : null);
+  if (persist && !saved) { const { meta, blobs } = saveSurfaces(srcBVH); persist.save('surfaces', {}, meta, blobs); }
+  const shared = { src, srcBVH, samples: new Map(), persist };
   if (cache) { cache.parts = sourceParts; cache.shared = shared; cache.states.clear(); }
   return shared;
 }
@@ -204,7 +211,7 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   // 计时：S3D_TIMING=1 时把各阶段耗时打到 stderr
   const T0 = performance.now(), lap = (what) => process.env.S3D_TIMING && console.error(`[score] ${what} ${Math.round(performance.now() - T0)}ms`);
   const recon = sceneObjects(result, { sourceParts }).filter((o) => o.pos.length);
-  const { src, srcBVH } = sharedOf(sourceParts, cache);
+  const shared = sharedOf(sourceParts, cache), { src, srcBVH } = shared;
   const ckey = JSON.stringify([k.delta, k.dMax, k.samples, k.cRes]);
   const state = cache ? (cache.states.get(ckey) ?? cache.states.set(ckey, { recon: new Map(), prev: null, srcRes: null }).get(ckey)) : null;
   lap('sceneObjects');
@@ -291,10 +298,10 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   const srcOut = [], srcRes = [];
   const near = nearest(reconBVH, k);
   // 全量时按块批量查询（一块几百个部件：点数够分给 worker，又不必同时留着全部采样点）
-  const BLOCK = 256, full = new Map();
+  const BLOCK = 256, full = new Map(), srcPts = srcSamples(shared, k.samples);
   if (!delta) for (let b = 0; b < src.length; b += BLOCK) {
     const block = src.slice(b, b + BLOCK);
-    nearestMany(reconBVH, k, block.map((s) => ({ pts: samplePoints(s.tris, k.samples, s.i + 1), color: s.color }))).forEach((x, j) => full.set(block[j].i, x));
+    nearestMany(reconBVH, k, block.map((s) => ({ pts: srcPts[s.i], color: s.color }))).forEach((x, j) => full.set(block[j].i, x));
   }
   for (const s of src) {
     const was = delta ? state.srcRes[s.i] : null;
@@ -305,7 +312,7 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
       const adds = delta.added.filter((a) => (!same || a.color === c) && boxesMeet(s.box, a.box, was.max));
       const hit = delta.flipped.has(c) ? null : (was.owners.some((o) => delta.removed.has(o)) || adds.length ? adds : false);
       if (hit !== false) {
-        const pts = samplePoints(s.tris, k.samples, s.i + 1), f = near(s.color);
+        const pts = toPoints(srcPts[s.i]), f = near(s.color);
         const d = hit ? was.d.slice() : new Float64Array(pts.length), own = hit ? was.own.slice() : new Int32Array(pts.length);
         for (let i = 0; i < pts.length; i++) {
           if (hit && !delta.removed.has(own[i]) && !(hit.some((a) => boxDist(pts[i], a.box) < d[i]) && delta.closer(pts[i], s.color, same, d[i]))) continue;
@@ -340,7 +347,7 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   const todo = recon.map((o, j) => j).filter((j) => !state?.recon.get(keys[j])), computed = new Map();
   for (let b = 0; b < todo.length; b += BLOCK) {
     const block = todo.slice(b, b + BLOCK).map((j) => ({ j, tris: triList(recon[j].pos) }));
-    nearestMany(srcBVH, k, block.map(({ j, tris }) => ({ pts: samplePoints(tris, k.samples, seedOf(recon[j].path)), color: recon[j].color }))).forEach(({ d }, m) => {
+    nearestMany(srcBVH, k, block.map(({ j, tris }) => ({ pts: flatPoints(samplePoints(tris, k.samples, seedOf(recon[j].path))), color: recon[j].color }))).forEach(({ d }, m) => {
       const { j, tris } = block[m], res = aggregate(d, k);
       computed.set(j, { r: res.r, mean: res.mean, max: res.max, tris: tris.length, area: tris.reduce((s2, t) => s2 + triArea(t), 0) });
     });
@@ -401,7 +408,7 @@ export function neighborhoodScorer({ parts, near, others, reconColors, consts = 
   const srcColors = new Set(parts.map((p) => colorKey(p.material?.color)));
   const ents = near.map((i) => {
     const p = parts[i], color = p.material?.color;
-    return { i, color, c: colorKey(color), pts: flatPoints(samplePoints(p.tris, k.samples, i + 1)), w: k.cRes * Math.log2(1 + areaOf(p.tris) / (k.delta * k.delta)), rest: new Map() };
+    return { i, color, c: colorKey(color), pts: flatPoints(sourceSamples(p.tris, i, k.samples)), w: k.cRes * Math.log2(1 + areaOf(p.tris) / (k.delta * k.delta)), rest: new Map() };
   });
   const otherSurf = others.length ? surfaces(others) : null;
   const srcSurf = surfaces(near.map((i) => ({ pos: trisToArray(parts[i].tris), color: parts[i].material?.color })));
@@ -478,7 +485,7 @@ export function pointErrors({ result, sourceParts, path, consts = {}, top = 10 }
   for (const s of src) {
     if (!s.tris.some((t) => t.some(inside))) continue;
     const f = back(s.color);
-    for (const p of samplePoints(s.tris, k.samples, s.i + 1)) { if (!inside(p)) continue; const [d, owner] = f(p); if (d > k.delta) out2.push({ at: fix(p), err: +(d * u).toFixed(4), source: s.name, nearest: owner >= 0 ? recon[owner].path : null }); }
+    for (const p of sourceSamples(s.tris, s.i, k.samples)) { if (!inside(p)) continue; const [d, owner] = f(p); if (d > k.delta) out2.push({ at: fix(p), err: +(d * u).toFixed(4), source: s.name, nearest: owner >= 0 ? recon[owner].path : null }); }
   }
   const pick = (xs) => xs.sort((a, b) => b.err - a.err).slice(0, top);
   return { delta: k0.delta, reconToSource: { over: out1.length, worst: pick(out1) }, sourceToRecon: { over: out2.length, worst: pick(out2) } };

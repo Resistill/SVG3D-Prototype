@@ -15,11 +15,11 @@ const SHARE = !!WT && typeof SharedArrayBuffer === 'function';
 const alloc = (Type, n) => new Type(SHARE ? new SharedArrayBuffer(n * Type.BYTES_PER_ELEMENT) : new ArrayBuffer(n * Type.BYTES_PER_ELEMENT));
 
 // MeshBVH（不分组）→ 查询用的数据 { nodes, tp, tri }：节点缓冲区原样复制，三角形顶点按树序排好（double，取值就是 float32 的值）
-//   pos：建树用的三角形汤（每 9 个数一个三角形）；index：建树后重排过的索引（geometry.index.array）
-export function nearestData(bvh, index, pos) {
-  if (bvh._roots.length !== 1) throw new Error('nearestData: 只支持没有分组的几何');
-  const root = bvh._roots[0], nodes = alloc(Uint8Array, root.byteLength);
-  nodes.set(new Uint8Array(root));
+//   root：树的节点缓冲区（bvh._roots[0]，或存下的字节）；pos：建树用的三角形汤（每 9 个数一个三角形）；
+//   index：建树后重排过的索引（geometry.index.array）
+export function nearestData(root, index, pos) {
+  const bytes = root instanceof Uint8Array ? root : new Uint8Array(root), nodes = alloc(Uint8Array, bytes.length);
+  nodes.set(bytes);
   const n = index.length / 3, tp = alloc(Float64Array, n * 9), tri = alloc(Int32Array, n);
   for (let i = 0; i < n; i++) {
     for (let c = 0; c < 3; c++) { const v = index[3 * i + c] * 3; tp[9 * i + 3 * c] = pos[v]; tp[9 * i + 3 * c + 1] = pos[v + 1]; tp[9 * i + 3 * c + 2] = pos[v + 2]; }
