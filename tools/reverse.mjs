@@ -16,6 +16,7 @@ import { planesOf, panelLines, shellLines } from './panels.mjs';
 import { patchesOf } from './patches.mjs';
 import { fitSweep, centerline } from './sweepfit.mjs';
 import { heightField } from './heights.mjs';
+import { assignRoles } from './roles.mjs';
 
 // ───────── 小工具 ─────────
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -517,7 +518,7 @@ export function fitPart(part, i, only = null, basic = false) {
   //   基本体拟合得很差（e > 0.15；示例里的路面、坡道、拱、扶手都在 0.16 以上）；
   //   封闭网格要细长：V / A^1.5 < 0.04（扫掠体 = 截面 × 长度，示例里最大 0.03；立方体 0.068，10:1 的长条 0.037）
   const areaP = part.tris.length >= 16 && fits[0].e > 0.15 ? part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0) : 0;
-  if (!only && !basic && !part.noSweep && areaP > 0 && !(vol > 0 && vol / areaP ** 1.5 >= 0.04)) {
+  if (!only && !basic && !part.noSweep && !coarseRole(part) && areaP > 0 && !(vol > 0 && vol / areaP ** 1.5 >= 0.04)) {
     // 同一个网格、同样的旋转与缩放的部件（没成类型的享元）只差一个平移：结果平移过去（只在主线程上遇到——worker 只预先拟合不共用网格的部件，
     // 所以有没有 worker 结果都一样）
     const Mx = part.matrix, key = part.mesh != null && Mx && (MESH_USE.get(part.mesh) ?? 0) > 1 ? `${part.mesh}|${[0, 1, 2, 4, 5, 6, 8, 9, 10].map((q) => Math.round(Mx[q] * 1e6)).join()}` : null;
@@ -614,7 +615,7 @@ function primitiveOf(fit, part, srcFile) {
   const fitScore = Math.max(0, Math.min(1, 1 - fit.e / TOL));
   const F = fit.frame, h = F.h, [ex, ey, ez] = F.cols;
   const ref = part.name ? `${srcFile}#${part.uid ?? part.name ?? part.from}` : PARTS_FILE && part.from ? `${PARTS_FILE}#${partsNode(part.from)}` : null;
-  const toMesh = part.force === 'mesh' ? !!ref : !part.force && (fit.e > FID.fitTol && !primCheaper(fit, part) || fit.cover < COVER_MIN) && !!ref;
+  const toMesh = part.force === 'mesh' || roleP(part) === 'decal' ? !!ref : !part.force && (fit.e > FID.fitTol && !primCheaper(fit, part) || fit.cover < COVER_MIN) && !!ref;
   if (toMesh) {
     // 拟合不了：引用源网格。外包络是世界包围盒，原点在其底面中心
     // （从合并网格里拆出来的部件在源文件里没有节点可引用，只能用最接近的基本体，并如实给出低拟合度）
@@ -757,7 +758,7 @@ let PANELS = true;
 const PANEL_MIN_TRIS = 24, PANEL_MIN_SIZE = 2; // 一个空心盒子至少 24 个三角形；小于 2 m 的部件不试
 const PANEL_PLANAR = 0.8; // 表面至少这么多落在大平面上才试（宿舍区的楼、棚、门框都在 0.88 以上）
 function panelsWorth(fit, part) {
-  if (!PANELS || FID.name !== 'structure' || part.force || part.tris.length < PANEL_MIN_TRIS) return false;
+  if (!PANELS || coarseRole(part) || FID.name !== 'structure' || part.force || part.tris.length < PANEL_MIN_TRIS) return false;
   if (1 - fit.e / TOL >= 0.5 && fit.cover >= COVER_MIN) return false;
   const { min, max } = fit.aabb;
   return Math.max(...sub(max, min)) >= PANEL_MIN_SIZE * M;
@@ -806,6 +807,11 @@ function tryPanels(tris, cols, t, part, cur, n = 1) {
 // 局部评分：只看这一个源部件（与全场评分同一套计价）。板件、基本体之并都拿它和现在的写法比；
 // 源部件的采样与 BVH 用到时才建，同一个部件的几种候选共用（每次逆向开始时清空：档位不同，计价不同）
 let JUDGES = new WeakMap();
+// 部件的角色（roles.mjs）；派生出来的部件对象（类型的局部坐标版本）带着 role 属性
+let PART_ROLE = new WeakMap();
+const roleP = (p) => p.role ?? PART_ROLE.get(p) ?? 'structure';
+// 装饰、贴花不做花时间的拆解（板件、外壳、并、扫掠）：写成基本体代理或网格引用
+const coarseRole = (p) => { const r = roleP(p); return r === 'decor' || r === 'decal'; };
 // 网格表面的高度（heights.mjs）：发射出来的 on=地形.top[u,w] 要按它编译、校验
 let HEIGHT = null;
 function judgeOf(part) {
@@ -983,12 +989,12 @@ function tryShell(tris, cols, t, part, cur, n = 1) {
 }
 let SHELLS = true;
 const shellWorth = (fit, part) => {
-  if (!SHELLS || FID.name === 'semantic' || part.force || part.tris.length < PANEL_MIN_TRIS) return false;
+  if (!SHELLS || coarseRole(part) || FID.name === 'semantic' || part.force || part.tris.length < PANEL_MIN_TRIS) return false;
   if (1 - fit.e / TOL >= 0.5 && fit.cover >= COVER_MIN) return false;
   const { min, max } = fit.aabb;
   return Math.max(...sub(max, min)) >= PANEL_MIN_SIZE * M;
 };
-const unionWorth = (fit, part) => UNIONS && FID.name !== 'semantic' && !part.force && fit.e > TOL && part.tris.length >= 8;
+const unionWorth = (fit, part) => UNIONS && FID.name !== 'semantic' && !coarseRole(part) && !part.force && fit.e > TOL && part.tris.length >= 8;
 // 网格引用的代价（与评分的 L_mesh 一样，同一个网格的实例分摊）加上这一行
 const meshCostOf = (prim, part) => lineCost(`mesh x src=${prim.props.src} size=${prim.props.size} pivot=${prim.props.pivot}`) + (SCORE_DEFAULTS.cMesh * Math.log2(1 + part.tris.length)) / Math.max(1, MESH_USE.get(part.mesh) ?? 1);
 // 有内容的物体（板件、基本体之并）：内容接在这一行后面，按缩进写
@@ -1113,7 +1119,7 @@ function unifyBoxLabels(objs) {
 }
 
 // ───────── 3 & 4. 关系与校验 ─────────
-export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null, prefit = null, partsFile = null, defaultMaterial = true, panels = true, unions = true, shells = true, nameStats = null, typeSeed = null } = {}) {
+export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null, prefit = null, partsFile = null, defaultMaterial = true, panels = true, unions = true, shells = true, nameStats = null, typeSeed = null, roles: roleRules = null } = {}) {
   setFidelity(fidelity, sceneUnit);
   PARTS_FILE = partsFile;
   PANELS = panels;
@@ -1132,6 +1138,10 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   let decided = null;
   const decs = decisions ? parseDecisions(decisions) : [];
   if (decs.length) { decided = applyDecisions(parts, decs); parts = decided.parts; }
+  // 角色（roles.mjs）：部件带着 role 就用（工程按 roles.json 判好的），否则按 roleRules 现判。不改部件对象（并行拟合按对象认部件）
+  PART_ROLE = new WeakMap();
+  { const rs = parts.every((p) => p.role) ? parts.map((p) => p.role) : assignRoles(parts, roleRules); parts.forEach((p, i) => PART_ROLE.set(p, rs[i])); }
+  const helpers = parts.filter((p) => roleP(p) === 'helper');
   // 分块逆向（tiles.mjs）：名字清理按全场的名字统计，各块一致
   cleanName = nameCleaner(nameStats ?? parts.map((p) => p.name));
   // 计时：S3D_TIMING=1 时把各阶段耗时打到 stderr（实战里定位瓶颈用）
@@ -1141,7 +1151,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   if (useTypes) {
     const groups = new Map();
     parts.forEach((p, i) => {
-      if (!p.matrix || p.mesh == null || p.force) return;
+      if (!p.matrix || p.mesh == null || p.force || roleP(p) === 'helper') return;
       const M = p.matrix, cs = [[M[0], M[1], M[2]], [M[4], M[5], M[6]], [M[8], M[9], M[10]]], sc = cs.map(len);
       if (sc.some((x) => x < 1e-9)) return;
       let R = cs.map((c, k) => scl(c, 1 / sc[k]));
@@ -1160,10 +1170,10 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const local = rep.tris.map((tri) => tri.map((v) => mvT(R, sub(v, t))));
       // 局部坐标：不带矩阵（并的缓存按矩阵认同一个网格的世界坐标实例）；类型的代表不试扫掠（扫掠写在世界坐标里，做不成类型，享元就散了）
       // 采样种子：默认取第一个实例的序号；分块逆向时取网格编号的哈希（各块里同一个网格写出同样的类型体，合并时去重）
-      const fit = fitPart({ ...rep, tris: local, matrix: null, noSweep: true }, typeSeed === 'mesh' ? meshSeed(rep.mesh) : ms[0].i);
+      const fit = fitPart({ ...rep, tris: local, matrix: null, noSweep: true, role: roleP(rep) }, typeSeed === 'mesh' ? meshSeed(rep.mesh) : ms[0].i);
       const bad = fit.e > FID.fitTol || fit.cover < COVER_MIN || fit.shape === 'tube' || fit.shape === 'sweep';
       // 板件：拟合差的类型（一栋楼被多处使用）在类型坐标系里拆成墙板、楼板，和现在的写法（基本体，或各实例引用网格）比
-      const typePart = { ...rep, tris: local, matrix: null };
+      const typePart = { ...rep, tris: local, matrix: null, role: roleP(rep) };
       const curT = bad ? { mesh: SCORE_DEFAULTS.cMesh * Math.log2(1 + rep.tris.length) + ms.length * lineCost('src="x" size=1,1,1 pivot=1,1,1') } : { line: primLineOf(primitiveOf(fit, { ...rep, name: null }, srcFile)) };
       const I3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
       const pb = panelsWorth(fit, typePart) ? tryPanels(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
@@ -1193,18 +1203,23 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     }
   }
   // prefit：worker 线程里预先算好的拟合（fitpool.mjs，部件很多时），结果与这里现算的一样
-  const fits = parts.map((p, i) => (typeOf.has(i) ? null : (!p.force && prefit?.fitOf(p, i)) || fitPart(p, i, PRIMS.has(p.force) ? p.force : null)));
+  // worker 预先拟合时不知道角色：装饰、贴花拿到的扫掠不用，现拟合（与单线程一样）
+  const preOf = (p, i) => { const f = !p.force && prefit?.fitOf(p, i); return f && !(f.shape === 'sweep' && coarseRole(p)) ? f : null; };
+  const fits = parts.map((p, i) => (typeOf.has(i) || roleP(p) === 'helper' ? null : preOf(p, i) || fitPart(p, i, PRIMS.has(p.force) ? p.force : null)));
   lap(`拟合 ${parts.length} 个部件（${types.length} 种类型覆盖 ${typeOf.size} 个实例）`);
   // 名字：L0 用源节点名；没有名字时按形状编号
   const used = new Map(), counters = {};
   const reserved = new Set(parts.filter((p) => p.forceName).map((p) => sanitize(p.forceName)));
   const uniqueId = (id, own = false) => { if (!own && reserved.has(id) && !used.has(id)) used.set(id, 1); if (used.has(id)) { const n = used.get(id) + 1; used.set(id, n); return `${id}_${n}`; } used.set(id, 1); return id; };
+  // 角色写进元数据（结构是默认，不写）
+  const metaOf = (p) => (roleP(p) === 'structure' ? p.meta : { role: roleP(p), ...(p.meta ?? {}) });
   const objs = parts.map((p, i) => {
+    if (roleP(p) === 'helper') return null;
     const ty = typeOf.get(i);
     if (ty) {
       // 类型的实例：位姿就是节点的刚体变换
       const { T, R, t } = ty, b = T.box;
-      return { id: uniqueId(sanitize(cleanName(p.name) ?? T.name)), src: p.uid ?? p.name ?? null, meta: p.meta, material: p.material, kind: T.name, props: {}, cols: R, at: add(t, mvC(R, T.c0)), box: b,
+      return { id: uniqueId(sanitize(cleanName(p.name) ?? T.name)), src: p.uid ?? p.name ?? null, meta: metaOf(p), role: roleP(p), material: p.material, kind: T.name, props: {}, cols: R, at: add(t, mvC(R, T.c0)), box: b,
         fit: Math.max(0, Math.min(1, 1 - T.fit.e / TOL)), err: T.fit.e, vol: (b.max[0] - b.min[0]) * (b.max[1] - b.min[1]) * (b.max[2] - b.min[2]), symY: false, instance: true };
     }
     const prim0 = primitiveOf(fits[i], p, srcFile);
@@ -1215,8 +1230,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     const symY = prim.kind === 'sphere' || prim.kind === 'revolve' || (['cyl', 'cone'].includes(prim.kind) && !prim.props.axis);
     snapUpright(prim);
     if (symY && Math.abs(prim.cols[1][1] - 1) < 1e-6) prim.cols = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-    return { id, src: p.uid ?? p.name ?? p.from ?? null, meta: p.meta, material: p.material, ...prim, vol, symY };
-  });
+    return { id, src: p.uid ?? p.name ?? p.from ?? null, meta: metaOf(p), role: roleP(p), material: p.material, ...prim, vol, symY };
+  }).filter(Boolean);
   const typeLines = types.flatMap((T) => {
     // 板件：类型体是一组墙板、楼板（已经相对包络的底面中心）
     if (T.prim.body) return [`def ${T.name} {`, `  ${T.prim.kind} body {  // ${T.count} 个实例；${T.prim.union ? '基本体之并' : T.prim.shell ? '外壳 − 空腔 − 开口' : '板件'}`, ...T.prim.body.map((l) => '    ' + l), '  }', '}'];
@@ -1243,6 +1258,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     o.mat = mats.get(k).name;
   }
   const header = [`// 由逆向管线从 ${srcFile} 生成（${level}）。~fit 是拟合度，~err 是相对误差；mesh 是拟合不了、直接引用源网格的部件`, ''];
+  // 辅助（白模体积、雾、碰撞体）不写进几何，只列出来（roles.json 里可以改判）
+  if (helpers.length) header.push(`// 辅助部件（不写进几何）：${helpers.map((p) => p.uid ?? p.name ?? p.from).join('、')}`, '');
   // 默认材质：一半以上的物体是同一种材质时，它标成 default=true，这些物体的行里不再写 mat=（真实地图常常全场一种白模材质）
   const matCount = new Map();
   for (const o of objs) matCount.set(o.mat, (matCount.get(o.mat) ?? 0) + 1);
@@ -1364,7 +1381,9 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     TERRAIN.set(B.id, ok);
     return ok;
   };
-  const chooseFor = (A, p, cand, name0, tau = 0.005 * S, frame = null) => {
+  const chooseFor = (A, p, cand0, name0, tau = 0.005 * S, frame = null) => {
+    // 贴花（地面、墙上的薄片）不当参照物：它的包围盒常常很大、很空
+    const cand = (B) => cand0(B) && B.role !== 'decal';
     const name = (B) => name0(B);
     // 世界向量 → 父坐标系（顶层是世界；阵列里是实例的坐标系）
     const toParent = (v) => (frame ? mvT(frame, v) : v);
@@ -1505,7 +1524,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     const emitMirror = (x) => {
       const mi = mirrorOf.get(x.id);
       if (!mi || droppedMirrors.has(mi.B.id)) return;
-      lines.push(`mirror ${mi.B.id} of=${x.id} across=${mi.across}`);
+      lines.push(`mirror ${mi.B.id} of=${x.id} across=${mi.across}${mi.B.role && mi.B.role !== 'structure' ? ` ~role="${mi.B.role}"` : ''}`);
       for (const [bid, path] of mi.paths) {
         placed.add(bid); targets.push({ o: byId.get(bid), path, tol: 2e-3 * S, mirror: mi.B.id, kind: 'mirror' });
         const src = byId.get(mi.srcOf.get(bid)), es = E.get(src.id) ?? { cols: src.cols, box: src.box };
@@ -1546,7 +1565,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
           const colsL = o.cols.map((c) => mvT(poses[0].M, c));
           const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
           const orient = o.symY && Math.abs(colsL[1][1] - 1) < 1e-6 ? '' : orientText(colsL);
-          lines.push('  ' + [o.kind, ch.id, props, `at=${vecS(lp)}`, orient, (o.mat === defaultMat ? '' : `mat=${o.mat}`), `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' ') + bodyOf(o, '  '));
+          lines.push('  ' + [o.kind, ch.id, props, `at=${vecS(lp)}`, orient, (o.mat === defaultMat ? '' : `mat=${o.mat}`), (o.role && o.role !== 'structure' ? `~role="${o.role}"` : ''), `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' ') + bodyOf(o, '  '));
           for (const [k, m] of ch.members.entries()) {
             targets.push({ o: m, path: `${u.id}.${k}.${ch.id}`, tol: 2e-3 * S, unit: u.id, kind: 'along' });
             setPose(m, colsL.map((c) => mvC(poses[k].M, c)), o.box);
@@ -1572,7 +1591,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
           // 阵列成员的校验更严（2 mm），数字精度也要跟上
           const cc = chooseFor(o, o.at, cand, (B) => (sib.has(B.id) ? unitOf.get(B.id).child.id : nameOf(B)), 5e-4 * S);
           const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
-          lines.push('  ' + [o.kind, ch.id, props, cc ? cc.place : `at=${vec(o.at)}`, cc ? orientRel(o, cc.ref) : orientText(o.cols), (o.mat === defaultMat ? '' : `mat=${o.mat}`), `~fit=${fmt(Math.min(...ch.members.map((mm) => mm.fit)))}`].filter(Boolean).join(' ') + bodyOf(o, '  '));
+          lines.push('  ' + [o.kind, ch.id, props, cc ? cc.place : `at=${vec(o.at)}`, cc ? orientRel(o, cc.ref) : orientText(o.cols), (o.mat === defaultMat ? '' : `mat=${o.mat}`), (o.role && o.role !== 'structure' ? `~role="${o.role}"` : ''), `~fit=${fmt(Math.min(...ch.members.map((mm) => mm.fit)))}`].filter(Boolean).join(' ') + bodyOf(o, '  '));
           if (cc) stats[cc.kind]++; else stats.coord++;
           sib.add(o.id);
           for (const [k, mm] of ch.members.entries()) {
@@ -1627,7 +1646,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
         const placeTxt = cc ? cc.place : lp.every((v) => Math.abs(v) < 1e-6) ? '' : `at=${vec(lp)}`;
         const colsL = o.cols.map((col) => mvT(RF, col));
         const orient = cc ? orientRel(o, cc.ref) : o.symY && Math.abs(colsL[1][1] - 1) < 1e-6 ? '' : orientText(colsL);
-        lines.push('  ' + [o.kind, ch.id, props, placeTxt, orient, (o.mat === defaultMat ? '' : `mat=${o.mat}`), `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' ') + bodyOf(o, '  '));
+        lines.push('  ' + [o.kind, ch.id, props, placeTxt, orient, (o.mat === defaultMat ? '' : `mat=${o.mat}`), (o.role && o.role !== 'structure' ? `~role="${o.role}"` : ''), `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' ') + bodyOf(o, '  '));
         sib.add(o.id);
         for (const [i, m] of ch.members.entries()) {
           const k = instOf(u, i);
@@ -1717,6 +1736,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     panels: [...types.filter((T) => T.prim.panels).map((T) => ({ type: T.name, instances: T.count, S: T.prim.panels.S, was: T.prim.panels.was })), ...objs.filter((o) => o.panels).map((o) => ({ id: nm(o.id), S: o.panels.S, was: o.panels.was, instead: o.panels.kind }))],
     shells: [...types.filter((T) => T.prim.shell).map((T) => ({ type: T.name, instances: T.count, ...T.prim.shell })), ...objs.filter((o) => o.shell).map((o) => ({ id: nm(o.id), ...o.shell, instead: o.shell.kind }))],
     unions: [...types.filter((T) => T.prim.union).map((T) => ({ type: T.name, instances: T.count, prims: T.prim.union.prims, S: T.prim.union.S, was: T.prim.union.was })), ...objs.filter((o) => o.union).map((o) => ({ id: nm(o.id), prims: o.union.prims, S: o.union.S, was: o.union.was, instead: o.union.kind }))],
+    roles: Object.fromEntries([...parts.reduce((m, p) => m.set(roleP(p), (m.get(roleP(p)) ?? 0) + 1), new Map())].sort()),
+    helpers: helpers.map((p) => p.uid ?? p.name ?? p.from),
     covered: kept.reduce((s, u) => s + u.children.reduce((t, c) => t + c.members.length, 0), 0),
     placement: out.stats,
     meanFit: +(objs.reduce((s, o) => s + o.fit, 0) / objs.length).toFixed(3),

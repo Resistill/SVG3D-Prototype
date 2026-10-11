@@ -195,7 +195,8 @@ function sharedOf(sourceParts, cache) {
     // 包围盒按原始坐标取（基线里的数字要和全量评分一模一样）
     const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
     for (const t of p.tris) for (const v of t) for (let j = 0; j < 3; j++) { if (v[j] < lo[j]) lo[j] = v[j]; if (v[j] > hi[j]) hi[j] = v[j]; }
-    return { i, name: p.uid ?? p.name ?? p.from ?? `part_${i}`, meshKey: p.mesh != null ? `m:${p.mesh}` : null, tris: p.tris, color: p.material?.color, area: areaOf(p.tris), box: { lo, hi } };
+    // role：工程按 roles.json 判的角色（roles.mjs）；辅助部件（白模体积、雾、碰撞体）不属于场景，不计 R_src、不进基线
+    return { i, role: p.role ?? null, skip: p.role === 'helper', name: p.uid ?? p.name ?? p.from ?? `part_${i}`, meshKey: p.mesh != null ? `m:${p.mesh}` : null, tris: p.tris, color: p.material?.color, area: areaOf(p.tris), box: { lo, hi } };
   });
   // 源表面的树：磁盘缓存里有就直接恢复（不重新建树）
   const persist = cache?.persist, saved = persist?.load('surfaces', {});
@@ -238,7 +239,7 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   const T0 = performance.now(), lap = (what) => process.env.S3D_TIMING && console.error(`[score] ${what} ${Math.round(performance.now() - T0)}ms`);
   const recon = sceneObjects(result, { sourceParts }).filter((o) => o.pos.length);
   const shared = sharedOf(sourceParts, cache), { src, srcBVH } = shared;
-  const ckey = JSON.stringify([k.delta, k.dMax, k.samples, k.cRes]);
+  const ckey = JSON.stringify([k.delta, k.dMax, k.samples, k.cRes, src.filter((x) => x.skip).map((x) => x.i).join()]);
   const state = cache ? (cache.states.get(ckey) ?? cache.states.set(ckey, { recon: new Map(), prev: null, srcRes: null }).get(ckey)) : null;
   if (state && !state.srcRes && shared.persist) loadState(state, shared, k, ckey);
   lap('sceneObjects');
@@ -360,6 +361,7 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
       touchedParts++; touchedPoints += d.length;
     }
     srcRes.push(x);
+    if (s.skip) { srcOut.push({ name: s.name, tris: s.tris.length, cost: 0, role: 'helper', skipped: true }); continue; }
     Rsrc += x.c;
     // 归属：~src 指向这个源部件的物体优先（它就是“负责解释这块网格”的那个），没有时归到最近点最多落在其上的物体
     const who = srcOwner.get(s.name) ?? (x.who >= 0 ? ids.path[x.who] : null);
@@ -407,6 +409,7 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   let Smesh = 0;
   const baseSeen = new Set();
   for (const s of src) {
+    if (s.skip) continue;
     const { lo, hi } = s.box;
     const first = !s.meshKey || !baseSeen.has(s.meshKey);
     if (s.meshKey) baseSeen.add(s.meshKey);

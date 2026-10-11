@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { compile, FACT_EPS } from '../src/s3d.js';
 import { readParts, reverse, FIDELITY, partsNode } from './reverse.mjs';
 import { heightField } from './heights.mjs';
+import { assignRoles } from './roles.mjs';
 import { reverseTiled } from './tiles.mjs';
 import { Document, NodeIO } from '@gltf-transform/core';
 import { SCORE_DEFAULTS, scoreCache } from './score.mjs';
@@ -87,6 +88,7 @@ export function openProject(dir) {
     // 几何层里有没有 .top[…] 这样的曲面锚点（有的话编译需要源网格）
     usesSurfaceAnchors: () => { try { return P.geometryFiles().some((x) => /\.top\[/.test(x.text)); } catch { return false; } },
     _heights: null,
+    roleRules() { try { return JSON.parse(P.read('roles.json')); } catch { return []; } },
     // 计入描述长度的文本
     // 基础层可能拆成了多个文件（base.s3d 是索引），修改层可能 import 细化结果（edits/refine-*.s3d），import 的文件一并计入
     geometryFiles: (overrides = {}) => GEOMETRY_LAYERS.flatMap((f) => importedFiles((x) => overrides[x] ?? P.read(x), f))
@@ -110,6 +112,8 @@ export function openProject(dir) {
         SESSIONS.set(dir, (ses = { key, parts, sidecar, cache: scoreCache(persist) }));
       }
       P.sidecar = ses.sidecar;
+      // 角色（roles.mjs）：工程目录里的 roles.json 排在默认规则前面；挂在部件上，逆向、评分、渲染都用它（不进磁盘缓存）
+      if (!ses.roled) { const rs = assignRoles(ses.parts, P.roleRules()); ses.parts.forEach((p, i) => { p.role = rs[i]; }); ses.roled = true; }
       return (P._parts = ses.parts);
     },
     // 增量评分的缓存（与 sourceParts() 读到的源部件配套；缓存自己会核对源部件是不是同一组）
