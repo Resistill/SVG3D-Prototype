@@ -251,6 +251,8 @@ async function run() {
   // 网格引用的 src 相对组合根所在的目录（工程目录；与工具的约定一致）
   viewer.srcBase = new URL(rootFile(), location.href).href;
   const warn = viewer.setScene(r);
+  $('#meshes').hidden = !viewer.meshCount;
+  $('#meshes').textContent = `网格 ${viewer.meshCount}`;
   const t2 = performance.now();
   // 打字时的等待按主线程上的耗时放宽（编译本身在 Worker 里，不卡界面）
   lastCost = out.worker ? t2 - t1 : t2 - t0;
@@ -544,6 +546,11 @@ viewer.fly.onChange = (on) => {
 $('#curves').addEventListener('click', (e) => {
   viewer.curveLayer.visible = !viewer.curveLayer.visible;
   e.target.classList.toggle('on', viewer.curveLayer.visible);
+});
+// 网格引用（逆向退回原网格的部件）的显示开关：关掉后只剩基本体，对照两种画面就知道哪些地方靠网格撑着
+$('#meshes').addEventListener('click', (e) => {
+  viewer.setShowMeshes(!viewer.showMeshes);
+  e.target.classList.toggle('on', viewer.showMeshes);
 });
 $('#export').addEventListener('click', () => viewer.exportGLB(current));
 

@@ -36,6 +36,9 @@ export class Viewer {
     // 源模型叠加层：半透明，不参与拾取与取景
     this.overlay = new THREE.Group();
     this.scene.add(this.content, this.curveLayer, this.overlay);
+    // mesh 引用（逆向时退回原网格的部件）是否显示；关掉后只剩基本体，看语义重建本身缺了什么
+    this.showMeshes = true;
+    this.meshCount = 0;
     // 误差热力：路径 → 0..1（满刻度由调用方定），null 时按材质显示
     this.heat = null;
     this.heatMats = new Map();
@@ -163,6 +166,7 @@ export class Viewer {
     this.content.traverse((o) => { if (o.isMesh && o.geometry) o.geometry.dispose(); });
     this.content.clear();
     const warnings = [];
+    this.meshCount = 0;
     for (const item of result.items) {
       try {
         if (item.kind === 'solid' && item.geom.type === 'mesh') { this.addMeshRef(item); continue; }
@@ -191,7 +195,7 @@ export class Viewer {
     this.nodeMap = new Map(result.nodes.map((n) => [n.path, n]));
     this.fitShadow();
     if (this.firstFrame && this.content.children.length) { this.frame(); this.firstFrame = false; }
-    if (this.isolated) this.applyIsolation();
+    this.applyVisibility();
     if (this.selected) this.highlight(this.selected);
     return warnings;
   }
@@ -200,6 +204,8 @@ export class Viewer {
   addMeshRef(item) {
     const holder = new THREE.Group();
     holder.name = item.path;
+    holder.userData.meshRef = true;
+    this.meshCount++;
     const ph = new THREE.Mesh(worldGeom(item), new THREE.MeshStandardMaterial({ color: '#8899aa', transparent: true, opacity: 0.35 }));
     ph.userData = { path: item.path, tags: item.tags, origMat: ph.material };
     this.paint(ph);
@@ -369,12 +375,17 @@ export class Viewer {
   // 隔离视图：只显示这些路径（及其后代），其余隐藏；null 退出
   isolate(paths) {
     this.isolated = paths?.length ? [...paths] : null;
-    this.applyIsolation();
+    this.applyVisibility();
   }
-  applyIsolation() {
+  // 显示 / 隐藏 mesh 引用（与隔离视图叠加：两者都允许才显示）
+  setShowMeshes(on) {
+    this.showMeshes = on;
+    this.applyVisibility();
+  }
+  applyVisibility() {
     const set = this.isolated && new Set(this.isolated);
     const under = (p) => { for (let i = p.length; i > 0; i = p.lastIndexOf('.', i - 1)) if (set.has(p.slice(0, i))) return true; return false; };
-    for (const c of this.content.children) c.visible = !set || under(c.name);
+    for (const c of this.content.children) c.visible = (!set || under(c.name)) && (this.showMeshes || !c.userData.meshRef);
     for (const l of this.curveLayer.children) l.visible = !set || under(l.userData.path ?? '');
   }
   // 一组路径的世界包围盒（隔离时对准用）
