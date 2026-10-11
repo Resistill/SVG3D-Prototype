@@ -492,6 +492,15 @@ function fitRevolveShell(pts, F, a, t0, H, scale, tol, tris) {
 
 // 网格编号 → 采样种子（分块逆向的类型）
 const meshSeed = (m) => { let h = 2166136261; for (const ch of String(m)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return (h >>> 0) % 1000003; };
+// 写起来更长的形状（多点轮廓的旋转体、样条扫掠）要用省下的残差付得起多写的数，否则用简单的那个：
+// 误差小一点就选它的话，一根细杆会被写成 20 个轮廓点的旋转体——轮廓描的是建模与取整的噪声。
+// 残差按 primCheaper 的估计（误差在 τ 以内不计，所以简单形状已经在容差以内时多写的全是浪费）；多写的数每个按 1.5
+function paysOff(simple, complex, extraNumbers, part) {
+  const h = simple.frame.h, scale = Math.max(Math.min(...h), 0.02 * Math.max(...h), 1e-6), tauS = FID.tau * M;
+  const area = part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0);
+  const R = (e) => 2 * 4 * Math.log2(1 + area / (tauS * tauS)) * Math.log2(1 + Math.max(0, e * scale - tauS) / tauS);
+  return R(simple.e) - R(complex.e) > 1.5 * extraNumbers;
+}
 // 扫掠的结果整体平移
 const moveSweep = (sw, d) => ({ ...sw, curve: sw.curve.kind === 'spline' ? { ...sw.curve, ctrl: sw.curve.ctrl.map((p) => add(p, d)) } : { ...sw.curve, c: add(sw.curve.c, d) } });
 let SWEEP_SEEN = new Map(), SWEEP_FAILED = new Set();
@@ -513,7 +522,7 @@ export function fitPart(part, i, only = null, basic = false) {
   if (!only && !basic && fits[0].e > 0.02) { const t = fitTube(part, i, vol, fits[0].e); if (t && t.e < fits[0].e) fits.unshift({ ...t, frame: fits[0].frame }); }
   // 拟合得不好时，试试旋转体（整流罩、天线）；语义档一律用基本体当代理（灰盒），不用旋转体。
   // 轮廓最多 16 个点；网格按真实信息量计价的部件（结构、地形）放宽到 64 个——它们拟合不好时不再退回便宜的网格引用，长一点的轮廓也比粗糙的基本体好
-  if (!only && !basic && FID.name !== 'semantic' && fits[0].e > 0.02) { const rv = fitRevolve(pts, verts, fits[0].frame, part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0), part.tris); if (rv && rv.e < fits[0].e && rv.prof.length <= (meshPriceMode(roleP(part), MESH_K) === 'full' ? 64 : 16)) fits.unshift({ ...rv, frame: fits[0].frame }); }
+  if (!only && !basic && FID.name !== 'semantic' && fits[0].e > 0.02) { const rv = fitRevolve(pts, verts, fits[0].frame, part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0), part.tris); if (rv && rv.e < fits[0].e && rv.prof.length <= (meshPriceMode(roleP(part), MESH_K) === 'full' ? 64 : 16) && paysOff(fits[0], rv, 2 * rv.prof.length - 3, part)) fits.unshift({ ...rv, frame: fits[0].frame }); }
   // 拟合得不好时，试试扫掠（截面不变、沿一条曲线走：弯曲的路面、螺旋坡道、拱、螺旋扶手；sweepfit.mjs）
   // 两个几乎不花时间的门槛（扫掠拟合每个部件要几毫秒到上百毫秒，真实场景里拟合差的部件有几百个，大多是家具这类别的东西）：
   //   基本体拟合得很差（e > 0.15；示例里的路面、坡道、拱、扶手都在 0.16 以上）——网格按真实信息量计价的部件（结构、地形）
@@ -531,7 +540,8 @@ export function fitPart(part, i, only = null, basic = false) {
     if (key && SWEEP_SEEN.has(key)) { const c = SWEEP_SEEN.get(key); sw = c.sw && moveSweep(c.sw, sub([Mx[12], Mx[13], Mx[14]], c.t)); }
     else if (fkey && SWEEP_FAILED.has(fkey)) sw = null;
     else { sw = fitSweep(part.tris, { tau: FID.tau * M, seed: 1 + ((part.tris.length * 7919 + Math.round(areaP / (M * M))) % 1000003) }); if (key) SWEEP_SEEN.set(key, { sw, t: [Mx[12], Mx[13], Mx[14]] }); if (!sw && fkey) SWEEP_FAILED.add(fkey); }
-    if (sw && sw.e < fits[0].e) fits.unshift({ shape: 'sweep', ...sw, frame: fits[0].frame });
+    // 多写的数：样条每个控制点 3 个；圆弧、螺旋一条曲线语句约 6 个；截面 1–2 个；基本体约 3 个
+    if (sw && sw.e < fits[0].e && paysOff(fits[0], sw, (sw.curve.kind === 'spline' ? 3 * sw.curve.ctrl.length : 6) + 2 - 3, part)) fits.unshift({ shape: 'sweep', ...sw, frame: fits[0].frame });
   }
   // 拟合得不好时，试试台阶（楼梯）
   if (!only && !basic && fits[0].e > 0.05) { const st = fitSteps(part, pts, fits[0].frame); if (st && st.e < fits[0].e) fits.unshift({ ...st, frame: fits[0].frame }); }
