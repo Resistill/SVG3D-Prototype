@@ -16,7 +16,7 @@ import { planesOf, panelLines, shellLines } from './panels.mjs';
 import { patchesOf } from './patches.mjs';
 import { fitSweep, centerline } from './sweepfit.mjs';
 import { heightField } from './heights.mjs';
-import { assignRoles } from './roles.mjs';
+import { assignRoles, scatterOf } from './roles.mjs';
 
 // ───────── 小工具 ─────────
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -1004,7 +1004,53 @@ const primLineOf0 = (prim) => [prim.kind, 'cur', ...Object.entries(prim.props).m
 const primLineOf = (prim) => (prim.curve ? [[prim.curve.kind, 'cur_path', ...Object.entries(prim.curve.props).map(([k, v]) => `${k}=${v}`), `at=${vec(prim.curve.at)}`, 'pin=origin', prim.curve.turn].filter(Boolean).join(' '), primLineOf0({ ...prim, props: { ...prim.props, path: 'cur_path' } })].join('\n') : primLineOf0(prim));
 // 普通部件换成板件：物体坐标系取拟合的偏航（拟合坐标系直立时），否则世界朝向
 // 基本体之并同样（物体坐标系取世界朝向：每一块有自己的朝向）；两种都成立时取分数低的
+// 分散的模型（一个节点里装着很多互不相连的块，各块包围盒之和远小于整体：几片外墙、楼梯的零件、散放的杂物）：
+// 整体只能套一个虚胖的大包围盒——关系、分区、阵列都被它误导。按连通分量拆开，每块拟合成基本体，写成 group { 各块 }，
+// 名字与来源不变。拆开后的局部分数不超过现在写法的 1.25 倍才拆（语义上偏向拆开，但几十片零件写成几十个盒子远比一行网格引用长）；
+// 不拆的标上 ~scatter=块数，并且不当别人的参照物（同贴花）。贴花、辅助不拆；块太多（> 60，碎屑）的不拆
+const SCATTER_SLACK = 1.25;
+const SCATTER_MAX = 60;
+function scatterGeometry(tris) {
+  const sc = scatterOf({ tris });
+  if (!sc.scattered || sc.comps.length > SCATTER_MAX) return null;
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (const tri of tris) for (const v of tri) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], v[k]); hi[k] = Math.max(hi[k], v[k]); }
+  const c0 = [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2];
+  const count = {};
+  const lines = sc.comps.map((ids) => {
+    const ts = ids.map((k) => tris[k].map((v) => sub(v, c0)));
+    const prim = snapUpright(primitiveOf(fitPart({ tris: ts, noSweep: true }, ids[0], null, true), { tris: ts }, 'x'));
+    count[prim.kind] = (count[prim.kind] ?? 0) + 1;
+    const nm = count[prim.kind] > 1 ? `${prim.kind}_${count[prim.kind]}` : prim.kind;
+    return [prim.kind, nm, ...Object.entries(prim.props).map(([k, v]) => `${k}=${v}`), prim.absolute ? '' : `at=${vec(prim.at)}`, prim.absolute ? '' : orientText(prim.cols)].filter(Boolean).join(' ');
+  });
+  if (lines.some((l) => !/^(box|cyl|cone|sphere|wedge) /.test(l))) return null;
+  const { body: body0, shift, box } = centerBody(lines);
+  return { body: body0.map((l) => l.replace(/ at=0,0,0(?= |$)/, '')), c0: add(c0, shift), box, n: lines.length };
+}
+// 拆开的写法（物体坐标系里、相对 g.c0）与现在的写法比局部分数；n：类型的实例数
+function scatterAccept(g, part, cur, n = 1) {
+  const { evalLines } = judgeOf(part);
+  const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon);
+  const curS = cur.mesh != null ? cur.mesh : (() => { const ls = evalLines([cur.line]); return ls ? total(ls) : Infinity; })();
+  const ls = evalLines([`group g at=${vec(g.c0)} {`, ...g.body.map((l) => '  ' + l), '}']);
+  return !!ls && total(ls) <= SCATTER_SLACK * curS;
+}
+// 分散、但没拆开的部件（块数）：不当别人的参照物
+let SCATTERED = new WeakMap();
+const fitScoreOf = (fit) => Math.max(0, Math.min(1, 1 - fit.e / TOL));
+const scatterWorth = (part) => !part.force && part.tris.length >= 6 && !['decal', 'helper'].includes(roleP(part));
+
 function panelPrim(fit, part, prim, partIndex = -1) {
+  // 已经认出来的（台阶、管道、扫掠、拟合得好的基本体）不拆
+  if (scatterWorth(part) && !['steps', 'tube', 'sweep'].includes(fit.shape) && (fit.e > TOL || fit.cover < COVER_MIN)) {
+    const g = scatterGeometry(part.tris);
+    if (g) {
+      const cur0 = prim.kind === 'mesh' ? { mesh: meshCostOf(prim, part) } : { line: primLineOf(prim) };
+      if (scatterAccept(g, part, cur0)) return { kind: 'group', props: {}, body: g.body, cols: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], at: g.c0, box: g.box, fit: fitScoreOf(fit), err: fit.e, scatter: { blocks: g.n } };
+      SCATTERED.set(part, g.n);
+    }
+  }
   const cur = prim.kind === 'mesh' ? { mesh: meshCostOf(prim, part) } : { line: primLineOf(prim) };
   let out = null;
   const better = (S) => !out || S < (out.panels ?? out.union ?? out.shell).S;
@@ -1132,6 +1178,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   SWEEP_FAILED = new Set();
   MESH_USE = new Map();
   JUDGES = new WeakMap();
+  SCATTERED = new WeakMap();
   HEIGHT = heightField(parts);
   for (const p of parts) if (p.mesh != null) MESH_USE.set(p.mesh, (MESH_USE.get(p.mesh) ?? 0) + 1);
   // 决定层：先作用到源部件上（忽略、合并、指定形状 / 名字 / 类型名），锁定在最后按上一次的结果替换
@@ -1176,16 +1223,18 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const typePart = { ...rep, tris: local, matrix: null, role: roleP(rep) };
       const curT = bad ? { mesh: SCORE_DEFAULTS.cMesh * Math.log2(1 + rep.tris.length) + ms.length * lineCost('src="x" size=1,1,1 pivot=1,1,1') } : { line: primLineOf(primitiveOf(fit, { ...rep, name: null }, srcFile)) };
       const I3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-      const pb = panelsWorth(fit, typePart) ? tryPanels(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
+      let sg = scatterWorth(typePart) && !['steps', 'tube', 'sweep'].includes(fit.shape) && (fit.e > TOL || fit.cover < COVER_MIN) ? scatterGeometry(local) : null;
+      if (sg && !scatterAccept(sg, typePart, curT, ms.length)) { for (const m of ms) SCATTERED.set(parts[m.i], sg.n); sg = null; }
+      const pb = !sg && panelsWorth(fit, typePart) ? tryPanels(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
       // 基本体之并（类型体是几个基本体）：两种都成立时取分数低的
-      const ub = unionWorth(fit, typePart) ? tryUnion(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
-      const sb = shellWorth(fit, typePart) ? tryShell(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
-      const cb = [pb, ub, sb].filter(Boolean).sort((x, y) => x.S - y.S)[0] ?? null;
+      const ub = !sg && unionWorth(fit, typePart) ? tryUnion(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
+      const sb = !sg && shellWorth(fit, typePart) ? tryShell(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
+      const cb = sg ? { ...sg, kind: 'group', fit: 1 - fit.e / TOL } : [pb, ub, sb].filter(Boolean).sort((x, y) => x.S - y.S)[0] ?? null;
       if (bad && !cb) continue; // 拟合不了的（会退回网格引用）不做类型
       let prim, c0, lo, hi;
       if (cb) {
         c0 = cb.c0; lo = add(c0, cb.box.min); hi = add(c0, cb.box.max);
-        prim = { kind: cb.kind ?? 'group', props: {}, body: cb.body, cols: I3, at: c0, box: cb.box, ...(cb === ub ? { union: { S: ub.S, was: ub.curS, prims: ub.prims } } : cb === sb ? { shell: { S: sb.S, was: sb.curS, openings: sb.openings, arches: sb.arches, interior: sb.interior } } : { panels: { S: pb.S, was: pb.curS } }) };
+        prim = { kind: cb.kind ?? 'group', props: {}, body: cb.body, cols: I3, at: c0, box: cb.box, ...(cb.n ? { scatter: { blocks: cb.n } } : cb === ub ? { union: { S: ub.S, was: ub.curS, prims: ub.prims } } : cb === sb ? { shell: { S: sb.S, was: sb.curS, openings: sb.openings, arches: sb.arches, interior: sb.interior } } : { panels: { S: pb.S, was: pb.curS } }) };
       } else {
         prim = primitiveOf(fit, { ...rep, name: null }, srcFile);
         // 类型体的原点放在包络的底面中心：实例的定位规则就和普通基本体一样
@@ -1212,14 +1261,14 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   const reserved = new Set(parts.filter((p) => p.forceName).map((p) => sanitize(p.forceName)));
   const uniqueId = (id, own = false) => { if (!own && reserved.has(id) && !used.has(id)) used.set(id, 1); if (used.has(id)) { const n = used.get(id) + 1; used.set(id, n); return `${id}_${n}`; } used.set(id, 1); return id; };
   // 角色写进元数据（结构是默认，不写）
-  const metaOf = (p) => (roleP(p) === 'structure' ? p.meta : { role: roleP(p), ...(p.meta ?? {}) });
+  const metaOf = (p) => { const m = roleP(p) === 'structure' ? p.meta : { role: roleP(p), ...(p.meta ?? {}) }; return SCATTERED.has(p) ? { ...(m ?? {}), scatter: SCATTERED.get(p) } : m; };
   const objs = parts.map((p, i) => {
     if (roleP(p) === 'helper') return null;
     const ty = typeOf.get(i);
     if (ty) {
       // 类型的实例：位姿就是节点的刚体变换
       const { T, R, t } = ty, b = T.box;
-      return { id: uniqueId(sanitize(cleanName(p.name) ?? T.name)), src: p.uid ?? p.name ?? null, meta: metaOf(p), role: roleP(p), material: p.material, kind: T.name, props: {}, cols: R, at: add(t, mvC(R, T.c0)), box: b,
+      return { id: uniqueId(sanitize(cleanName(p.name) ?? T.name)), src: p.uid ?? p.name ?? null, meta: metaOf(p), role: roleP(p), scattered: SCATTERED.has(p), material: p.material, kind: T.name, props: {}, cols: R, at: add(t, mvC(R, T.c0)), box: b,
         fit: Math.max(0, Math.min(1, 1 - T.fit.e / TOL)), err: T.fit.e, vol: (b.max[0] - b.min[0]) * (b.max[1] - b.min[1]) * (b.max[2] - b.min[2]), symY: false, instance: true };
     }
     const prim0 = primitiveOf(fits[i], p, srcFile);
@@ -1230,11 +1279,11 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     const symY = prim.kind === 'sphere' || prim.kind === 'revolve' || (['cyl', 'cone'].includes(prim.kind) && !prim.props.axis);
     snapUpright(prim);
     if (symY && Math.abs(prim.cols[1][1] - 1) < 1e-6) prim.cols = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-    return { id, src: p.uid ?? p.name ?? p.from ?? null, meta: metaOf(p), role: roleP(p), material: p.material, ...prim, vol, symY };
+    return { id, src: p.uid ?? p.name ?? p.from ?? null, meta: metaOf(p), role: roleP(p), scattered: SCATTERED.has(p), material: p.material, ...prim, vol, symY };
   }).filter(Boolean);
   const typeLines = types.flatMap((T) => {
     // 板件：类型体是一组墙板、楼板（已经相对包络的底面中心）
-    if (T.prim.body) return [`def ${T.name} {`, `  ${T.prim.kind} body {  // ${T.count} 个实例；${T.prim.union ? '基本体之并' : T.prim.shell ? '外壳 − 空腔 − 开口' : '板件'}`, ...T.prim.body.map((l) => '    ' + l), '  }', '}'];
+    if (T.prim.body) return [`def ${T.name} {`, `  ${T.prim.kind} body {  // ${T.count} 个实例；${T.prim.union ? '基本体之并' : T.prim.shell ? '外壳 − 空腔 − 开口' : T.prim.scatter ? '分散的块' : '板件'}`, ...T.prim.body.map((l) => '    ' + l), '  }', '}'];
     // 台阶的位置由两个端点决定（at= 对它不起作用）：端点直接平移到类型的坐标系里（原点在包络的底面中心）
     if (T.prim.kind === 'span') {
       const mv = (v) => vec(sub(v.split(',').map(Number), T.c0));
@@ -1382,8 +1431,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     return ok;
   };
   const chooseFor = (A, p, cand0, name0, tau = 0.005 * S, frame = null) => {
-    // 贴花（地面、墙上的薄片）不当参照物：它的包围盒常常很大、很空
-    const cand = (B) => cand0(B) && B.role !== 'decal';
+    // 贴花（地面、墙上的薄片）、分散的模型不当参照物：它们的包围盒常常很大、很空
+    const cand = (B) => cand0(B) && B.role !== 'decal' && !B.scattered;
     const name = (B) => name0(B);
     // 世界向量 → 父坐标系（顶层是世界；阵列里是实例的坐标系）
     const toParent = (v) => (frame ? mvT(frame, v) : v);
@@ -1735,6 +1784,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     // 第一遍就拆成板件的部件与类型：分数（只看这个部件）从 was 降到 S
     panels: [...types.filter((T) => T.prim.panels).map((T) => ({ type: T.name, instances: T.count, S: T.prim.panels.S, was: T.prim.panels.was })), ...objs.filter((o) => o.panels).map((o) => ({ id: nm(o.id), S: o.panels.S, was: o.panels.was, instead: o.panels.kind }))],
     shells: [...types.filter((T) => T.prim.shell).map((T) => ({ type: T.name, instances: T.count, ...T.prim.shell })), ...objs.filter((o) => o.shell).map((o) => ({ id: nm(o.id), ...o.shell, instead: o.shell.kind }))],
+    scattered: [...types.filter((T) => T.prim.scatter).map((T) => ({ type: T.name, instances: T.count, blocks: T.prim.scatter.blocks })), ...objs.filter((o) => o.scatter).map((o) => ({ id: nm(o.id), blocks: o.scatter.blocks }))],
     unions: [...types.filter((T) => T.prim.union).map((T) => ({ type: T.name, instances: T.count, prims: T.prim.union.prims, S: T.prim.union.S, was: T.prim.union.was })), ...objs.filter((o) => o.union).map((o) => ({ id: nm(o.id), prims: o.union.prims, S: o.union.S, was: o.union.was, instead: o.union.kind }))],
     roles: Object.fromEntries([...parts.reduce((m, p) => m.set(roleP(p), (m.get(roleP(p)) ?? 0) + 1), new Map())].sort()),
     helpers: helpers.map((p) => p.uid ?? p.name ?? p.from),
