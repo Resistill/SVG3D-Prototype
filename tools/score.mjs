@@ -16,6 +16,7 @@ import { closestMany, pointArray, sharedArray } from './nearest.mjs';
 import { samplePoints, sourceSamples } from './parts.mjs';
 import { colorKey, surfaces, sourceSurfaces, saveSurfaces, loadSurfaces } from './surfaces.mjs';
 import { sceneObjects, trisToArray } from './worldtris.mjs';
+import { nodeRoles } from '../src/roles-view.js';
 
 // 长度常数（delta、dMax）按米给出，unit 是每个场景单位多少米；计算前换算成场景单位（inScene），输出的误差（meanErr、maxErr）再换回米。
 // 换算之后分数与单位无关：残差是 d/δ，面积权重是 面积/δ²，都是无量纲的
@@ -407,22 +408,35 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   // 基线：每个源部件写成一句世界坐标的 mesh 引用，误差为零（只取决于源部件与 cMesh）
   const fmt = (x) => String(Math.round(x * 1e4) / 1e4);
   let Smesh = 0;
-  const baseSeen = new Set();
+  const baseSeen = new Set(), baseOf = new Array(src.length).fill(0);
   for (const s of src) {
     if (s.skip) continue;
     const { lo, hi } = s.box;
     const first = !s.meshKey || !baseSeen.has(s.meshKey);
     if (s.meshKey) baseSeen.add(s.meshKey);
     const pv = [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2];
+    const before = Smesh;
     Smesh += lineCost(`mesh p src="x#${s.name}" size=${[0, 1, 2].map((j) => fmt(hi[j] - lo[j])).join(',')} pivot=${pv.map(fmt).join(',')} at=${pv.map(fmt).join(',')} mat=m`) + (first ? k.cMesh * Math.log2(1 + s.tris.length) : 0);
+    baseOf[s.i] = Smesh - before;
   }
   lap('S_mesh');
   const S = D.total + Lmesh + Rsrc + Rrecon;
+  // 按角色分开（roles.mjs）：重建一侧（描述长度、网格引用、R_recon）按物体的 ~role，源一侧（R_src、基线 S_mesh）按源部件的角色；
+  // 每个角色里同样算解释率 1 − S / S_mesh。没归属的描述长度（unattributed）不分，所以各角色的 S 加起来比总分少这一点
+  const roleOf = nodeRoles(result), byRole = {};
+  const R = (r) => (byRole[r] ??= { S: 0, L_stmt: 0, L_mesh: 0, R_src: 0, R_recon: 0, S_mesh: 0, objects: 0, sources: 0 });
+  for (const p of per.values()) { const b = R(roleOf(p.path)); b.L_stmt += p.stmt; b.L_mesh += p.mesh; b.R_recon += p.rRecon; b.objects++; }
+  src.forEach((x, i) => { if (x.skip) return; const b = R(x.role ?? 'structure'); b.R_src += srcRes[i].c; b.S_mesh += baseOf[i]; b.sources++; });
+  for (const b of Object.values(byRole)) {
+    b.S = b.L_stmt + b.L_mesh + b.R_src + b.R_recon;
+    b.explain = b.S_mesh ? +(1 - b.S / b.S_mesh).toFixed(4) : null;
+    for (const k of ['S', 'L_stmt', 'L_mesh', 'R_src', 'R_recon', 'S_mesh']) b[k] = +b[k].toFixed(2);
+  }
   const objects = [...per.values()].map((p) => ({ ...p, total: +(p.stmt + p.mesh + p.rSrc + p.rRecon).toFixed(3), stmt: +p.stmt.toFixed(2), mesh: +p.mesh.toFixed(2), rSrc: +p.rSrc.toFixed(3), rRecon: +p.rRecon.toFixed(3), meanErr: +(p.meanErr * u).toFixed(5), maxErr: +(p.maxErr * u).toFixed(5) }));
   const r3 = (x) => +x.toFixed(2);
   return {
     S: r3(S), L_stmt: r3(D.total), unattributed: r3(D.total - attributed), droppedLines: D.dropped, L_mesh: r3(Lmesh), R_src: r3(Rsrc), R_recon: r3(Rrecon), S_mesh: r3(Smesh), explain: +(1 - S / Smesh).toFixed(4),
-    consts: k0, objects, sources: srcOut,
+    byRole, consts: k0, objects, sources: srcOut,
     worst: [...objects].sort((a, b) => (b.mesh + b.rSrc + b.rRecon) - (a.mesh + a.rSrc + a.rRecon)).slice(0, 20).map((o) => ({ path: o.path, cost: +(o.mesh + o.rSrc + o.rRecon).toFixed(2), meanErr: o.meanErr, mesh: o.mesh > 0 })),
   };
 }
