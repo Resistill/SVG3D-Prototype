@@ -159,7 +159,16 @@ async function inspectSource(P, names) {
     const area = p.tris.reduce((s, [A, B, C]) => { const u = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], w = [C[0] - A[0], C[1] - A[1], C[2] - A[2]]; return s + Math.hypot(u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]) / 2; }, 0);
     const F = pcaFrame(samplePoints(p.tris, 800, i + 1));
     let suggestion = null;
-    try { suggestion = reverseParts([p], { srcFile: P.cfg.source, compress: false, names: false, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit }).src.split('\n').find((l) => /^(box|cyl|cone|sphere|wedge|mesh) /.test(l))?.replace(/ ~src=.*$/, '') ?? null; } catch { /* 单独逆向失败 */ }
+    try {
+      // 第一条物体语句；板件、基本体之并、外壳是带内容的多行块，整块给出
+      const ls = reverseParts([p], { srcFile: P.cfg.source, compress: false, names: false, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit }).src.split('\n');
+      const k = ls.findIndex((l) => /^(box|cyl|cone|sphere|wedge|mesh|revolve|pipe|span|group|subtract) /.test(l));
+      if (k >= 0) {
+        const head = ls[k].replace(/ ~src="[^"]*"/, '').replace(/ ~fit=\S+/, '');
+        const end = head.endsWith(' {') ? ls.findIndex((l, j) => j > k && l === '}') : k;
+        suggestion = [head, ...ls.slice(k + 1, end + 1)].join('\n');
+      }
+    } catch { /* 单独逆向失败 */ }
     return {
       name, tris: p.tris.length, material: p.material, area: +area.toFixed(3),
       box: { min: r4(lo), max: r4(hi), size: r4(hi.map((v, k) => v - lo[k])), center: r4(hi.map((v, k) => (v + lo[k]) / 2)) },

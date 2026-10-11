@@ -6,7 +6,7 @@ import { cpus } from 'node:os';
 
 const WORKER = new URL('./fitworker.mjs', import.meta.url);
 
-export async function prefit(parts, { fidelity = 'detail', unit = 1, threads = Math.min(8, cpus().length - 1), min = 1500 } = {}) {
+export async function prefit(parts, { fidelity = 'detail', unit = 1, threads = Math.min(8, cpus().length - 1), min = 300 } = {}) {
   if (parts.length < min || threads < 2) return null;
   const meshUse = new Map();
   for (const p of parts) if (p.mesh != null) meshUse.set(p.mesh, (meshUse.get(p.mesh) ?? 0) + 1);
@@ -18,8 +18,9 @@ export async function prefit(parts, { fidelity = 'detail', unit = 1, threads = M
     w.once('message', (m) => { resolve(m); w.terminate(); });
     w.once('error', reject);
   })));
-  const fits = new Map();
-  for (const r of results) for (const { i, fit } of r) fits.set(i, fit);
+  const fits = new Map(), unions = new Map();
+  for (const r of results) for (const { i, fit, union } of r) { fits.set(i, fit); if (union !== undefined) unions.set(i, union); }
   // 只有同一个部件对象在同一个序号上才能取用（决定层可能换掉、删掉部件，序号会变）
-  return { fitOf: (p, i) => (parts[i] === p ? fits.get(i) : undefined), count: fits.size };
+  // unionOf：拟合差的部件预先算好的“基本体之并”的几何（null 表示拼不成；undefined 表示没算）
+  return { fitOf: (p, i) => (parts[i] === p ? fits.get(i) : undefined), unionOf: (p, i) => (parts[i] === p ? unions.get(i) : undefined), count: fits.size };
 }

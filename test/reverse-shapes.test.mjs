@@ -93,7 +93,8 @@ box slab size=19.4,0.3,11.4 at=0,4,0
   // 屋顶上的一个箱子：立在板件拼成的楼上
   const parts = [{ name: 'hall', tris, material: white }, ground, { name: 'crate', tris: cube([2, 8, -1], [4, 10, 1]), material: grey }];
   const scoreOf = (out) => score({ result: compile(out.src), files: [{ file: 'x.s3d', text: out.src }], sourceParts: parts, consts: { delta: 0.05 } }).S;
-  const out = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure' });
+  // 这个楼正好是“外壳 − 空腔 − 开口”（见下一条测试）；这里关掉外壳，看板件
+  const out = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure', shells: false });
   assert.deepEqual(compile(out.src).errors, []);
   assert.match(out.src, /^group hall .*\{\n(  (box|subtract) .*\n)+/m, '楼写成一组板件');
   assert.match(out.src, /^\s+box wall\S* size=/m);
@@ -101,15 +102,77 @@ box slab size=19.4,0.3,11.4 at=0,4,0
   assert.match(out.src, /^box crate .*on=hall/m, '箱子仍然立在楼上');
   assert.deepEqual(out.report.fallback, [], '定位全部通过校验');
   assert.equal(out.report.panels.length, 1);
-  const solid = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure', panels: false });
+  const solid = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure', panels: false, shells: false, unions: false });
   assert.match(solid.src, /^box hall /m);
   assert.ok(scoreOf(out) < scoreOf(solid) - 20, `板件 ${scoreOf(out)} < 实心盒子 ${scoreOf(solid)}`);
   assert.equal(reverse(parts, { srcFile: 'x.glb', fidelity: 'semantic' }).report.panels.length, 0, '语义档仍用基本体当代理');
   // 享元：同一个网格的两栋楼 → 一个类型，类型体是板件
   const M = (tx) => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, tx, 0, 0, 1];
-  const typed = reverse([{ ...parts[0], name: 'hallA', mesh: '0:0', matrix: M(0) }, { name: 'hallB', tris: shift(tris, [35, 0, 0]), material: white, mesh: '0:0', matrix: M(35) }, ground], { srcFile: 'x.glb', fidelity: 'structure' });
+  const typed = reverse([{ ...parts[0], name: 'hallA', mesh: '0:0', matrix: M(0) }, { name: 'hallB', tris: shift(tris, [35, 0, 0]), material: white, mesh: '0:0', matrix: M(35) }, ground], { srcFile: 'x.glb', fidelity: 'structure', shells: false });
   assert.deepEqual(compile(typed.src).errors, []);
   assert.match(typed.src, /^def hallA \{\n  group body \{/m);
   assert.equal(typed.report.panels[0]?.instances, 2);
   assert.deepEqual(typed.report.fallback, []);
+});
+
+// 源描述编译成世界三角形（一个部件）
+const trisOf = (text) => {
+  const tris = [];
+  for (const o of sceneObjectsOf(compile(text))) for (let i = 0; i < o.pos.length; i += 9) tris.push([0, 3, 6].map((k) => [o.pos[i + k], o.pos[i + k + 1], o.pos[i + k + 2]]));
+  return tris;
+};
+const cubeTris = (a, b) => { const v = (i) => [i & 1 ? b[0] : a[0], i & 2 ? b[1] : a[1], i & 4 ? b[2] : a[2]]; return [[0, 1, 3, 2], [4, 6, 7, 5], [0, 4, 5, 1], [2, 3, 7, 6], [0, 2, 6, 4], [1, 5, 7, 3]].flatMap(([p, q, s, t]) => [[v(p), v(q), v(s)], [v(p), v(s), v(t)]]); };
+
+test('外壳 − 空腔 − 开口：空心的楼第一遍就写成 subtract shell { outer ; cavity ; opening }，楼里的楼板另写；拱门写成矩形 + 横放的圆柱', () => {
+  const white = { name: 'white', color: '#ffffff' }, grey = { name: 'grey', color: '#808080' };
+  const ground = { name: 'ground', tris: cubeTris([-40, -1, -40], [60, 0, 40]), material: grey };
+  const hall = trisOf(`subtract shell {
+  box outer size=20,8,12
+  box inner size=19.4,7.4,11.4 at=0,0.3,0
+  box door size=3,4,1 at=outer.front pin=center align=bottom
+}
+box slab size=19.4,0.3,11.4 at=0,4,0`);
+  const parts = [{ name: 'hall', tris: hall, material: white }, ground];
+  const out = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure' });
+  assert.deepEqual(compile(out.src).errors, []);
+  assert.match(out.src, /^group hall [^\n]*\{\n  subtract shell \{\n    box outer size=20,8,12\n    box cavity size=19\.4,7\.4,11\.4 at=0,0\.3,0\n    box opening size=3,4,[\d.]+ at=0,0,[\d.]+\n  \}\n  box slab size=19\.4,0\.3,11\.4 at=0,4,0\n\}/m, out.src);
+  assert.equal(out.report.shells.length, 1);
+  const S = (o) => score({ result: compile(o.src), files: [{ file: 'x.s3d', text: o.src }], sourceParts: parts, consts: { delta: 0.05 } }).S;
+  const panels = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure', shells: false });
+  assert.ok(S(out) < S(panels), `外壳 ${S(out)} < 板件 ${S(panels)}`);
+  // 敞开的底面、带拱的门洞（spaceport 的厂房）
+  const shed = trisOf(`subtract body {
+  box outer size=34,22,26
+  box inner size=32.4,21.2,24.4
+  box opening size=12,15.4,2.4 at=outer.front pin=center align=bottom
+  cyl arch r=6 h=2.4 axis=z at=opening.top pin=center
+}`);
+  const o2 = reverse([{ name: 'shed', tris: shed, material: white }, ground], { srcFile: 'x.glb', fidelity: 'structure' });
+  assert.deepEqual(compile(o2.src).errors, []);
+  const m = /^subtract shed [^\n]*\{\n  box outer size=34,22,26\n  box cavity size=32\.4,([\d.]+),24\.4 at=0,(-?[\d.]+),0\n  box opening size=([\d.]+),([\d.]+),[\d.]+ at=0,0,[\d.]+\n  cyl arch r=([\d.]+) h=[\d.]+ axis=z at=0,([\d.]+),[\d.]+\n\}/m.exec(o2.src);
+  assert.ok(m, o2.src);
+  assert.ok(+m[2] < 0 && Math.abs(+m[1] + +m[2] - 21.2) < 0.1, `空腔从地面下穿出（底面敞开），顶在 21.2：${m[1]} ${m[2]}`);
+  assert.ok(Math.abs(+m[3] - 12) < 0.3 && Math.abs(+m[5] - 6) < 0.15 && Math.abs(+m[6] + +m[5] - 15.4) < 0.3, `门洞 12 宽、拱半径 6、拱心高 15.4：${m.slice(3)}`);
+  assert.equal(reverse(parts, { srcFile: 'x.glb', fidelity: 'semantic' }).report.shells.length, 0, '语义档仍用基本体当代理');
+});
+
+test('基本体之并：圆柱与整球焊在一起的罐写成 group { cyl ; sphere }，埋在里面的面也解释了；同样的三个罐成阵列；空腔不算实心块', () => {
+  const white = { name: 'white', color: '#ffffff' }, grey = { name: 'grey', color: '#808080' };
+  const ground = { name: 'ground', tris: cubeTris([-40, -1, -40], [60, 0, 40]), material: grey };
+  // 合批（L2）：同材质的圆柱与球拼成一个网格，球的赤道与圆柱的顶边共用顶点，下半球与顶盖埋在里面
+  const src = `material white color=#ffffff
+material grey color=#808080
+box ground size=100,1,80 at=10,-1,0 mat=grey
+repeat tanks n=3 step=10,0,0 at=0,0,0 mat=white {
+  cyl tank r=3.5 h=9
+  sphere cap r=3.5 on=tank gap=-3.5
+}`;
+  const parts = partsOfDocument(sceneToGLB(src, { level: 'L2' }).doc);
+  const out = reverse(parts, { srcFile: 'x.glb', level: 'L2', fidelity: 'structure' });
+  assert.deepEqual(compile(out.src).errors, []);
+  assert.ok(out.report.unions.length === 3 && out.report.unions.every((u) => u.prims === 2), JSON.stringify(out.report.unions));
+  assert.match(out.src, /^repeat \S+ n=3 step=10,0,0 [^\n]*\{\n  group \S+[^\n]*\{\n    cyl \S+ r=3\.5 h=9\n    sphere \S+ r=3\.5 at=0,5\.5,0\n  \}\n\}/m, out.src);
+  const S = (o) => score({ result: compile(o.src), files: [{ file: 'x.s3d', text: o.src }], sourceParts: parts, consts: { delta: 0.05 } }).S;
+  const plain = reverse(parts, { srcFile: 'x.glb', level: 'L2', fidelity: 'structure', unions: false });
+  assert.ok(S(out) < 0.5 * S(plain), `${S(out)} 对 ${S(plain)}`);
 });

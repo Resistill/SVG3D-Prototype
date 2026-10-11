@@ -187,3 +187,145 @@ export function panelLines(tris, { cell, thick, maxThick, maxBoxes = 60, digits 
   }
   return null;
 }
+
+// ── 外壳 − 空腔 − 开口：空心的楼（厂房、仓库）写成 subtract shell { box outer ; box cavity ; box door … ; cyl arch … }。
+// 外包盒的面上有外表面、它后面（不超过 maxThick，也不超过这个方向尺寸的 30%）有朝里的平行面——这一面是墙，朝里的面是空腔的边界；
+// 至少三面墙才算空心。没有墙的一面：有外表面就当作同样厚的实心面，没有外表面就是敞开的（空腔穿出去）。
+// 开口：墙的外表面在空腔正对着的范围里没被三角形盖住的连通格子——几乎填满外接矩形的是矩形洞，像“矩形 + 半圆”的是拱门。
+// 剩下的三角形（楼里的楼板、内墙）交给板件。输入在物体坐标系里（y 朝上）；返回 { shell: subtract 里的语句, at: 外壳的底面中心, extra: 板件语句 } 或 null
+export function shellLines(tris, { tau, digits = 2, maxThick, thick, cell: cell0, maxBoxes = 60 }) {
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (const t of tris) for (const v of t) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], v[k]); hi[k] = Math.max(hi[k], v[k]); }
+  const ext = sub(hi, lo);
+  if (Math.min(...ext) <= 4 * tau) return null;
+  const planes = planesOf(tris, { tol: tau, minFrac: 0.002 });
+  const sides = [];
+  for (let a = 0; a < 3; a++) for (const s of [1, -1]) {
+    const pos = s > 0 ? hi[a] : lo[a], [u, v] = [0, 1, 2].filter((k) => k !== a), face = ext[u] * ext[v];
+    const pick = (ok) => planes.filter(ok).sort((x, y) => y.area - x.area)[0] ?? null;
+    const outer0 = pick((p) => p.n[a] === s && Math.abs(p.d - s * pos) <= tau);
+    // 外表面只盖住这一面的一小部分（敞开的底面只剩一圈墙脚）：这一面是敞开的
+    const outer = outer0 && outer0.area >= 0.5 * face ? outer0 : null;
+    const mt = Math.min(maxThick, 0.3 * ext[a]);
+    // 朝里的面 n = −s·e_a：n·x = d → x_a = −s·d；墙厚 = s·(pos − x_a)
+    const inner = pick((p) => p.n[a] === -s && s * (pos + s * p.d) > tau / 2 && s * (pos + s * p.d) <= mt && p.area >= 0.2 * face);
+    sides.push({ a, s, pos, outer, outer0, inner, inPos: inner ? -s * inner.d : null, th: inner ? s * (pos + s * inner.d) : null });
+  }
+  const walls = sides.filter((x) => x.outer && x.inner);
+  if (walls.length < 3) return null;
+  const ths = walls.map((w) => w.th).sort((x, y) => x - y), th0 = ths[ths.length >> 1];
+  const cl = [...lo], ch = [...hi];
+  for (const x of sides) {
+    const bound = x.inner ? x.inPos : x.outer ? x.pos - x.s * th0 : x.pos + x.s * th0;
+    if (x.s > 0) ch[x.a] = bound; else cl[x.a] = bound;
+  }
+  if ([0, 1, 2].some((k) => cl[k] >= ch[k] - tau)) return null;
+  const fmtv = (p) => p.map((x) => fmt(x, digits)).join(',');
+  const bottomAt = (lo3, hi3) => [(lo3[0] + hi3[0]) / 2, lo3[1], (lo3[2] + hi3[2]) / 2];
+  const boxLine = (name, lo3, hi3) => `box ${name} size=${fmtv(sub(hi3, lo3))} at=${fmtv(bottomAt(lo3, hi3))}`;
+  const shell = [boxLine('outer', lo, hi), boxLine('cavity', cl, ch)];
+  const found = []; // 开口：{ l3, h3（占的区域，拱门含半圆）, rect: [l3, h3], arch: { at, r, depth, axis } }
+  for (const w of walls) {
+    const { a, s } = w, [u, v] = a === 1 ? [0, 2] : [a === 0 ? 2 : 0, 1];
+    const c = Math.max(cell0, ext[u] / 160, ext[v] / 160), nu = Math.max(1, Math.round(ext[u] / c)), nv = Math.max(1, Math.round(ext[v] / c));
+    const cu = ext[u] / nu, cv = ext[v] / nv;
+    // 外表面的栅格：每格 2×2 个子采样点，盖住至少 2 个算占用（同 rasterize）
+    const bits = new Uint8Array(nu * nv);
+    const SUB = [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]];
+    for (const t of w.outer.tris) {
+      const P = t.map((p) => [(p[u] - lo[u]) / cu, (p[v] - lo[v]) / cv]);
+      const [p, q, r] = P, den = (q[1] - r[1]) * (p[0] - r[0]) + (r[0] - q[0]) * (p[1] - r[1]);
+      if (Math.abs(den) < 1e-18) continue;
+      const i0 = Math.max(0, Math.floor(Math.min(p[0], q[0], r[0]))), i1 = Math.min(nu - 1, Math.floor(Math.max(p[0], q[0], r[0])));
+      const j0 = Math.max(0, Math.floor(Math.min(p[1], q[1], r[1]))), j1 = Math.min(nv - 1, Math.floor(Math.max(p[1], q[1], r[1])));
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) for (let k = 0; k < 4; k++) {
+        const x = i + SUB[k][0], y = j + SUB[k][1];
+        const l1 = ((q[1] - r[1]) * (x - r[0]) + (r[0] - q[0]) * (y - r[1])) / den, l2 = ((r[1] - p[1]) * (x - r[0]) + (p[0] - r[0]) * (y - r[1])) / den;
+        if (l1 >= -1e-9 && l2 >= -1e-9 && l1 + l2 <= 1 + 1e-9) bits[j * nu + i] |= 1 << k;
+      }
+    }
+    const covered = (i, j) => { const b = bits[j * nu + i]; return (b & 1) + ((b >> 1) & 1) + ((b >> 2) & 1) + ((b >> 3) & 1) >= 2; };
+    // 洞要通到空腔里：从空腔正对着的格子开始找
+    const inCav = (i, j) => { const x = lo[u] + (i + 0.5) * cu, y = lo[v] + (j + 0.5) * cv; return x > cl[u] && x < ch[u] && y > cl[v] && y < ch[v]; };
+    const seen = new Uint8Array(nu * nv);
+    for (let j0 = 0; j0 < nv; j0++) for (let i0 = 0; i0 < nu; i0++) {
+      if (seen[j0 * nu + i0] || covered(i0, j0) || !inCav(i0, j0)) continue;
+      const comp = [], stack = [[i0, j0]];
+      seen[j0 * nu + i0] = 1;
+      while (stack.length) {
+        const [i, j] = stack.pop();
+        comp.push([i, j]);
+        for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const x = i + di, y = j + dj;
+          if (x < 0 || y < 0 || x >= nu || y >= nv || seen[y * nu + x] || covered(x, y)) continue;
+          seen[y * nu + x] = 1; stack.push([x, y]);
+        }
+      }
+      // 洞可以伸出空腔正对的范围（门开到地面，而地面以上才是空腔），但大半要在里面
+      if (comp.length < 4 || comp.filter(([i, j]) => inCav(i, j)).length < comp.length / 2) continue;
+      const bi0 = Math.min(...comp.map((x) => x[0])), bi1 = Math.max(...comp.map((x) => x[0])), bj0 = Math.min(...comp.map((x) => x[1])), bj1 = Math.max(...comp.map((x) => x[1]));
+      const W = (bi1 - bi0 + 1) * cu, H = (bj1 - bj0 + 1) * cv, u0 = lo[u] + bi0 * cu, v0 = lo[v] + bj0 * cv;
+      const mid = w.pos - (s * w.th) / 2, depth = 3 * w.th;
+      const opening = (vTop) => {
+        const l3 = [0, 0, 0], h3 = [0, 0, 0];
+        l3[a] = mid - depth / 2; h3[a] = mid + depth / 2; l3[u] = u0; h3[u] = u0 + W; l3[v] = v0; h3[v] = vTop;
+        return { l3, h3 };
+      };
+      const fill = comp.length / ((bi1 - bi0 + 1) * (bj1 - bj0 + 1));
+      // 拱门：下面是矩形，上面是直径等于宽度的半圆（只在竖直的墙上）；与洞的重合度（交 / 并）比矩形的填充率高才算
+      const r = W / 2, vc = v0 + H - r, uc = u0 + r;
+      let archIoU = 0;
+      if (a !== 1 && vc > v0 + cv) {
+        const mine = new Set(comp.map(([i, j]) => j * nu + i));
+        let inter = 0, uni = mine.size;
+        for (let j = bj0; j <= bj1; j++) for (let i = bi0; i <= bi1; i++) {
+          const x = lo[u] + (i + 0.5) * cu, y = lo[v] + (j + 0.5) * cv;
+          const pred = y <= vc || (x - uc) ** 2 + (y - vc) ** 2 <= r * r;
+          if (pred && mine.has(j * nu + i)) inter++; else if (pred) uni++;
+        }
+        archIoU = inter / uni;
+      }
+      if (fill >= 0.85 && fill >= archIoU) {
+        const { l3, h3 } = opening(v0 + H);
+        found.push({ a, l3, h3, rect: [l3, h3] });
+        continue;
+      }
+      if (archIoU < 0.85) continue;
+      const { l3, h3 } = opening(vc);
+      const at = [0, 0, 0];
+      at[a] = mid; at[u] = uc; at[v] = vc - r;
+      const ah = [...h3];
+      ah[v] = vc + r;
+      found.push({ a, l3, h3: ah, rect: [l3, h3], arch: { at, r, depth, axis: a === 0 ? 'x' : 'z' } });
+    }
+  }
+  // 被别的开口盖住：在自己所在的墙面上的范围落在另一个开口里（穿墙的方向只要有重叠）
+  const inside = (x, y) => [0, 1, 2].every((k) => (k === x.a ? x.l3[k] < y.h3[k] && x.h3[k] > y.l3[k] : x.l3[k] >= y.l3[k] - tau && x.h3[k] <= y.h3[k] + tau));
+  const vol3 = (x) => (x.h3[0] - x.l3[0]) * (x.h3[1] - x.l3[1]) * (x.h3[2] - x.l3[2]);
+  const holesBox = found.filter((x) => !found.some((y) => y !== x && vol3(y) > vol3(x) && inside(x, y)));
+  if (holesBox.length > 12) return null;
+  let nOpen = 0, nArch = 0;
+  for (const x of holesBox) {
+    shell.push(boxLine(++nOpen > 1 ? `opening_${nOpen}` : 'opening', ...x.rect));
+    if (x.arch) shell.push(`cyl ${++nArch > 1 ? `arch_${nArch}` : 'arch'} r=${fmt(x.arch.r, digits)} h=${fmt(x.arch.depth, digits)} axis=${x.arch.axis} at=${fmtv(x.arch.at)}`);
+  }
+  // 外壳解释了的三角形：外表面、朝里的面、洞口四周的侧面（落在开口占的区域里）
+  const used = new Set();
+  const levels = [[], [], []];
+  for (const x of sides) { if (x.outer0) levels[x.a].push(x.pos); if (x.inner) levels[x.a].push(x.inPos); }
+  for (const t of tris) {
+    const n = cross(sub(t[1], t[0]), sub(t[2], t[0])), l = len(n);
+    if (!(l > 0)) { used.add(t); continue; }
+    const a = [0, 1, 2].find((k) => Math.abs(n[k]) > 0.999 * l);
+    if (a !== undefined && levels[a].some((y) => Math.abs((t[0][a] + t[1][a] + t[2][a]) / 3 - y) <= tau)) used.add(t);
+  }
+  const near = (c, b) => [0, 1, 2].every((k) => c[k] >= b.l3[k] - tau && c[k] <= b.h3[k] + tau);
+  const left = tris.filter((t) => !used.has(t) && !holesBox.some((b) => near(scl(add(add(t[0], t[1]), t[2]), 1 / 3), b)));
+  const area = (ts) => ts.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0);
+  let extra = [];
+  if (area(left) > 0.03 * area(tris)) {
+    const p = panelLines(left, { cell: cell0, thick, maxThick, digits, maxBoxes });
+    if (p) extra = p.lines;
+  }
+  return { shell, at: bottomAt(lo, hi), extra, openings: nOpen, arches: nArch };
+}

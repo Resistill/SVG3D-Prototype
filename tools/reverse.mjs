@@ -12,7 +12,8 @@ import { sceneObjects } from './worldtris.mjs';
 import { rng, bitsHash, readParts, partsOfDocument, splitComponents, uniqueVertices, samplePoints } from './parts.mjs';
 import { compile, _curves, FACT_EPS } from '../src/s3d.js';
 import { parseDecisions, applyDecisions, applyLocks, PRIMS } from './decisions.mjs';
-import { planesOf, panelLines } from './panels.mjs';
+import { planesOf, panelLines, shellLines } from './panels.mjs';
+import { patchesOf } from './patches.mjs';
 
 // ───────── 小工具 ─────────
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -115,15 +116,37 @@ export function pcaFrame(pts) {
   ex = cross(ey, ez);
   return frameFrom(pts, [unit(ex), unit(ey), unit(ez)], null);
 }
+const triNormal = ([a, b, c]) => { const n = cross(sub(b, a), sub(c, a)); return { n: unit(n), area: len(n) / 2 }; };
 // 法线坐标系：按面积把三角形法线聚类（n 与 -n 视为同一方向），最大的平面方向作为第一根轴，
 // 与它垂直的最大平面方向作为第二根轴。平面构成的人造部件由此得到精确的朝向（盒子的面、圆柱的端面）
-function normalFrame(tris, pts) {
+// triN：可选，与 tris 一一对应的 { n, area }（同一批三角形反复拟合时预先算好，数值与这里现算的相同）
+function normalFrame(tris, pts, triN = null) {
   const clusters = [];
-  const items = tris.map(([a, b, c]) => { const n = cross(sub(b, a), sub(c, a)); return { n: unit(n), area: len(n) / 2 }; }).filter((t) => t.area > 1e-12);
+  const items = (triN ?? tris.map(triNormal)).filter((t) => t.area > 1e-12);
   items.sort((x, y) => y.area - x.area);
+  // 找“创建得最早的、方向差不到 1.8° 的簇”：簇的方向按分量量化放进格网（格长 0.04 > 两个相差 1.8° 的单位向量的分量差），
+  // 只看 t.n 与 −t.n 所在格子的相邻格子，结果与按创建顺序线性查找相同（曲面上簇几乎和三角形一样多，线性查找是平方的）
+  // 簇少（盒子、楔形只有几个）时线性查找更快：簇到 32 个才建格网
+  let grid = null;
+  const Q = 0.04, cellKey = (x, y, z) => ((x + 32) * 64 + (y + 32)) * 64 + (z + 32);
+  const put = (c) => { const k = cellKey(Math.floor(c.dir[0] / Q), Math.floor(c.dir[1] / Q), Math.floor(c.dir[2] / Q)); const l = grid.get(k); if (l) l.push(c); else grid.set(k, [c]); };
   for (const t of items) {
-    const cl = clusters.find((c) => Math.abs(dot(c.dir, t.n)) > 0.9995);
-    if (cl) cl.area += t.area; else clusters.push({ dir: t.n, area: t.area });
+    let cl = null;
+    if (!grid) cl = clusters.find((c) => Math.abs(dot(c.dir, t.n)) > 0.9995);
+    else for (const s of [1, -1]) {
+      const x = Math.floor((s * t.n[0]) / Q), y = Math.floor((s * t.n[1]) / Q), z = Math.floor((s * t.n[2]) / Q);
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (let k = -1; k <= 1; k++) {
+        const l = grid.get(cellKey(x + i, y + j, z + k));
+        if (l) for (const c of l) if ((!cl || c.k < cl.k) && Math.abs(dot(c.dir, t.n)) > 0.9995) cl = c;
+      }
+    }
+    if (cl) cl.area += t.area;
+    else {
+      const c = { dir: t.n, area: t.area, k: clusters.length };
+      clusters.push(c);
+      if (grid) put(c);
+      else if (clusters.length >= 32) { grid = new Map(); clusters.forEach(put); }
+    }
   }
   if (!clusters.length) return null;
   clusters.sort((x, y) => y.area - x.area);
@@ -415,23 +438,26 @@ function fitRevolve(pts, verts, F, areaMesh) {
   return best;
 }
 
-// only：只在这种形状里挑（决定层指定了形状）
-export function fitPart(part, i, only = null) {
-  const pts = samplePoints(part.tris, 600, i + 1);
+// only：只在这种形状里挑（决定层指定了形状）；basic：只用盒、圆柱、圆台、球、楔形（“基本体之并”里的每一块）
+export function fitPart(part, i, only = null, basic = false) {
+  // 拼“基本体之并”时每个部件要拟合几十次：采样少一些（顶点总在采样里，包络仍是准的）
+  const pts = samplePoints(part.tris, basic ? 200 : 600, i + 1);
   const vol = meshVolume(part.tris);
   const vmap = new Map();
-  for (const t of part.tris) for (const v of t) vmap.set(vkey(v), v);
+  // part.vkeys：可选，与 tris 一一对应的三个顶点键（同上）
+  if (part.vkeys) part.tris.forEach((t, k) => { const ks = part.vkeys[k]; vmap.set(ks[0], t[0]); vmap.set(ks[1], t[1]); vmap.set(ks[2], t[2]); });
+  else for (const t of part.tris) for (const v of t) vmap.set(vkey(v), v);
   const verts = [...vmap.values()];
-  const frames = [uprightFrame(pts), pcaFrame(pts), normalFrame(part.tris, pts)].filter(Boolean);
+  const frames = [uprightFrame(pts), pcaFrame(pts), normalFrame(part.tris, pts, part.triN)].filter(Boolean);
   let fits = frames.map((F) => fitInFrame(F, pts, vol, verts, only)).filter(Boolean);
   if (!fits.length) fits = frames.map((F) => fitInFrame(F, pts, vol, verts));
   fits.sort((a, b) => effErr(a) - effErr(b));
   // 基本体拟合得不好时，试试管道（弯管、输料管）
-  if (!only && fits[0].e > 0.02) { const t = fitTube(part, i, vol, fits[0].e); if (t && t.e < fits[0].e) fits.unshift({ ...t, frame: fits[0].frame }); }
+  if (!only && !basic && fits[0].e > 0.02) { const t = fitTube(part, i, vol, fits[0].e); if (t && t.e < fits[0].e) fits.unshift({ ...t, frame: fits[0].frame }); }
   // 拟合得不好时，试试旋转体（整流罩、天线）；语义档一律用基本体当代理（灰盒），不用旋转体
-  if (!only && FID.name !== 'semantic' && fits[0].e > 0.02) { const rv = fitRevolve(pts, verts, fits[0].frame, part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0)); if (rv && rv.e < fits[0].e && rv.prof.length <= 16) fits.unshift({ ...rv, frame: fits[0].frame }); }
+  if (!only && !basic && FID.name !== 'semantic' && fits[0].e > 0.02) { const rv = fitRevolve(pts, verts, fits[0].frame, part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0)); if (rv && rv.e < fits[0].e && rv.prof.length <= 16) fits.unshift({ ...rv, frame: fits[0].frame }); }
   // 拟合得不好时，试试台阶（楼梯）
-  if (!only && fits[0].e > 0.05) { const st = fitSteps(part, pts, fits[0].frame); if (st && st.e < fits[0].e) fits.unshift({ ...st, frame: fits[0].frame }); }
+  if (!only && !basic && fits[0].e > 0.05) { const st = fitSteps(part, pts, fits[0].frame); if (st && st.e < fits[0].e) fits.unshift({ ...st, frame: fits[0].frame }); }
   const best = fits[0];
   // 覆盖率：网格表面积 / 基本体表面积。实心的楼块、墙接近 1；一块起伏的地形、一道弯曲的长墙、地面贴花只占包络盒很小一部分表面，
   // 硬套一个基本体比保留网格糟得多（网格常常不闭合，所以不用体积判断）
@@ -609,6 +635,19 @@ function primitiveOf(fit, part, srcFile) {
   return { ...base, kind: 'wedge', props: { size: vec([w, 2 * h[1], d]) }, cols, at: sub(F.c, scl(ey, h[1])), box: { min: [-w / 2, 0, -d / 2], max: [w / 2, 2 * h[1], d / 2] } };
 }
 
+// 粗档位：局部 y 只差一点点就竖直（拟合的噪声，写出来是 rot=(0.002,-1,-0.004,45) 这样的）→ 吸附成竖直，只留偏航（turn=）。
+// 倾角不超过档位角度步长的 5 倍，并且最长边 × 倾角不超过容差（远端的偏移在容差以内）
+function snapUpright(prim) {
+  if (FID.angle && !prim.absolute && prim.kind !== 'mesh' && prim.cols[1][1] < 1 - 1e-9) {
+    const tilt = Math.acos(Math.min(1, prim.cols[1][1])), ext = Math.max(...[0, 1, 2].map((k) => prim.box.max[k] - prim.box.min[k]));
+    if (tilt < (5 * FID.angle * Math.PI) / 180 && ext * tilt < FID.tau * M) {
+      const y = [0, 1, 0], x = unit(sub(prim.cols[0], scl(y, prim.cols[0][1])));
+      prim.cols = [x, y, cross(x, y)];
+    }
+  }
+  return prim;
+}
+
 // ── 板件（结构档）：拟合差的大部件——有内部空间的楼（外墙、楼板、内墙连成一个网格）——第一遍就按平面拆成墙板、楼板，
 // 门窗洞空出来（panels.mjs，细化用的同一套）。和现在的写法（最接近的基本体，或网格引用）在这个部件自己的源表面上按评分比较
 // （与全场评分同一套计价，只看这一个部件），板件更好才用。
@@ -635,15 +674,8 @@ function tryPanels(tris, cols, t, part, cur, n = 1) {
   const pl = planesOf(local, { tol: 2 * FID.tau * M, minFrac: 0.005 });
   const areaAll = local.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0);
   if (pl.reduce((s2, q) => s2 + q.area, 0) < PANEL_PLANAR * areaAll) return null;
-  const consts = { ...SCORE_DEFAULTS, delta: FID.tau, unit: 1 / M };
-  let scorer = null; // 用到时才建（源部件的采样与 BVH）
-  const score = (objs, lines) => (scorer ??= neighborhoodScorer({ parts: [{ tris: part.tris, material: part.material }], near: [0], others: [], reconColors: new Set(), consts }))(objs, lines);
-  const color = part.material?.color;
+  const { evalLines } = judgeOf(part);
   const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon);
-  const evalLines = (lines) => {
-    const r = compile(lines.join('\n'), { factEps: FACT_EPS * M });
-    return r.errors.length ? null : score(sceneObjects(r).map((o) => ({ ...o, color })), lines);
-  };
   let curS = Infinity;
   if (cur.mesh != null) curS = cur.mesh;
   else {
@@ -667,33 +699,236 @@ function tryPanels(tris, cols, t, part, cur, n = 1) {
     if (ls && (!best || total(ls) < best.S)) best = { S: total(ls), ls, lines: p.lines };
   }
   if (!best || best.S >= curS) return null;
-  // 容器按自己包围盒的底面中心定位（at=、on= 都是），不是按原点：把板件平移到“包络的底面中心在原点”。
-  // 板件的包络与源网格的包络差一点（格子取整、单面薄板的厚度），所以先编译一次取板件自己的包络
-  const boxOfLines = (lines) => {
-    const bl = [Infinity, Infinity, Infinity], bh = [-Infinity, -Infinity, -Infinity];
-    for (const o of sceneObjects(compile(lines.join('\n'), { factEps: FACT_EPS * M }))) for (let i = 0; i < o.pos.length; i += 3) for (let k = 0; k < 3; k++) { bl[k] = Math.min(bl[k], o.pos[i + k]); bh[k] = Math.max(bh[k], o.pos[i + k]); }
-    return { min: bl, max: bh };
-  };
-  const b0 = boxOfLines(best.lines), c1 = [(b0.min[0] + b0.max[0]) / 2, b0.min[1], (b0.min[2] + b0.max[2]) / 2];
-  const body = best.lines.map((l) => (/^\S/.test(l) ? l.replace(/ at=(-?[\d.e-]+),(-?[\d.e-]+),(-?[\d.e-]+)/, (_, x, y, z) => ` at=${vec(sub([+x, +y, +z], c1))}`) : l));
+  const { body, shift, box } = centerBody(best.lines);
   // 拟合度：源表面到板件的平均距离，按 4τ 归一化（τ 以内的误差在评分里不计）
   const meanErr = best.ls.meanErr * M;
-  // 平移后的数字按档位取整：包络的底面中心离原点还差不到半个取整步长，同样记进原点（编译器就是这样放的）
-  const b1 = boxOfLines(body), c2 = [(b1.min[0] + b1.max[0]) / 2, b1.min[1], (b1.min[2] + b1.max[2]) / 2];
-  return { body, c0: add(add(c0, c1), c2), box: { min: sub(b1.min, c2), max: sub(b1.max, c2) }, fit: Math.max(0, Math.min(1, 1 - meanErr / (4 * tau))), meanErr: best.ls.meanErr, S: +best.S.toFixed(2), curS: +curS.toFixed(2) };
+  return { body, c0: add(c0, shift), box, fit: Math.max(0, Math.min(1, 1 - meanErr / (4 * tau))), meanErr: best.ls.meanErr, S: +best.S.toFixed(2), curS: +curS.toFixed(2) };
 }
+// 局部评分：只看这一个源部件（与全场评分同一套计价）。板件、基本体之并都拿它和现在的写法比；
+// 源部件的采样与 BVH 用到时才建，同一个部件的几种候选共用（每次逆向开始时清空：档位不同，计价不同）
+let JUDGES = new WeakMap();
+function judgeOf(part) {
+  let J = JUDGES.get(part);
+  if (J) return J;
+  const consts = { ...SCORE_DEFAULTS, delta: FID.tau, unit: 1 / M };
+  let scorer = null;
+  const score = (objs, lines) => (scorer ??= neighborhoodScorer({ parts: [{ tris: part.tris, material: part.material }], near: [0], others: [], reconColors: new Set(), consts }))(objs, lines);
+  const color = part.material?.color;
+  const evalLines = (lines) => {
+    const r = compile(lines.join('\n'), { factEps: FACT_EPS * M });
+    return r.errors.length ? null : score(sceneObjects(r).map((o) => ({ ...o, color })), lines);
+  };
+  JUDGES.set(part, (J = { evalLines }));
+  return J;
+}
+// 容器按自己包围盒的底面中心定位（at=、on= 都是），不是按原点：把一组语句（第一层都带 at=）平移到“包络的底面中心在原点”。
+// 内容的包络与源网格的包络差一点（格子取整、单面薄板的厚度、基本体的取整），所以先编译一次取内容自己的包络。
+// 返回平移后的语句、平移量（加到原来的原点上）与平移后的包络
+// subtract：包络只是第一个子物体（被减体），只拿它算
+function centerBody(lines, subtract = false) {
+  const boxOfLines = (ls) => {
+    const bl = [Infinity, Infinity, Infinity], bh = [-Infinity, -Infinity, -Infinity];
+    for (const o of sceneObjects(compile(ls.join('\n'), { factEps: FACT_EPS * M }))) for (let i = 0; i < o.pos.length; i += 3) for (let k = 0; k < 3; k++) { bl[k] = Math.min(bl[k], o.pos[i + k]); bh[k] = Math.max(bh[k], o.pos[i + k]); }
+    return { min: bl, max: bh };
+  };
+  const b0 = boxOfLines(subtract ? lines.slice(0, 1) : lines), c1 = [(b0.min[0] + b0.max[0]) / 2, b0.min[1], (b0.min[2] + b0.max[2]) / 2];
+  const body = lines.map((l) => (/^\S/.test(l) ? l.replace(/ at=(-?[\d.e-]+),(-?[\d.e-]+),(-?[\d.e-]+)/, (_, x, y, z) => ` at=${vec(sub([+x, +y, +z], c1))}`) : l));
+  // 平移后的数字按档位取整：包络的底面中心离原点还差不到半个取整步长，同样记进原点（编译器就是这样放的）
+  const b1 = boxOfLines(subtract ? body.slice(0, 1) : body), c2 = [(b1.min[0] + b1.max[0]) / 2, b1.min[1], (b1.min[2] + b1.max[2]) / 2];
+  return { body, shift: add(c1, c2), box: { min: sub(b1.min, c2), max: sub(b1.max, c2) } };
+}
+
+// ── 基本体之并：几个基本体的网格拼成的部件（罐 = 圆柱 + 球，火箭 = 两段圆柱 + 整流罩）整体只能拟合成 revolve 或网格，
+// 而且源网格里埋在里面的面（球的下半、圆柱的顶盖）解释不了。在非流形边上把网格拆成面片（patches.mjs），
+// 相邻的面片两两试着合并，合并后仍是一个好的基本体（盒、圆柱、圆台、球、楔形）就合并，误差最小的先合；
+// 最后每一块都得是好的基本体（面积不到 2% 的碎片可以丢下），块数 2–6，写成 group { cyl … ; sphere … }。
+// 与现在的写法在这个部件自己的源表面上比评分（同板件），更好才用。参数与 tryPanels 相同。
+// 语义档不试：一律用基本体当代理；而且 25 cm 的尺子下，只看这一个部件的局部分数高估了收益（附近的物体本来就解释了它的一部分），
+// 宿舍区、H1 的全场分数反而变差（+1.3%、+0.6%）
+const UNION_MAX_PATCHES = 16, UNION_MAX_PRIMS = 6; // 面片多于 16 块的很少能拼成几个基本体，却占了大部分时间（两两试合并）
+// 几何部分（拆面片、合并、拟合、写出每一块）只取决于三角形与档位，可以在 worker 线程里预先算（fitpool.mjs）：
+// 返回 { lines（相对 c0 的语句）, c0, prims } 或 null
+export function unionGeometry(tris) {
+  if (tris.length < 8) return null;
+  const { patches, adj, closed } = patchesOf(tris);
+  if (patches.length < 2 || patches.length > UNION_MAX_PATCHES) return null;
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (const tri of tris) for (const v of tri) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], v[k]); hi[k] = Math.max(hi[k], v[k]); }
+  const c0 = [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2];
+  const local = tris.map((tri) => tri.map((v) => sub(v, c0)));
+  const triArea = local.map(([a, b, c]) => len(cross(sub(b, a), sub(c, a))) / 2), areaAll = triArea.reduce((s2, x) => s2 + x, 0);
+  // 每个三角形的法线、顶点键只算一次（一块要和别的块反复合并、拟合）
+  const triN = local.map(triNormal), vkeys = local.map((t) => t.map(vkey));
+  // 一块 = 若干面片；拟合按面片集合记忆（种子取最小的三角形编号，结果与合并的顺序无关）
+  const memo = new Map();
+  const fitOf = (ids) => {
+    const key = [...ids].sort((x, y) => x - y).join();
+    if (!memo.has(key)) {
+      const ts = [...ids].flatMap((k) => patches[k]).sort((x, y) => x - y);
+      const sub3 = ts.map((k) => local[k]);
+      memo.set(key, { ts, area: ts.reduce((s2, k) => s2 + triArea[k], 0), fit: sub3.length ? fitPart({ tris: sub3, triN: ts.map((k) => triN[k]), vkeys: ts.map((k) => vkeys[k]) }, ts[0], null, true) : null });
+    }
+    return memo.get(key);
+  };
+  const tMerge = Math.min(0.05, FID.fitTol), tKeep = Math.min(0.25, FID.fitTol);
+  // 相邻：共用顶点，或者包围盒相距不到容差（不连着的两层：立面的正反两面、贴在一起的两块）
+  const pbox = patches.map((ts) => { const b = { lo: [Infinity, Infinity, Infinity], hi: [-Infinity, -Infinity, -Infinity] }; for (const k of ts) for (const v of local[k]) for (let d = 0; d < 3; d++) { b.lo[d] = Math.min(b.lo[d], v[d]); b.hi[d] = Math.max(b.hi[d], v[d]); } return b; });
+  const gapTol = FID.tau * M;
+  for (let a = 0; a < patches.length; a++) for (let b = a + 1; b < patches.length; b++) {
+    if ([0, 1, 2].every((d) => pbox[a].lo[d] <= pbox[b].hi[d] + gapTol && pbox[b].lo[d] <= pbox[a].hi[d] + gapTol)) { adj[a].add(b); adj[b].add(a); }
+  }
+  let blocks = patches.map((_, k) => ({ ids: new Set([k]), adj: new Set(adj[k]) }));
+  for (;;) {
+    let best = null;
+    for (let i = 0; i < blocks.length; i++) for (let j = i + 1; j < blocks.length; j++) {
+      const A = blocks[i], B = blocks[j];
+      if (![...B.ids].some((k) => A.adj.has(k))) continue;
+      // 两块都由封闭的面片组成：各自已是完整的实体，不拼
+      if ([...A.ids, ...B.ids].every((k) => closed[k])) continue;
+      // 合并后的误差既要小，也不能比两块各自的误差明显变大（两段半径不同的圆柱合起来像一个圆台，平均误差不大，但两块各自是精确的圆柱）
+      const f = fitOf(new Set([...A.ids, ...B.ids])).fit, eA = fitOf(A.ids).fit?.e ?? Infinity, eB = fitOf(B.ids).fit?.e ?? Infinity;
+      if (f && f.e <= Math.min(tMerge, Math.max(eA, eB) + tMerge / 5) && (!best || f.e < best.e)) best = { i, j, e: f.e };
+    }
+    if (!best) break;
+    const A = blocks[best.i], B = blocks[best.j];
+    const C = { ids: new Set([...A.ids, ...B.ids]), adj: new Set([...A.adj, ...B.adj]) };
+    blocks = blocks.filter((_, k) => k !== best.i && k !== best.j).concat([C]);
+  }
+  const kept = [];
+  for (const b of blocks) {
+    const f = fitOf(b.ids);
+    // 不是基本体的一块再试旋转体（火箭的整流罩）；管道、台阶的位置写在父坐标系里，不放进来
+    if (f.fit && f.fit.e > tKeep && FID.name !== 'semantic') {
+      const rv = fitPart({ tris: f.ts.map((k) => local[k]) }, f.ts[0]);
+      if (rv.shape === 'revolve' && rv.e <= tKeep) { kept.push({ ...f, fit: rv }); continue; }
+    }
+    if (f.fit && f.fit.e <= tKeep) kept.push(f);
+    else if (f.area > 0.02 * areaAll) return null;
+  }
+  if (kept.length < 2 || kept.length > UNION_MAX_PRIMS) return null;
+  // 法线整体朝里、又装在另一块里面的一块是空腔的内表面（空心楼的内墙面），不是实心的基本体：并不成立（交给“外壳 − 空腔 − 开口”）。
+  // 朝向 = 按面积加权的 法线·(面中心 − 块中心)，与它的绝对值之和相比明显为负才算朝里（正反两面的薄片接近 0）。
+  // 单独一块朝里的（房间的内墙面）照旧：现在的写法也是实心的
+  const boxOf = (f) => { const b = { lo: [Infinity, Infinity, Infinity], hi: [-Infinity, -Infinity, -Infinity] }; for (const k of f.ts) for (const v of local[k]) for (let d = 0; d < 3; d++) { b.lo[d] = Math.min(b.lo[d], v[d]); b.hi[d] = Math.max(b.hi[d], v[d]); } return b; };
+  const inward = kept.map((f) => {
+    const c = f.fit.frame.c;
+    let sum = 0, abs = 0;
+    for (const k of f.ts) { const tri = local[k], d = dot(triN[k].n, sub(scl(add(add(tri[0], tri[1]), tri[2]), 1 / 3), c)) * triArea[k]; sum += d; abs += Math.abs(d); }
+    return sum < -0.5 * abs;
+  });
+  const tIn = FID.tau * M;
+  for (let i = 0; i < kept.length; i++) if (inward[i]) {
+    const A = boxOf(kept[i]);
+    if (kept.some((g, j) => j !== i && !inward[j] && (() => { const B = boxOf(g); return [0, 1, 2].every((d) => A.lo[d] >= B.lo[d] - tIn && A.hi[d] <= B.hi[d] + tIn); })())) return null;
+  }
+  kept.sort((x, y) => y.area - x.area || x.ts[0] - y.ts[0]);
+  const count = {};
+  const lines = kept.map((f) => {
+    const prim = snapUpright(primitiveOf(f.fit, { tris: f.ts.map((k) => local[k]) }, 'x'));
+    if (prim.kind === 'mesh' || prim.absolute) return null;
+    count[prim.kind] = (count[prim.kind] ?? 0) + 1;
+    const nm = count[prim.kind] > 1 ? `${prim.kind}_${count[prim.kind]}` : prim.kind;
+    return [prim.kind, nm, ...Object.entries(prim.props).map(([k, v]) => `${k}=${v}`), `at=${vec(prim.at)}`, orientText(prim.cols)].filter(Boolean).join(' ');
+  });
+  return lines.includes(null) ? null : { lines, c0, prims: kept.length };
+}
+// pre：worker 预先算好的几何（undefined 表示没有，现算）
+function tryUnion(tris, cols, t, part, cur, n = 1, pre = undefined) {
+  const g = pre !== undefined ? pre : unionGeometry(tris);
+  if (!g) return null;
+  const { lines, c0 } = g;
+  const { evalLines } = judgeOf(part);
+  const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon);
+  const curS = cur.mesh != null ? cur.mesh : (() => { const ls = evalLines([cur.line]); return ls ? total(ls) : Infinity; })();
+  const orient = orientText(cols), head = `group g at=${vec(add(t, mvC(cols, c0)))} pin=origin${orient ? ' ' + orient : ''} {`;
+  const L = [head, ...lines.map((l) => '  ' + l), '}'];
+  if (L.reduce((s2, l) => s2 + lineCost(l), 0) >= curS) return null;
+  const ls = evalLines(L);
+  if (!ls || total(ls) >= curS) return null;
+  const { body: body0, shift, box } = centerBody(lines);
+  const body = body0.map((l) => l.replace(/ at=0,0,0(?= |$)/, '')); // 落在原点的那一块不用写位置
+  const meanErr = ls.meanErr * M, tau = FID.tau * M;
+  return { body, c0: add(c0, shift), box, fit: Math.max(0, Math.min(1, 1 - meanErr / (4 * tau))), meanErr: ls.meanErr, S: +total(ls).toFixed(2), curS: +curS.toFixed(2), prims: g.prims };
+}
+let PREFIT = null, UNIONS = true, COMPOSITE_MS = { panels: 0, unions: 0, shells: 0 }, UNION_SEEN = new Map();
+
+// ── 外壳 − 空腔 − 开口（panels.mjs 的 shellLines）：空心的楼写成 subtract shell { box outer ; box cavity ; box opening … ; cyl arch … }，
+// 楼里的楼板、内墙接着写成板件（外面再包一层 group）。和板件一样在物体坐标系里做、按这个部件自己的源表面比评分。
+// 结构档、精细档都试（语义档一律用基本体当代理）；参数与 tryPanels 相同
+function tryShell(tris, cols, t, part, cur, n = 1) {
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (const tri of tris) for (const v of tri) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], v[k]); hi[k] = Math.max(hi[k], v[k]); }
+  const c0 = [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2];
+  const local = tris.map((tri) => tri.map((v) => sub(v, c0)));
+  const tau = FID.tau * M;
+  const sh = shellLines(local, { tau, digits: DIGITS, maxThick: 2 * M, thick: Math.max(2 * FID.tau, 0.1) * M, cell: 2 * tau, maxBoxes: 60 });
+  if (!sh) return null;
+  const { evalLines } = judgeOf(part);
+  const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon);
+  const curS = cur.mesh != null ? cur.mesh : (() => { const ls = evalLines([cur.line]); return ls ? total(ls) : Infinity; })();
+  const shellBlock = [`subtract shell at=${vec(sh.at)} {`, ...sh.shell.map((l) => '  ' + l), '}'];
+  // 楼里没有别的东西：物体本身就是 subtract；有楼板、内墙：group { subtract shell … ; 板件 }
+  const kind = sh.extra.length ? 'group' : 'subtract';
+  const lines = sh.extra.length ? [...shellBlock, ...sh.extra] : sh.shell;
+  const orient = orientText(cols), head = `${kind} g at=${vec(add(t, mvC(cols, c0)))} pin=origin${orient ? ' ' + orient : ''} {`;
+  const L = [head, ...lines.map((l) => '  ' + l), '}'];
+  if (L.reduce((s2, l) => s2 + lineCost(l), 0) >= curS) return null;
+  const ls = evalLines(L);
+  if (!ls || total(ls) >= curS) return null;
+  const { body: body0, shift, box } = centerBody(lines, kind === 'subtract');
+  const body = body0.map((l) => l.replace(/ at=0,0,0(?= |$)/, ''));
+  const meanErr = ls.meanErr * M;
+  return { kind, body, c0: add(c0, shift), box, fit: Math.max(0, Math.min(1, 1 - meanErr / (4 * tau))), meanErr: ls.meanErr, S: +total(ls).toFixed(2), curS: +curS.toFixed(2), openings: sh.openings, arches: sh.arches, interior: sh.extra.length > 0 };
+}
+let SHELLS = true;
+const shellWorth = (fit, part) => {
+  if (!SHELLS || FID.name === 'semantic' || part.force || part.tris.length < PANEL_MIN_TRIS) return false;
+  if (1 - fit.e / TOL >= 0.5 && fit.cover >= COVER_MIN) return false;
+  const { min, max } = fit.aabb;
+  return Math.max(...sub(max, min)) >= PANEL_MIN_SIZE * M;
+};
+const unionWorth = (fit, part) => UNIONS && FID.name !== 'semantic' && !part.force && fit.e > TOL && part.tris.length >= 8;
 // 网格引用的代价（与评分的 L_mesh 一样，同一个网格的实例分摊）加上这一行
 const meshCostOf = (prim, part) => lineCost(`mesh x src=${prim.props.src} size=${prim.props.size} pivot=${prim.props.pivot}`) + (SCORE_DEFAULTS.cMesh * Math.log2(1 + part.tris.length)) / Math.max(1, MESH_USE.get(part.mesh) ?? 1);
+// 有内容的物体（板件、基本体之并）：内容接在这一行后面，按缩进写
+const bodyOf = (o, ind = '') => (o.body ? [' {', ...o.body.map((l) => ind + '  ' + l), ind + '}'].join('\n') : '');
 const primLineOf = (prim) => [prim.kind, 'cur', ...Object.entries(prim.props).map(([k, v]) => `${k}=${v}`), prim.absolute ? '' : `at=${vec(prim.at)}`, prim.absolute ? '' : orientText(prim.cols)].filter(Boolean).join(' ');
 // 普通部件换成板件：物体坐标系取拟合的偏航（拟合坐标系直立时），否则世界朝向
-function panelPrim(fit, part, prim) {
-  if (!panelsWorth(fit, part)) return null;
+// 基本体之并同样（物体坐标系取世界朝向：每一块有自己的朝向）；两种都成立时取分数低的
+function panelPrim(fit, part, prim, partIndex = -1) {
+  const cur = prim.kind === 'mesh' ? { mesh: meshCostOf(prim, part) } : { line: primLineOf(prim) };
+  let out = null;
+  const better = (S) => !out || S < (out.panels ?? out.union ?? out.shell).S;
   const up = fit.frame.cols[1];
-  const cols = up[1] > 0.999 ? fit.frame.cols : [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-  const tris = part.tris.map((tri) => tri.map((v) => mvT(cols, v)));
-  const pb = tryPanels(tris, cols, [0, 0, 0], part, prim.kind === 'mesh' ? { mesh: meshCostOf(prim, part) } : { line: primLineOf(prim) });
-  if (!pb) return null;
-  return { kind: 'group', props: {}, body: pb.body, cols, at: mvC(cols, pb.c0), box: pb.box, fit: pb.fit, err: fit.e, panels: { S: pb.S, was: pb.curS, kind: prim.kind } };
+  const fcols = up[1] > 0.999 ? fit.frame.cols : [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+  const ftris = panelsWorth(fit, part) || shellWorth(fit, part) ? part.tris.map((tri) => tri.map((v) => mvT(fcols, v))) : null;
+  if (panelsWorth(fit, part)) {
+    const t0 = performance.now(), pb = tryPanels(ftris, fcols, [0, 0, 0], part, cur);
+    COMPOSITE_MS.panels += performance.now() - t0;
+    if (pb) out = { kind: 'group', props: {}, body: pb.body, cols: fcols, at: mvC(fcols, pb.c0), box: pb.box, fit: pb.fit, err: fit.e, panels: { S: pb.S, was: pb.curS, kind: prim.kind } };
+  }
+  if (shellWorth(fit, part)) {
+    const t0 = performance.now(), sb = tryShell(ftris, fcols, [0, 0, 0], part, cur);
+    COMPOSITE_MS.shells += performance.now() - t0;
+    if (sb && better(sb.S)) out = { kind: sb.kind, props: {}, body: sb.body, cols: fcols, at: mvC(fcols, sb.c0), box: sb.box, fit: sb.fit, err: fit.e, shell: { S: sb.S, was: sb.curS, kind: prim.kind, openings: sb.openings, arches: sb.arches, interior: sb.interior } };
+  }
+  if (unionWorth(fit, part)) {
+    const I = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+    // 几何部分：worker 预先算好的；或者同一个网格、同样的旋转与缩放（没成类型的享元：拟合差，各实例分开写）
+    // 只差一个平移，几何平移过去就是（评分每个实例照做：各实例现在的写法不一样）
+    const Mx = part.matrix, key = part.mesh != null && Mx ? `${part.mesh}|${[0, 1, 2, 4, 5, 6, 8, 9, 10].map((k) => Math.round(Mx[k] * 1e6)).join()}` : null;
+    const t0 = performance.now();
+    let pre = PREFIT?.unionOf?.(part, partIndex);
+    if (pre === undefined && key) {
+      if (!UNION_SEEN.has(key)) UNION_SEEN.set(key, { g: unionGeometry(part.tris), t: [Mx[12], Mx[13], Mx[14]] });
+      const c = UNION_SEEN.get(key);
+      pre = c.g && { ...c.g, c0: add(sub(c.g.c0, c.t), [Mx[12], Mx[13], Mx[14]]) };
+    }
+    const ub = tryUnion(part.tris, I, [0, 0, 0], part, cur, 1, pre);
+    COMPOSITE_MS.unions += performance.now() - t0;
+    if (ub && better(ub.S)) out = { kind: 'group', props: {}, body: ub.body, cols: I, at: ub.c0, box: ub.box, fit: ub.fit, err: fit.e, union: { S: ub.S, was: ub.curS, kind: prim.kind, prims: ub.prims } };
+  }
+  return out;
 }
 
 // 朝向（列为局部轴）→ turn / rot 文本；R 是 3×3（行主序），由列构造
@@ -775,11 +1010,17 @@ function unifyBoxLabels(objs) {
 }
 
 // ───────── 3 & 4. 关系与校验 ─────────
-export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null, prefit = null, partsFile = null, defaultMaterial = true, panels = true } = {}) {
+export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null, prefit = null, partsFile = null, defaultMaterial = true, panels = true, unions = true, shells = true } = {}) {
   setFidelity(fidelity, sceneUnit);
   PARTS_FILE = partsFile;
   PANELS = panels;
+  UNIONS = unions;
+  PREFIT = prefit;
+  SHELLS = shells;
+  COMPOSITE_MS = { panels: 0, unions: 0, shells: 0 };
+  UNION_SEEN = new Map();
   MESH_USE = new Map();
+  JUDGES = new WeakMap();
   for (const p of parts) if (p.mesh != null) MESH_USE.set(p.mesh, (MESH_USE.get(p.mesh) ?? 0) + 1);
   // 决定层：先作用到源部件上（忽略、合并、指定形状 / 名字 / 类型名），锁定在最后按上一次的结果替换
   let decided = null;
@@ -814,13 +1055,18 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const bad = fit.e > FID.fitTol || fit.cover < COVER_MIN || fit.shape === 'tube';
       // 板件：拟合差的类型（一栋楼被多处使用）在类型坐标系里拆成墙板、楼板，和现在的写法（基本体，或各实例引用网格）比
       const typePart = { ...rep, tris: local };
-      const pb = panelsWorth(fit, typePart) ? tryPanels(local, [[1, 0, 0], [0, 1, 0], [0, 0, 1]], [0, 0, 0], typePart,
-        bad ? { mesh: SCORE_DEFAULTS.cMesh * Math.log2(1 + rep.tris.length) + ms.length * lineCost('src="x" size=1,1,1 pivot=1,1,1') } : { line: primLineOf(primitiveOf(fit, { ...rep, name: null }, srcFile)) }, ms.length) : null;
-      if (bad && !pb) continue; // 拟合不了的（会退回网格引用）不做类型
+      const curT = bad ? { mesh: SCORE_DEFAULTS.cMesh * Math.log2(1 + rep.tris.length) + ms.length * lineCost('src="x" size=1,1,1 pivot=1,1,1') } : { line: primLineOf(primitiveOf(fit, { ...rep, name: null }, srcFile)) };
+      const I3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+      const pb = panelsWorth(fit, typePart) ? tryPanels(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
+      // 基本体之并（类型体是几个基本体）：两种都成立时取分数低的
+      const ub = unionWorth(fit, typePart) ? tryUnion(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
+      const sb = shellWorth(fit, typePart) ? tryShell(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
+      const cb = [pb, ub, sb].filter(Boolean).sort((x, y) => x.S - y.S)[0] ?? null;
+      if (bad && !cb) continue; // 拟合不了的（会退回网格引用）不做类型
       let prim, c0, lo, hi;
-      if (pb) {
-        c0 = pb.c0; lo = add(c0, pb.box.min); hi = add(c0, pb.box.max);
-        prim = { kind: 'group', props: {}, body: pb.body, cols: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], at: c0, box: pb.box, panels: { S: pb.S, was: pb.curS } };
+      if (cb) {
+        c0 = cb.c0; lo = add(c0, cb.box.min); hi = add(c0, cb.box.max);
+        prim = { kind: cb.kind ?? 'group', props: {}, body: cb.body, cols: I3, at: c0, box: cb.box, ...(cb === ub ? { union: { S: ub.S, was: ub.curS, prims: ub.prims } } : cb === sb ? { shell: { S: sb.S, was: sb.curS, openings: sb.openings, arches: sb.arches, interior: sb.interior } } : { panels: { S: pb.S, was: pb.curS } }) };
       } else {
         prim = primitiveOf(fit, { ...rep, name: null }, srcFile);
         // 类型体的原点放在包络的底面中心：实例的定位规则就和普通基本体一样
@@ -832,7 +1078,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       let name = sanitize(base), k2 = 2;
       while (typeNames.has(name) || KINDS_RESERVED.has(name)) name = `${sanitize(base)}_v${k2++}`;
       typeNames.add(name);
-      const T = { name, prim, c0, box: { min: sub(lo, c0), max: sub(hi, c0) }, fit: pb ? { ...fit, e: TOL * (1 - pb.fit) } : fit, count: ms.length };
+      const T = { name, prim, c0, box: { min: sub(lo, c0), max: sub(hi, c0) }, fit: cb ? { ...fit, e: TOL * (1 - cb.fit) } : fit, count: ms.length };
       types.push(T);
       for (const m of ms) typeOf.set(m.i, { T, R: m.R, t: m.t });
     }
@@ -853,26 +1099,18 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
         fit: Math.max(0, Math.min(1, 1 - T.fit.e / TOL)), err: T.fit.e, vol: (b.max[0] - b.min[0]) * (b.max[1] - b.min[1]) * (b.max[2] - b.min[2]), symY: false, instance: true };
     }
     const prim0 = primitiveOf(fits[i], p, srcFile);
-    const prim = panelPrim(fits[i], p, prim0) ?? prim0;
+    const prim = panelPrim(fits[i], p, prim0, i) ?? prim0;
     const nm = p.name && !/^part_\d+$|^merged_/.test(p.name) ? cleanName(p.name) : null;
     const id = p.forceName ? uniqueId(sanitize(p.forceName), true) : uniqueId(nm ? sanitize(nm) : `${prim.kind}${(counters[prim.kind] = (counters[prim.kind] ?? 0) + 1)}`);
     const vol = (prim.box.max[0] - prim.box.min[0]) * (prim.box.max[1] - prim.box.min[1]) * (prim.box.max[2] - prim.box.min[2]);
     const symY = prim.kind === 'sphere' || prim.kind === 'revolve' || (['cyl', 'cone'].includes(prim.kind) && !prim.props.axis);
-    // 粗档位：局部 y 只差一点点就竖直（拟合的噪声，写出来是 rot=(0.002,-1,-0.004,45) 这样的）→ 吸附成竖直，只留偏航（turn=）。
-    // 倾角不超过档位角度步长的 5 倍，并且最长边 × 倾角不超过容差（远端的偏移在容差以内）
-    if (FID.angle && !prim.absolute && prim.kind !== 'mesh' && prim.cols[1][1] < 1 - 1e-9) {
-      const tilt = Math.acos(Math.min(1, prim.cols[1][1])), ext = Math.max(...[0, 1, 2].map((k) => prim.box.max[k] - prim.box.min[k]));
-      if (tilt < (5 * FID.angle * Math.PI) / 180 && ext * tilt < FID.tau * M) {
-        const y = [0, 1, 0], x = unit(sub(prim.cols[0], scl(y, prim.cols[0][1])));
-        prim.cols = [x, y, cross(x, y)];
-      }
-    }
+    snapUpright(prim);
     if (symY && Math.abs(prim.cols[1][1] - 1) < 1e-6) prim.cols = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
     return { id, src: p.uid ?? p.name ?? p.from ?? null, meta: p.meta, material: p.material, ...prim, vol, symY };
   });
   const typeLines = types.flatMap((T) => {
     // 板件：类型体是一组墙板、楼板（已经相对包络的底面中心）
-    if (T.prim.body) return [`def ${T.name} {`, `  group body {  // ${T.count} 个实例；板件`, ...T.prim.body.map((l) => '    ' + l), '  }', '}'];
+    if (T.prim.body) return [`def ${T.name} {`, `  ${T.prim.kind} body {  // ${T.count} 个实例；${T.prim.union ? '基本体之并' : T.prim.shell ? '外壳 − 空腔 − 开口' : '板件'}`, ...T.prim.body.map((l) => '    ' + l), '  }', '}'];
     // 台阶的位置由两个端点决定（at= 对它不起作用）：端点直接平移到类型的坐标系里（原点在包络的底面中心）
     if (T.prim.kind === 'span') {
       const mv = (v) => vec(sub(v.split(',').map(Number), T.c0));
@@ -911,15 +1149,15 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     // 旁路信息（sidecar 表里对上的列）也写成 ~元数据：不计描述长度，可以在 where 里读
     const meta = Object.entries(o.meta ?? {}).filter(([, v]) => v !== '').map(([k, v]) => `~${k}=${/^-?\d+(\.\d+)?$/.test(v) ? v : JSON.stringify(String(v))}`);
     const head = [o.kind, o.id, props, place, orient, o.mat === defaultMat ? '' : (o.mat === defaultMat ? '' : `mat=${o.mat}`), `~fit=${fmt(o.fit)}`, o.src ? `~src=${JSON.stringify(o.src)}` : '', ...meta].filter(Boolean).join(' ');
-    // 板件：一组墙板、楼板写在物体自己的坐标系里（原点在包络的底面中心）
-    return o.body ? [head + ' {', ...o.body.map((l) => '  ' + l), '}'].join('\n') : head;
+    // 板件、基本体之并：内容写在物体自己的坐标系里（原点在包络的底面中心）
+    return head + bodyOf(o);
   };
   const absLine = (o) => line(o, `at=${vec(o.at)}`, orientText(o.cols));
   const absSrc = header.concat(objs.map(absLine)).join('\n');
 
   // 空间事实（全坐标版本）
   const r0 = compile(absSrc, { factEps: FACT_EPS * M });
-  lap('全坐标版本编译');
+  lap(`全坐标版本编译（其中板件 ${Math.round(COMPOSITE_MS.panels)}ms、基本体之并 ${Math.round(COMPOSITE_MS.unions)}ms、外壳 ${Math.round(COMPOSITE_MS.shells)}ms）`);
   const byId = new Map(objs.map((o) => [o.id, o]));
   const onOf = new Map(), againstOf = new Map(), nearOf = new Map();
   const related = new Map();
@@ -1127,7 +1365,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
           const colsL = o.cols.map((c) => mvT(poses[0].M, c));
           const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
           const orient = o.symY && Math.abs(colsL[1][1] - 1) < 1e-6 ? '' : orientText(colsL);
-          lines.push('  ' + [o.kind, ch.id, props, `at=${vecS(lp)}`, orient, (o.mat === defaultMat ? '' : `mat=${o.mat}`), `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' '));
+          lines.push('  ' + [o.kind, ch.id, props, `at=${vecS(lp)}`, orient, (o.mat === defaultMat ? '' : `mat=${o.mat}`), `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' ') + bodyOf(o, '  '));
           for (const [k, m] of ch.members.entries()) {
             targets.push({ o: m, path: `${u.id}.${k}.${ch.id}`, tol: 2e-3 * S, unit: u.id, kind: 'along' });
             setPose(m, colsL.map((c) => mvC(poses[k].M, c)), o.box);
@@ -1153,7 +1391,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
           // 阵列成员的校验更严（2 mm），数字精度也要跟上
           const cc = chooseFor(o, o.at, cand, (B) => (sib.has(B.id) ? unitOf.get(B.id).child.id : nameOf(B)), 5e-4 * S);
           const props = Object.entries(o.props).map(([k, v]) => `${k}=${v}`).join(' ');
-          lines.push('  ' + [o.kind, ch.id, props, cc ? cc.place : `at=${vec(o.at)}`, cc ? orientRel(o, cc.ref) : orientText(o.cols), (o.mat === defaultMat ? '' : `mat=${o.mat}`), `~fit=${fmt(Math.min(...ch.members.map((mm) => mm.fit)))}`].filter(Boolean).join(' '));
+          lines.push('  ' + [o.kind, ch.id, props, cc ? cc.place : `at=${vec(o.at)}`, cc ? orientRel(o, cc.ref) : orientText(o.cols), (o.mat === defaultMat ? '' : `mat=${o.mat}`), `~fit=${fmt(Math.min(...ch.members.map((mm) => mm.fit)))}`].filter(Boolean).join(' ') + bodyOf(o, '  '));
           if (cc) stats[cc.kind]++; else stats.coord++;
           sib.add(o.id);
           for (const [k, mm] of ch.members.entries()) {
@@ -1208,7 +1446,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
         const placeTxt = cc ? cc.place : lp.every((v) => Math.abs(v) < 1e-6) ? '' : `at=${vec(lp)}`;
         const colsL = o.cols.map((col) => mvT(RF, col));
         const orient = cc ? orientRel(o, cc.ref) : o.symY && Math.abs(colsL[1][1] - 1) < 1e-6 ? '' : orientText(colsL);
-        lines.push('  ' + [o.kind, ch.id, props, placeTxt, orient, (o.mat === defaultMat ? '' : `mat=${o.mat}`), `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' '));
+        lines.push('  ' + [o.kind, ch.id, props, placeTxt, orient, (o.mat === defaultMat ? '' : `mat=${o.mat}`), `~fit=${fmt(Math.min(...ch.members.map((m) => m.fit)))}`].filter(Boolean).join(' ') + bodyOf(o, '  '));
         sib.add(o.id);
         for (const [i, m] of ch.members.entries()) {
           const k = instOf(u, i);
@@ -1290,7 +1528,9 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     arrays: kept.map((u) => ({ id: nm(u.id), n: u.n, ...(u.holes?.length ? { holes: u.holes } : {}), kind: u.along ? 'along' : u.rotate ? 'rotate' : u.turn ? 'screw' : u.grid ? 'grid' : 'linear', children: u.children.map((c) => c.id) })),
     mirrors: mirrors.filter((mi) => !droppedMirrors.has(mi.B.id)).map((mi) => ({ id: nm(mi.B.id), of: nm(mi.A.id), across: mi.across, objects: mi.paths.size })),
     // 第一遍就拆成板件的部件与类型：分数（只看这个部件）从 was 降到 S
-    panels: [...types.filter((T) => T.prim.body).map((T) => ({ type: T.name, instances: T.count, S: T.prim.panels.S, was: T.prim.panels.was })), ...objs.filter((o) => o.body).map((o) => ({ id: nm(o.id), S: o.panels.S, was: o.panels.was, instead: o.panels.kind }))],
+    panels: [...types.filter((T) => T.prim.panels).map((T) => ({ type: T.name, instances: T.count, S: T.prim.panels.S, was: T.prim.panels.was })), ...objs.filter((o) => o.panels).map((o) => ({ id: nm(o.id), S: o.panels.S, was: o.panels.was, instead: o.panels.kind }))],
+    shells: [...types.filter((T) => T.prim.shell).map((T) => ({ type: T.name, instances: T.count, ...T.prim.shell })), ...objs.filter((o) => o.shell).map((o) => ({ id: nm(o.id), ...o.shell, instead: o.shell.kind }))],
+    unions: [...types.filter((T) => T.prim.union).map((T) => ({ type: T.name, instances: T.count, prims: T.prim.union.prims, S: T.prim.union.S, was: T.prim.union.was })), ...objs.filter((o) => o.union).map((o) => ({ id: nm(o.id), prims: o.union.prims, S: o.union.S, was: o.union.was, instead: o.union.kind }))],
     covered: kept.reduce((s, u) => s + u.children.reduce((t, c) => t + c.members.length, 0), 0),
     placement: out.stats,
     meanFit: +(objs.reduce((s, o) => s + o.fit, 0) / objs.length).toFixed(3),
@@ -1605,11 +1845,11 @@ function detectArrays(objs, related) {
   // 签名：形状、材质、相对竖直方向的姿态，加上尺寸数值；尺寸按容差比较（拟合会有毫米级的噪声）
   const nums = (o) => Object.entries(o.props).filter(([k]) => !['src', 'pivot', 'axis'].includes(k)).flatMap(([, v]) => (String(v).match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/g) ?? []).map(Number));
   // 朝向不进签名：一般轴的旋转会改变物体相对竖直方向的姿态；每一对的运动在下面单独核对
-  const head = (o) => [o.kind, o.props.axis ?? '', o.mat].join('|');
+  const head = (o) => [o.kind, o.props.axis ?? '', o.mat, ...(o.body ?? [])].join('|');
   const sameSize = (a, b) => { const x = nums(a), y = nums(b); return x.length === y.length && x.every((v, i) => Math.abs(v - y[i]) < 0.01 * S + 0.005 * Math.abs(v)); };
   const groupList = [];
   for (const o of objs) {
-    if (o.kind === 'mesh' || o.body || o.absolute) continue; // 板件（一组墙板）的形状不在参数里，不参与阵列
+    if (o.kind === 'mesh' || o.absolute) continue; // 板件、基本体之并的形状在内容里（签名带着内容的原文）
     const g = groupList.find((gg) => gg.head === head(o) && sameSize(gg.items[0], o));
     if (g) g.items.push(o); else groupList.push({ head: head(o), items: [o] });
   }
@@ -1955,6 +2195,12 @@ function detectArrays(objs, related) {
 }
 
 // 调试用：两个候选坐标系各自的最优拟合
+// fitworker.mjs 用：一个部件的拟合，加上它可能用到的“基本体之并”的几何（条件与 unionWorth 相同，决定层与选项留给主线程）
+export function prefitPart(tris, i) {
+  const fit = fitPart({ tris }, i);
+  return { fit, union: FID.name !== 'semantic' && fit.e > TOL && tris.length >= 8 ? unionGeometry(tris) : undefined };
+}
+
 export function _debugFits(part, i) {
   const pts = samplePoints(part.tris, 600, i + 1);
   const vol = meshVolume(part.tris);
