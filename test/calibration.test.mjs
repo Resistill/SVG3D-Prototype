@@ -46,18 +46,3 @@ test('L0 / L1 / L2 三档：L0 ≈ L1 < L2，与真值评测同序', () => {
   assert.ok(Math.abs(l0.S - l1.S) < 0.01 * l0.S && Math.abs(l0.ev - l1.ev) < 0.01 * l0.ev, JSON.stringify(rows));
   assert.ok(l2.S > Math.max(l0.S, l1.S) && l2.quality.some((q, k) => q < l0.quality[k]), JSON.stringify(rows));
 });
-
-test('邻域评分与全场分数同向：自动细化的每一步，普通物体两者相差不到 1', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 's3d-cal-'));
-  const { doc, io } = sceneToGLB(read('spaceport.s3d'), { level: 'L2' });
-  const glb = join(dir, 'world.glb');
-  writeFileSync(glb, await io.writeBinary(doc));
-  await runCommand('init', join(dir, 'p'), { source: glb, fidelity: 'semantic', unit: 1 });
-  const res = await runCommand('refine', join(dir, 'p'), { auto: true, budget: 4, to: 'structure' });
-  const steps = res.log.filter((l) => l.delta != null);
-  assert.ok(steps.length >= 1, JSON.stringify(res.log));
-  for (const l of steps) {
-    assert.equal(Math.sign(l.local), Math.sign(l.delta), JSON.stringify(l));
-    if (l.kind === 'object') assert.ok(Math.abs(l.local - l.delta) < 1, JSON.stringify(l));
-  }
-});

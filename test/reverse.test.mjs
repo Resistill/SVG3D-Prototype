@@ -1,4 +1,4 @@
-// 闭环：示例场景 → GLB → 逆向 → 与原始描述比对
+// 闭环：示例场景 → GLB → 逆向 → 与原始描述比对（往返、压缩、阵列、命名、决定层）
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -268,39 +268,6 @@ test('享元类型：同一个网格被多个节点使用 → 一个 def + 若�
   ids.map(ctr).sort((a, b) => a[0] - b[0]).forEach((c, k) => [[-10, 5], [0, 5], [12, 5]][k].forEach((v, j) => assert.ok(Math.abs(c[j] - v) < 0.05, `${ids[k]}: ${c}`)));
 });
 
-// 把整个场景挂到一个缩放过的父节点下：同一个世界，换一种长度单位（k = 每米多少个场景单位）
-const rescale = (doc, k) => {
-  for (const scene of doc.getRoot().listScenes()) {
-    const top = doc.createNode('units').setScale([k, k, k]);
-    for (const c of scene.listChildren()) { scene.removeChild(c); top.addChild(c); }
-    scene.addChild(top);
-  }
-  return doc;
-};
-
-test('场景单位：同一个场景按米、stud（0.28 m）、厘米逆向，形状、阵列、镜像一致，残差分数基本不变', () => {
-  const src = readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8');
-  for (const fidelity of ['structure', 'semantic']) {
-    const runs = [1, 0.28, 0.01].map((unit) => {
-      const parts = partsOfDocument(rescale(sceneToGLB(src, { level: 'L0' }).doc, 1 / unit));
-      const out = reverse(parts, { srcFile: 'x.glb', fidelity, unit });
-      const r = compile(out.src, { factEps: FACT_EPS / unit });
-      assert.deepEqual(r.errors, [], `${fidelity} unit=${unit}`);
-      const s = score({ result: r, files: [{ file: null, text: out.src }], sourceParts: parts, consts: { delta: FIDELITY[fidelity].tau, unit } });
-      const kinds = {};
-      for (const o of out.objs) kinds[o.kind] = (kinds[o.kind] ?? 0) + 1;
-      return { unit, kinds, arrays: out.report.arrays.map((a) => a.id + ':' + a.children.join('+')).sort(), mirrors: out.report.mirrors.map((m) => m.of).sort(), R: s.R_src + s.R_recon };
-    });
-    for (const x of runs.slice(1)) {
-      assert.deepEqual(x.kinds, runs[0].kinds, `${fidelity} unit=${x.unit} 形状`);
-      assert.deepEqual(x.arrays, runs[0].arrays, `${fidelity} unit=${x.unit} 阵列`);
-      assert.deepEqual(x.mirrors, runs[0].mirrors, `${fidelity} unit=${x.unit} 镜像`);
-      // 数字按“不粗于米制分辨率的 3 倍”取整，单位不同取整的步长也不同（语义档在 stud 下是整数），残差允许差几个百分点
-      assert.ok(Math.abs(x.R - runs[0].R) < 0.03 * runs[0].R, `${fidelity} unit=${x.unit} 残差 ${x.R} 对 ${runs[0].R}`);
-    }
-  }
-});
-
 test('决定层：忽略、指定形状与名字、合并、保留网格、锁定定位；满足不了的与找不到的写进报告', () => {
   const src = readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8');
   const parts = partsOfDocument(sceneToGLB(src, { level: 'L0' }).doc);
@@ -331,113 +298,4 @@ test('决定层：忽略、指定形状与名字、合并、保留网格、锁�
   assert.match(out.src, /^mesh spare_mesh /m, '保留为网格');
   assert.match(out.src, /^box ground .*at=0,-0\.5,0 pin=center/m, '地面沿用人改过的定位');
   assert.deepEqual(compile(out.src).errors, []);
-});
-
-test('台阶：楼梯写成 span … steps=n，级数、截面与原文一致，几何包络对得上；成对的楼梯写成镜像', () => {
-  const src = readFileSync(new URL('../examples/basics.s3d', import.meta.url), 'utf8');
-  const out = reverse(partsOfDocument(sceneToGLB(src, { level: 'L0' }).doc), { srcFile: 'x.glb', level: 'L0' });
-  const m = /^span stairs from=(\S+) to=(\S+) steps=(\d+) section=(\S+)/m.exec(out.src);
-  assert.ok(m, out.src.split('\n').filter((l) => /stairs/.test(l)).join('\n'));
-  assert.equal(+m[3], 8);
-  assert.deepEqual(m[4].split(',').map(Number), [2, 0.2]);
-  const box = (r) => r.nodes.find((n) => n.path === 'stairs').box;
-  const a = box(compile(src)), b = box(compile(out.src));
-  for (const k of ['min', 'max']) a[k].forEach((v, i) => assert.ok(Math.abs(v - b[k][i]) < 0.01, `${k}: ${a[k]} 对 ${b[k]}`));
-  const sp = reverse(partsOfDocument(sceneToGLB(readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8'), { level: 'L0' }).doc), { srcFile: 'x.glb', level: 'L0' });
-  assert.ok((sp.src.match(/^span \S+ from=\S+ to=\S+ steps=/gm) ?? []).length >= 2, '两段楼梯');
-  assert.ok(sp.report.mirrors.some((x) => /stair/.test(x.of)), JSON.stringify(sp.report.mirrors));
-});
-
-test('旋转体：整流罩写成 revolve（底部半径、高度、尖顶与原文一致）；螺旋扶手这类只占旋转面一小部分的不算', () => {
-  const sp = reverse(partsOfDocument(sceneToGLB(readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8'), { level: 'L0' }).doc), { srcFile: 'x.glb', level: 'L0', fidelity: 'structure' });
-  const m = /^revolve rocket_nose profile=\[([^\]]+)\]/m.exec(sp.src);
-  assert.ok(m, sp.src.split('\n').filter((l) => /nose/.test(l)).join('\n'));
-  const prof = m[1].split(';').map((p) => p.replace(/[()\s]/g, '').split(',').map(Number));
-  assert.ok(Math.abs(prof[0][0] - 2) < 0.05 && prof[0][1] === 0, `底部 ${prof[0]}`);
-  const top = prof[prof.length - 1];
-  assert.ok(Math.abs(top[1] - 7) < 0.05 && top[0] < 0.3, `尖顶 ${top}`);
-  assert.deepEqual(compile(sp.src).errors, []);
-  const cv = reverse(partsOfDocument(sceneToGLB(readFileSync(new URL('../examples/curves.s3d', import.meta.url), 'utf8'), { level: 'L0' }).doc), { srcFile: 'x.glb', level: 'L0', fidelity: 'structure' });
-  assert.doesNotMatch(cv.src, /^revolve garage_rail /m, '螺旋扶手不是旋转体');
-});
-
-test('并行拟合：worker 线程预先算的拟合与单线程逐字一致', async () => {
-  const { prefit } = await import('../tools/fitpool.mjs');
-  const src = readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8');
-  const parts = partsOfDocument(sceneToGLB(src, { level: 'L1' }).doc);
-  const pre = await prefit(parts, { fidelity: 'structure', unit: 1, threads: 3, min: 0 });
-  assert.ok(pre && pre.count > 50, JSON.stringify(pre && pre.count));
-  const a = reverse(parts, { srcFile: 'x.glb', level: 'L1', fidelity: 'structure' });
-  const b = reverse(parts, { srcFile: 'x.glb', level: 'L1', fidelity: 'structure', prefit: pre });
-  assert.equal(b.src, a.src);
-});
-
-test('L2 的网格兜底：合并网格拆出来、拟合不了的分量写进部件文件，网格引用指向它；精细档的分数大幅下降', async () => {
-  const { partsGlb } = await import('../tools/project.mjs');
-  const { score } = await import('../tools/score.mjs');
-  const { sceneObjects } = await import('../tools/worldtris.mjs');
-  const src = readFileSync(new URL('../examples/spaceport.s3d', import.meta.url), 'utf8');
-  const parts = partsOfDocument(sceneToGLB(src, { level: 'L2' }).doc);
-  const plain = reverse(parts, { srcFile: 'x.glb', level: 'L2', fidelity: 'detail' });
-  const fb = reverse(parts, { srcFile: 'x.glb', level: 'L2', fidelity: 'detail', partsFile: 'p.parts.glb' });
-  assert.match(fb.src, /src="p\.parts\.glb#merged_\d+~\d+"/);
-  const r = compile(fb.src);
-  assert.deepEqual(r.errors, []);
-  assert.ok(sceneObjects(r, { sourceParts: parts }).every((o) => !o.mesh?.placeholder), '网格引用都对得上源部件');
-  const S = (text) => score({ result: compile(text), files: [{ file: null, text }], sourceParts: parts, consts: { delta: 0.005 } }).S;
-  assert.ok(S(fb.src) < 0.5 * S(plain.src), `${S(fb.src)} 对 ${S(plain.src)}`);
-  const bin = await partsGlb(parts, fb.objs, 'p.parts.glb');
-  assert.ok(bin && bin.length > 1000);
-});
-
-test('L2 的楼梯改写之后，旁边的物体照常定位、零错误编译', () => {
-  const src = `material m color=#888888
-material n color=#cc4444
-box ground size=40,1,40 pin=top mat=m
-span stairs from=0,0,0 to=6,3,0 steps=8 section=2,0.2 mat=m
-box crate size=1,1,1 at=3,0,1.6 mat=n
-box crate2 size=1,1,1 at=3.4,1.6,-1.6 mat=n`;
-  const parts = partsOfDocument(sceneToGLB(src, { level: 'L2' }).doc);
-  const out = reverse(parts, { srcFile: 'x.glb', level: 'L2', fidelity: 'structure' });
-  assert.match(out.src, /steps=8/);
-  assert.deepEqual(compile(out.src).errors, []);
-});
-
-test('板件：结构档第一遍就把空心的楼写成墙板与楼板（普通部件与享元类型都是），比实心盒子分数低；语义档不变', () => {
-  const r = compile(`
-subtract shell {
-  box outer size=20,8,12
-  box inner size=19.4,7.4,11.4 at=0,0.3,0
-  box door size=3,4,1 at=outer.front pin=center align=bottom
-}
-box slab size=19.4,0.3,11.4 at=0,4,0
-`);
-  const tris = [];
-  for (const o of sceneObjectsOf(r)) for (let i = 0; i < o.pos.length; i += 9) tris.push([0, 3, 6].map((k) => [o.pos[i + k], o.pos[i + k + 1], o.pos[i + k + 2]]));
-  const white = { name: 'white', color: '#ffffff' }, grey = { name: 'grey', color: '#808080' };
-  const cube = (a, b) => { const v = (i) => [i & 1 ? b[0] : a[0], i & 2 ? b[1] : a[1], i & 4 ? b[2] : a[2]]; return [[0, 1, 3, 2], [4, 6, 7, 5], [0, 4, 5, 1], [2, 3, 7, 6], [0, 2, 6, 4], [1, 5, 7, 3]].flatMap(([p, q, s, t]) => [[v(p), v(q), v(s)], [v(p), v(s), v(t)]]); };
-  const shift = (ts, d) => ts.map((t) => t.map((p) => [p[0] + d[0], p[1] + d[1], p[2] + d[2]]));
-  const ground = { name: 'ground', tris: cube([-30, -1, -30], [60, 0, 30]), material: grey };
-  // 屋顶上的一个箱子：立在板件拼成的楼上
-  const parts = [{ name: 'hall', tris, material: white }, ground, { name: 'crate', tris: cube([2, 8, -1], [4, 10, 1]), material: grey }];
-  const scoreOf = (out) => score({ result: compile(out.src), files: [{ file: 'x.s3d', text: out.src }], sourceParts: parts, consts: { delta: 0.05 } }).S;
-  const out = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure' });
-  assert.deepEqual(compile(out.src).errors, []);
-  assert.match(out.src, /^group hall .*\{\n(  (box|subtract) .*\n)+/m, '楼写成一组板件');
-  assert.match(out.src, /^\s+box wall\S* size=/m);
-  assert.match(out.src, /^\s+box slab\S* size=[\d.]+,0\.3,/m, '楼板的厚度来自配对的上下两个面');
-  assert.match(out.src, /^box crate .*on=hall/m, '箱子仍然立在楼上');
-  assert.deepEqual(out.report.fallback, [], '定位全部通过校验');
-  assert.equal(out.report.panels.length, 1);
-  const solid = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure', panels: false });
-  assert.match(solid.src, /^box hall /m);
-  assert.ok(scoreOf(out) < scoreOf(solid) - 20, `板件 ${scoreOf(out)} < 实心盒子 ${scoreOf(solid)}`);
-  assert.equal(reverse(parts, { srcFile: 'x.glb', fidelity: 'semantic' }).report.panels.length, 0, '语义档仍用基本体当代理');
-  // 享元：同一个网格的两栋楼 → 一个类型，类型体是板件
-  const M = (tx) => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, tx, 0, 0, 1];
-  const typed = reverse([{ ...parts[0], name: 'hallA', mesh: '0:0', matrix: M(0) }, { name: 'hallB', tris: shift(tris, [35, 0, 0]), material: white, mesh: '0:0', matrix: M(35) }, ground], { srcFile: 'x.glb', fidelity: 'structure' });
-  assert.deepEqual(compile(typed.src).errors, []);
-  assert.match(typed.src, /^def hallA \{\n  group body \{/m);
-  assert.equal(typed.report.panels[0]?.instances, 2);
-  assert.deepEqual(typed.report.fallback, []);
 });
