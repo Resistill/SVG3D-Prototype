@@ -190,9 +190,43 @@ export function panelLines(tris, { cell, thick, maxThick, maxBoxes = 60, digits 
       // 板的外包矩形与洞
       let bi0 = nu, bi1 = -1, bj0 = nv, bj1 = -1, occ = 0;
       for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) if (g[j * nu + i]) { occ++; bi0 = Math.min(bi0, i); bi1 = Math.max(bi1, i); bj0 = Math.min(bj0, j); bj1 = Math.max(bj1, j); }
-      const holes = rects(nu, nv, (i, j) => i >= bi0 && i <= bi1 && j >= bj0 && j <= bj1 && !g[j * nu + i]);
-      const fill = occ / ((bi1 - bi0 + 1) * (bj1 - bj0 + 1));
+      // 洞：外包矩形里空着的格子按连通块分开，每个洞单独写——几乎填满外接矩形的是一个矩形洞；竖直的墙上
+      // “下面矩形、上面直径等于宽度的半圆”更吻合的是拱门（矩形 + 一根穿墙的圆柱，同外壳的开口）；不规则的才逐格合并成矩形。
+      // 以前一律逐格合并，拱顶成了一串台阶状的洞。洞：{ a0, a1, b0, b1 }（板内二维坐标），拱：{ arch: { uc, vc, r } }
       const toAB = (r) => ({ a0: lo[0] + r.i0 * c, a1: lo[0] + (r.i1 + 1) * c, b0: lo[1] + r.j0 * c, b1: lo[1] + (r.j1 + 1) * c });
+      const holes = [];
+      {
+        const empty = (i, j) => i >= bi0 && i <= bi1 && j >= bj0 && j <= bj1 && !g[j * nu + i], seen = new Uint8Array(nu * nv);
+        for (let j0 = bj0; j0 <= bj1; j0++) for (let i0 = bi0; i0 <= bi1; i0++) {
+          if (seen[j0 * nu + i0] || !empty(i0, j0)) continue;
+          const comp = [], stack = [[i0, j0]];
+          seen[j0 * nu + i0] = 1;
+          while (stack.length) {
+            const [i, j] = stack.pop();
+            comp.push([i, j]);
+            for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = i + di, y = j + dj; if (empty(x, y) && !seen[y * nu + x]) { seen[y * nu + x] = 1; stack.push([x, y]); } }
+          }
+          const ci0 = Math.min(...comp.map((x) => x[0])), ci1 = Math.max(...comp.map((x) => x[0])), cj0 = Math.min(...comp.map((x) => x[1])), cj1 = Math.max(...comp.map((x) => x[1]));
+          const fill = comp.length / ((ci1 - ci0 + 1) * (cj1 - cj0 + 1)), box = toAB({ i0: ci0, i1: ci1, j0: cj0, j1: cj1 });
+          // 拱与矩形谁更吻合（与洞的交 / 并）用谁（同外壳的开口）：拱门的洞占外接矩形九成以上，只看填充率会当成矩形
+          const W = box.a1 - box.a0, r = W / 2, vc = box.b1 - r, uc = box.a0 + r;
+          let archIoU = 0;
+          if (F.kind === 'wall' && comp.length >= 6 && vc > box.b0 + c) {
+            const mine = new Set(comp.map(([i, j]) => j * nu + i));
+            let inter = 0, uni = mine.size;
+            for (let j = cj0; j <= cj1; j++) for (let i = ci0; i <= ci1; i++) {
+              const x = lo[0] + (i + 0.5) * c, y = lo[1] + (j + 0.5) * c, pred = y <= vc || (x - uc) ** 2 + (y - vc) ** 2 <= r * r;
+              if (pred && mine.has(j * nu + i)) inter++; else if (pred) uni++;
+            }
+            archIoU = inter / uni;
+          }
+          if (fill >= 0.85 && fill >= archIoU) { holes.push(box); continue; }
+          if (archIoU >= 0.85) { holes.push({ a0: box.a0, a1: box.a1, b0: box.b0, b1: vc }, { arch: { uc, vc, r } }); continue; }
+          const mine = new Set(comp.map(([i, j]) => j * nu + i));
+          for (const h of rects(nu, nv, (i, j) => mine.has(j * nu + i))) holes.push(toAB(h));
+        }
+      }
+      const fill = occ / ((bi1 - bi0 + 1) * (bj1 - bj0 + 1));
       // 矩形在物体坐标系里的底面中心、尺寸、朝向
       const place = (r) => placeAB(toAB(r));
       const placeAB = ({ a0, a1, b0, b1 }) => {
@@ -214,8 +248,10 @@ export function panelLines(tris, { cell, thick, maxThick, maxBoxes = 60, digits 
       if (holes.length && fill >= 0.6 && 2 + holes.length < full.length) {
         // 一个大矩形挖掉几个洞：subtract 的原点是外包矩形的底面中心，洞在它的坐标系里
         const body = { i0: bi0, i1: bi1, j0: bj0, j1: bj1 }, B = place(body), Bab = toAB(body);
-        const lines = holes.map((h) => {
-          const H = toAB(h), dx = (H.a0 + H.a1) / 2 - (Bab.a0 + Bab.a1) / 2;
+        const lines = holes.map((H) => {
+          // 拱：穿墙的圆柱（axis=z 是墙的厚度方向；圆柱按包络的底面放，圆心在 vc）
+          if (H.arch) return `  cyl ${name('arch')} r=${fmt(H.arch.r, digits)} h=${fmt(3 * th, digits)} axis=z at=${vec([H.arch.uc - (Bab.a0 + Bab.a1) / 2, H.arch.vc - H.arch.r - Bab.b0, 0])}`;
+          const dx = (H.a0 + H.a1) / 2 - (Bab.a0 + Bab.a1) / 2;
           const local = F.kind === 'wall' ? [dx, H.b0 - Bab.b0, 0] : [dx, -th, (H.b0 + H.b1) / 2 - (Bab.b0 + Bab.b1) / 2];
           const size = F.kind === 'wall' ? [H.a1 - H.a0, H.b1 - H.b0, 3 * th] : [H.a1 - H.a0, 3 * th, H.b1 - H.b0];
           return `  box ${name('hole')} size=${vec(size)}${local.some((x) => Math.abs(x) > 1e-9) ? ` at=${vec(local)}` : ''}`;

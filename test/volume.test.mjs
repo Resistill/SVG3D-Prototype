@@ -50,3 +50,18 @@ test('大部件当小场景：一个模型里 70 根一样的柱子排成一排�
   assert.match(out.src, /^group Fence_Posts_01 [^\n]*\{\n\s+repeat \S+ n=70 step=2,0,0/m, out.src);
   assert.doesNotMatch(out.src, /^mesh /m);
 });
+
+test('板件里的拱门：墙上“矩形 + 半圆”的洞写成矩形洞加一根穿墙的圆柱，不再是一串台阶状的洞', async () => {
+  const { panelLines } = await import('../tools/panels.mjs');
+  const { sceneObjects } = await import('../tools/worldtris.mjs');
+  const r = compile('subtract w {\n  box body size=12,8,0.3\n  box door size=3,3,1 at=0,0,0\n  cyl top r=1.5 h=1 axis=z at=0,1.5,0\n}');
+  assert.deepEqual(r.errors, []);
+  const tris = [];
+  for (const o of sceneObjects(r)) for (let i = 0; i < o.pos.length; i += 9) tris.push([0, 3, 6].map((k) => [o.pos[i + k], o.pos[i + k + 1], o.pos[i + k + 2]]));
+  const p = panelLines(tris, { cell: 0.1, thick: 0.1, maxThick: 1, digits: 2, maxBoxes: 200 });
+  const text = p.lines.join('\n');
+  const m = /cyl arch r=([\d.]+) h=[\d.]+ axis=z at=(-?[\d.]+),(-?[\d.]+),0/.exec(text);
+  assert.ok(m, text);
+  assert.ok(Math.abs(+m[1] - 1.5) < 0.15, `半径 ${m[1]}`);
+  assert.ok((text.match(/box hole/g) ?? []).length <= 2, text);
+});
