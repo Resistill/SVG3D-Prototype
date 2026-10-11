@@ -11,6 +11,7 @@ import { FIDELITY } from './reverse.mjs';
 import { readdirSync, renameSync, mkdirSync, appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { safe } from './split.mjs';
+import { nodeRoles, ROLE_LABELS } from '../src/roles-view.js';
 
 // ── 提议：AI 的修改先写成 proposals/NNN-标题.s3d，人（或按约定的 agent）预览后接受或否决 ──
 // 文件首行 // layer=edits why=…；可以有 // retract <行号>（撤销目标层的某一行）；其余是要追加到目标层的语句
@@ -321,15 +322,21 @@ export const COMMANDS = {
     },
   },
   render: {
-    desc: '离屏渲染成 PNG：view=iso|iso2|top|front|back|left|right，mode=color|id|labels|error（按 score.json 的误差从绿到红上色）；focus=路径或 selection（只标注、并且不被遮挡）；source 渲染源模型；box 指定取景（返回值里的 box 可原样传回，源与重建取景一致）；ortho 正交相机',
-    args: { view: '视角（默认 iso）', mode: '模式（默认 labels）', focus: '可选：路径（或源部件名），或 selection', size: '边长像素（默认 1024）', out: '输出文件（默认 renders/<view>-<mode>.png）', source: '可选：渲染源模型而不是重建结果', box: '可选：取景范围 x0,y0,z0,x1,y1,z1', ortho: '可选：正交相机', cut: '可选：水平剖切高度（切掉高于它的部分，剖面画成轮廓线；配合 --view=top 看某一层的平面）', elev: '可选：俯仰角（度），--view=front --elev=0 --ortho 是真正的立面' },
+    desc: '离屏渲染成 PNG：view=iso|iso2|top|front|back|left|right，mode=color|id|labels|error（按 score.json 的误差从绿到红上色）；focus=路径或 selection（只标注、并且不被遮挡）；source 渲染源模型；only 只画某些角色（structure,terrain…）；box 指定取景（返回值里的 box 可原样传回，源与重建取景一致）；ortho 正交相机',
+    args: { view: '视角（默认 iso）', mode: '模式（默认 labels）', focus: '可选：路径（或源部件名），或 selection', size: '边长像素（默认 1024）', out: '输出文件（默认 renders/<view>-<mode>.png）', source: '可选：渲染源模型而不是重建结果', box: '可选：取景范围 x0,y0,z0,x1,y1,z1', ortho: '可选：正交相机', cut: '可选：水平剖切高度（切掉高于它的部分，剖面画成轮廓线；配合 --view=top 看某一层的平面）', elev: '可选：俯仰角（度），--view=front --elev=0 --ortho 是真正的立面', only: '可选：只画这些角色，逗号分隔（structure / terrain / decor / decal / helper；源模型按部件的角色，重建按 ~role）' },
     async run(P, a) {
       const parts = await P.sourceParts();
+      const only = a.only ? String(a.only).split(',').map((r) => r.trim()).filter(Boolean) : null;
+      for (const r of only ?? []) if (!ROLE_LABELS[r]) throw new Error(`没有角色 ${r}（可用：${Object.keys(ROLE_LABELS).join(' / ')}）`);
       let objs;
       if (a.source) {
         const { trisToArray } = await import('./worldtris.mjs');
-        objs = parts.map((p, i) => ({ path: p.uid ?? p.name ?? p.from ?? `part_${i}`, pos: trisToArray(p.tris), color: p.material?.color ?? '#c9c9c9' }));
-      } else objs = sceneObjects(P.compile(), { sourceParts: parts });
+        objs = parts.filter((p) => !only || only.includes(p.role ?? 'structure')).map((p, i) => ({ path: p.uid ?? p.name ?? p.from ?? `part_${i}`, pos: trisToArray(p.tris), color: p.material?.color ?? '#c9c9c9' }));
+      } else {
+        const result = P.compile();
+        objs = sceneObjects(result, { sourceParts: parts });
+        if (only) { const roleOf = nodeRoles(result); objs = objs.filter((o) => only.includes(roleOf(o.path))); }
+      }
       const view = a.view ?? 'iso', mode = a.mode ?? 'labels';
       if (mode === 'error') {
         // 误差热图：每个物体（或源部件）的平均误差，以 4δ 为满刻度
@@ -344,9 +351,9 @@ export const COMMANDS = {
       if (!VIEWS[view]) throw new Error(`没有视角 ${view}（可用：${Object.keys(VIEWS).join(' ')}）`);
       const focus = a.focus === 'selection' ? P.selection().paths : a.focus ? [].concat(a.focus) : null;
       const res = rasterize(objs, { view, mode, size: +(a.size ?? 1024), focus: focus?.length ? focus : null, box: bx && { min: bx.slice(0, 3), max: bx.slice(3) }, ortho: !!a.ortho, cut: a.cut != null ? +a.cut : null, elev: a.elev != null ? +a.elev : null });
-      const out = a.out ?? `renders/${a.source ? 'source-' : ''}${view}-${mode}${focus ? '-focus' : ''}.png`;
+      const out = a.out ?? `renders/${a.source ? 'source-' : ''}${view}-${mode}${focus ? '-focus' : ''}${only ? '-' + only.join('+') : ''}.png`;
       P.write(out, res.png);
-      return { file: P.path(out), view, mode, focus, box: [...res.box.min, ...res.box.max].join(','), legend: res.legend };
+      return { file: P.path(out), view, mode, focus, ...(only ? { only, objects: objs.length } : {}), box: [...res.box.min, ...res.box.max].join(','), legend: res.legend };
     },
   },
   propose: {

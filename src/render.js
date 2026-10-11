@@ -5,6 +5,7 @@ import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { worldGeom, itemGeometry, makeEvaluator } from './geometry.js';
 import { VIEWS, camera as presetCam } from './views.js';
+import { nodeRoles } from './roles-view.js';
 
 export class Viewer {
   constructor(el) {
@@ -38,6 +39,11 @@ export class Viewer {
     this.scene.add(this.content, this.curveLayer, this.overlay);
     // mesh 引用（逆向时退回原网格的部件）是否显示；关掉后只剩基本体，看语义重建本身缺了什么
     this.showMeshes = true;
+    // 按角色隐藏（结构 / 装饰 / 地形 / 贴花 / 辅助，见 tools/roles.mjs）；roleCounts：场景里每种角色的物体数
+    this.hiddenRoles = new Set();
+    this.roleCounts = {};
+    // 源模型叠加层的角色：节点名 → 角色（工程逆向时写的 state/source-roles.json），没有的按结构
+    this.sourceRoles = null;
     this.meshCount = 0;
     // 误差热力：路径 → 0..1（满刻度由调用方定），null 时按材质显示
     this.heat = null;
@@ -193,6 +199,9 @@ export class Viewer {
     }
     this.nodes = result.nodes;
     this.nodeMap = new Map(result.nodes.map((n) => [n.path, n]));
+    const roleOf = nodeRoles(result);
+    this.roleCounts = {};
+    for (const c of this.content.children) { c.userData.role = roleOf(c.name); this.roleCounts[c.userData.role] = (this.roleCounts[c.userData.role] ?? 0) + 1; }
     this.fitShadow();
     if (this.firstFrame && this.content.children.length) { this.frame(); this.firstFrame = false; }
     this.applyVisibility();
@@ -358,7 +367,13 @@ export class Viewer {
     if (token !== this.overlayToken) return 0;
     this.ghostMat ??= new THREE.MeshBasicMaterial({ color: '#2f7dff', transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
     const ghost = (obj) => { obj.traverse((o) => { if (o.isMesh) { o.material = this.ghostMat; o.castShadow = o.receiveShadow = false; o.renderOrder = 5; } }); this.overlay.add(obj); };
-    if (!only) { ghost(gltf.scene.clone(true)); return 1; }
+    // 叠加层的网格标上角色（按节点名查 sourceRoles），角色开关对它同样生效
+    // （three.js 改写了节点名：按 glTF 里原始的节点名查；先标在原物体上，克隆时 userData 一起复制）
+    // 同名的部件按出现顺序编号 名字@k（与工具读源部件的编号相同，findSourceNode 也按这个对应）
+    this.findSourceNode(gltf, '');
+    for (const [name, list] of gltf.userData.s3dParts) list.forEach((m, k) => { m.userData.sourceRole = this.sourceRoles?.[list.length > 1 ? `${name}@${k + 1}` : name] ?? this.sourceRoles?.[name] ?? 'structure'; });
+    const show = (root) => root.traverse((o) => { if (o.userData.sourceRole) o.visible = !this.hiddenRoles.has(o.userData.sourceRole); });
+    if (!only) { const all = gltf.scene.clone(true); ghost(all); show(all); return 1; }
     gltf.scene.updateMatrixWorld(true);
     let n = 0;
     for (const name of only) {
@@ -382,10 +397,16 @@ export class Viewer {
     this.showMeshes = on;
     this.applyVisibility();
   }
+  // 某种角色显示 / 隐藏（重建与源模型叠加层一起）
+  setRoleVisible(role, on) {
+    if (on) this.hiddenRoles.delete(role); else this.hiddenRoles.add(role);
+    this.applyVisibility();
+  }
   applyVisibility() {
     const set = this.isolated && new Set(this.isolated);
     const under = (p) => { for (let i = p.length; i > 0; i = p.lastIndexOf('.', i - 1)) if (set.has(p.slice(0, i))) return true; return false; };
-    for (const c of this.content.children) c.visible = (!set || under(c.name)) && (this.showMeshes || !c.userData.meshRef);
+    for (const c of this.content.children) c.visible = (!set || under(c.name)) && (this.showMeshes || !c.userData.meshRef) && !this.hiddenRoles.has(c.userData.role);
+    this.overlay.traverse((o) => { if (o.userData.sourceRole) o.visible = !this.hiddenRoles.has(o.userData.sourceRole); });
     for (const l of this.curveLayer.children) l.visible = !set || under(l.userData.path ?? '');
   }
   // 一组路径的世界包围盒（隔离时对准用）

@@ -167,6 +167,7 @@ export async function initProject(dir, source, { split = 'auto', copy = false, f
   for (const [f, h] of Object.entries(HEADERS)) if (!existsSync(join(dir, f))) writeFileSync(join(dir, f), typeof h === 'function' ? h(dir) : h);
   mkdirSync(join(dir, 'state'), { recursive: true });
   const P = openProject(dir);
+  { const rs = assignRoles(parts, P.roleRules()); parts.forEach((p, i) => { p.role = rs[i]; }); }
   P._parts = parts;
   const rep = await runReverse(P, { fresh: true });
   const note = guess && `场景单位按 1 = ${cfg.unit} 米（部件尺寸的中位数是 ${guess.median} 个单位，猜的）；不对的话用 reverse --unit=<每个单位多少米> --fresh 改（stud 是 0.28）`;
@@ -219,6 +220,8 @@ export async function runReverse(P, { fresh = false, fidelity = null, unit = nul
   await writePartsFile(P, parts, out.objs);
   writeBase(P, out.src);
   P.write('base.report.json', JSON.stringify(out.report, null, 2) + '\n');
+  // 源部件的角色（键 = 名字或 名字@k，同 ~src）：界面的源模型叠加层按它分角色显示
+  P.write('state/source-roles.json', JSON.stringify(Object.fromEntries(parts.filter((p) => p.uid ?? p.name).map((p) => [p.uid ?? p.name, p.role ?? 'structure']))) + '\n');
   const hash = sha1(P.sourcePath());
   if (hash !== P.cfg.sourceHash) { P.cfg.sourceHash = hash; writeCfg(P.path('project.json'), P.cfg); }
   return { fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, ...(out.report.decisions ? { decisions: { applied: out.report.decisions.applied.length, unsatisfied: out.report.decisions.unsatisfied, dangling: out.report.decisions.dangling } } : {}), parts: parts.length, ...(tiled ? { tiles: out.report.tiles.length } : {}), arrays: out.report.arrays.length, mirrors: out.report.mirrors.length, meshes: out.objs.filter((o) => o.kind === 'mesh').length, renamed: out.report.renamed };

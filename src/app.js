@@ -5,6 +5,7 @@ import { createCollab, detectApi, esc } from './collab.js';
 import { shimWorker, rpc } from './shim-worker.js';
 import { createCompiler } from './compile-client.js';
 import { VIEWS } from './views.js';
+import { ROLE_LABELS, ROLE_ORDER } from './roles-view.js';
 
 const $ = (s) => document.querySelector(s);
 const src = $('#src'), gutter = $('#gutter'), errorsEl = $('#errors'), statusEl = $('#status');
@@ -253,6 +254,7 @@ async function run() {
   const warn = viewer.setScene(r);
   $('#meshes').hidden = !viewer.meshCount;
   $('#meshes').textContent = `网格 ${viewer.meshCount}`;
+  renderRoleToggles();
   const t2 = performance.now();
   // 打字时的等待按主线程上的耗时放宽（编译本身在 Worker 里，不卡界面）
   lastCost = out.worker ? t2 - t1 : t2 - t0;
@@ -553,6 +555,20 @@ $('#meshes').addEventListener('click', (e) => {
   e.target.classList.toggle('on', viewer.showMeshes);
 });
 $('#export').addEventListener('click', () => viewer.exportGLB(current));
+// 按角色显示（结构 / 地形 / 装饰 / 贴花 / 辅助，见 tools/roles.mjs）：只列场景里有的角色；只有一种时整组不显示。
+// 关掉一种角色，重建与源模型叠加层里这一种一起隐藏——只看结构，对照源模型就能看出问题在哪
+function renderRoleToggles() {
+  const box = $('#roles'), counts = viewer.roleCounts ?? {}, present = ROLE_ORDER.filter((r) => counts[r]);
+  box.hidden = present.length < 2;
+  box.replaceChildren(...present.map((r) => {
+    const b = document.createElement('button');
+    b.textContent = `${ROLE_LABELS[r]} ${counts[r]}`;
+    b.title = `显示/隐藏${ROLE_LABELS[r]}（~role=${r}；没写 ~role 的是结构）`;
+    b.classList.toggle('on', !viewer.hiddenRoles.has(r));
+    b.addEventListener('click', () => { const on = viewer.hiddenRoles.has(r); viewer.setRoleVisible(r, on); b.classList.toggle('on', on); });
+    return b;
+  }));
+}
 
 // ── 相机预设、快照与离屏渲染（docs/PLAN2.md 4.7 多视角一致）──
 // 预设与 tools/raster.mjs 是同一份（src/views.js）：切到 iso 看到的就是 AI 用 render --view=iso 看到的取景。
@@ -668,6 +684,7 @@ async function openProjectFor(file) {
     const r = await fetch(dir + 'project.json', { cache: 'no-store' });
     if (!r.ok) return null;
     const cfg = await r.json();
+    try { const rr = await fetch(dir + 'state/source-roles.json', { cache: 'no-store' }); if (rr.ok) viewer.sourceRoles = await rr.json(); } catch { /* 没有：叠加层一律按结构 */ }
     return { dir, apiDir: dir.replace(/\/$/, '') || '.', cfg, unit: cfg.unit ?? 1, score: null };
   } catch { return null; }
 }
