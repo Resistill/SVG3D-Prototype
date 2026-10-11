@@ -114,7 +114,7 @@ box slab size=19.4,0.3,11.4 at=0,4,0
   const typed = reverse([{ ...parts[0], name: 'hallA', mesh: '0:0', matrix: M(0) }, { name: 'hallB', tris: shift(tris, [35, 0, 0]), material: white, mesh: '0:0', matrix: M(35) }, ground], { srcFile: 'x.glb', fidelity: 'structure', shells: false });
   assert.deepEqual(compile(typed.src).errors, []);
   assert.match(typed.src, /^def hallA \{\n  group body \{/m);
-  assert.equal(typed.report.panels[0]?.instances, 2);
+  assert.equal((typed.report.panels[0] ?? typed.report.subs[0])?.instances, 2);
   assert.deepEqual(typed.report.fallback, []);
 });
 

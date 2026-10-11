@@ -494,12 +494,24 @@ function fitRevolveShell(pts, F, a, t0, H, scale, tol, tris) {
 const meshSeed = (m) => { let h = 2166136261; for (const ch of String(m)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return (h >>> 0) % 1000003; };
 // 写起来更长的形状（多点轮廓的旋转体、样条扫掠）要用省下的残差付得起多写的数，否则用简单的那个：
 // 误差小一点就选它的话，一根细杆会被写成 20 个轮廓点的旋转体——轮廓描的是建模与取整的噪声。
-// 残差按 primCheaper 的估计（误差在 τ 以内不计，所以简单形状已经在容差以内时多写的全是浪费）；多写的数每个按 1.5
+// 残差按 primCheaper 的估计（误差在 τ 以内不计，所以简单形状已经在容差以内时多写的全是浪费），
+// 再加上形状多出来的面（覆盖率 = 网格面积 / 形状面积不到 1：盖住弯道的楔形，表面大半落在路面以外——e 只量源到形状，看不见这部分），
+// 那部分按封顶的距离计；多写的数每个按 1.5
 function paysOff(simple, complex, extraNumbers, part) {
   const h = simple.frame.h, scale = Math.max(Math.min(...h), 0.02 * Math.max(...h), 1e-6), tauS = FID.tau * M;
-  const area = part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0);
-  const R = (e) => 2 * 4 * Math.log2(1 + area / (tauS * tauS)) * Math.log2(1 + Math.max(0, e * scale - tauS) / tauS);
-  return R(simple.e) - R(complex.e) > 1.5 * extraNumbers;
+  const area = part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0), w = 2 * 4 * Math.log2(1 + area / (tauS * tauS));
+  // 多出来的面离源表面多远：不超过形状第二小的半尺寸（细杆的方柱多出来的只是棱角，离圆柱不过几厘米；盖住弯道的楔形多出来的离路面很远），封顶 dMax
+  const extra = (f) => { if (coverOf(f, area) >= 1) return 0; const d = Math.min(SCORE_DEFAULTS.dMax * M, [...f.frame.h].sort((a, b) => a - b)[1]); return (1 - coverOf(f, area)) * Math.log2(1 + Math.max(0, d - tauS) / tauS); };
+  const R = (f) => w * (Math.log2(1 + Math.max(0, f.e * scale - tauS) / tauS) + extra(f));
+  return R(simple) - R(complex) > 1.5 * extraNumbers;
+}
+// 覆盖率：网格表面积 / 形状的表面积（台阶、管、旋转体、扫掠贴着网格走，算 1）
+function coverOf(f, areaMesh) {
+  if (!f.shape || f.shape === 'tube' || f.shape === 'steps' || f.shape === 'revolve' || f.shape === 'sweep') return 1;
+  const h = f.frame.h, R = Math.max(f.r0 ?? 0, f.r1 ?? 0);
+  const areaPrim = f.shape === 'sphere' ? 4 * Math.PI * f.r * f.r
+    : f.shape === 'cyl' || f.shape === 'cone' ? 2 * Math.PI * R * R + 2 * Math.PI * R * 2 * h[f.axis] : 8 * (h[0] * h[1] + h[0] * h[2] + h[1] * h[2]);
+  return areaPrim > 0 ? areaMesh / areaPrim : 1;
 }
 // 扫掠的结果整体平移
 const moveSweep = (sw, d) => ({ ...sw, curve: sw.curve.kind === 'spline' ? { ...sw.curve, ctrl: sw.curve.ctrl.map((p) => add(p, d)) } : { ...sw.curve, c: add(sw.curve.c, d) } });
@@ -549,11 +561,7 @@ export function fitPart(part, i, only = null, basic = false) {
   // 覆盖率：网格表面积 / 基本体表面积。实心的楼块、墙接近 1；一块起伏的地形、一道弯曲的长墙、地面贴花只占包络盒很小一部分表面，
   // 硬套一个基本体比保留网格糟得多（网格常常不闭合，所以不用体积判断）
   const areaMesh = part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0);
-  const h = best.frame.h, R = Math.max(best.r0 ?? 0, best.r1 ?? 0);
-  const areaPrim = best.shape === 'sphere' ? 4 * Math.PI * best.r * best.r
-    : best.shape === 'cyl' || best.shape === 'cone' ? 2 * Math.PI * R * R + 2 * Math.PI * R * 2 * h[best.axis]
-      : best.shape === 'tube' || best.shape === 'steps' || best.shape === 'revolve' || best.shape === 'sweep' ? areaMesh : 8 * (h[0] * h[1] + h[0] * h[2] + h[1] * h[2]);
-  const cover = areaPrim > 0 ? areaMesh / areaPrim : 1;
+  const cover = coverOf(best, areaMesh);
   const lo = [0, 1, 2].map((k) => Math.min(...pts.map((p) => p[k]))), hi = [0, 1, 2].map((k) => Math.max(...pts.map((p) => p[k])));
   const vc = scl(verts.reduce((s, v) => add(s, v), [0, 0, 0]), 1 / Math.max(1, verts.length));
   return { ...best, aabb: { min: lo, max: hi }, vc, cover };
@@ -1118,9 +1126,10 @@ function subSceneLines(pieces, part) {
 }
 // 子场景的候选：分量（2–400 块）；只有一块时，板件分解的盒子（格子从细到粗）。frame 里的三角形 ftris，cols、cur 同 tryPanels。
 // 返回 { body, at（frame 里，组的包络底面中心）, box, S, curS, pieces } 或 null
-function trySubScene(ftris, part, cur) {
+// n：类型的实例数（残差按实例数计，描述只写一次）
+function trySubScene(ftris, part, cur, n = 1) {
   const { evalLines } = judgeOf(part);
-  const total = (ls) => ls.L + ls.R_src + ls.R_recon + ls.R_vol;
+  const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon + ls.R_vol);
   // cur.S：已经有更好的候选（板件、外壳、并）时直接给它的分数
   const curS = cur.S ?? (cur.mesh != null ? cur.mesh : (() => { const ls = evalLines([cur.line]); return ls ? total(ls) : Infinity; })());
   if (curS < SUB_MIN_S) return null;
@@ -1185,14 +1194,19 @@ const scatterWorth = (part) => !part.force && part.tris.length >= 6 && !['decal'
 
 function panelPrim(fit, part, prim, partIndex = -1) {
   // 已经认出来的（台阶、管道、扫掠、拟合得好的基本体）不拆
-  if (scatterWorth(part) && !['steps', 'tube', 'sweep'].includes(fit.shape) && (fit.e > TOL || fit.cover < COVER_MIN)) {
+  // 分散的模型拆成一组基本体（每个分量一块）；能当小场景拆的（结构的大部件）先试小场景——它按分量拆、每块完整地拟合、再比分数，
+  // 包括了这种写法——没有结果时才退回这里（见函数末尾）
+  const subOK = subSceneWorth(fit, part);
+  const tryScatter = () => {
+    if (!(scatterWorth(part) && !['steps', 'tube', 'sweep'].includes(fit.shape) && (fit.e > TOL || fit.cover < COVER_MIN))) return null;
     const g = scatterGeometry(part.tris);
-    if (g) {
-      const cur0 = prim.kind === 'mesh' ? { mesh: meshCostOf(prim, part) } : { line: primLineOf(prim) };
-      if (scatterAccept(g, part, cur0)) return { kind: 'group', props: {}, body: g.body, cols: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], at: g.c0, box: g.box, fit: fitScoreOf(fit), err: fit.e, scatter: { blocks: g.n } };
-      SCATTERED.set(part, g.n);
-    }
-  }
+    if (!g) return null;
+    const cur0 = prim.kind === 'mesh' ? { mesh: meshCostOf(prim, part) } : { line: primLineOf(prim) };
+    if (scatterAccept(g, part, cur0)) return { kind: 'group', props: {}, body: g.body, cols: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], at: g.c0, box: g.box, fit: fitScoreOf(fit), err: fit.e, scatter: { blocks: g.n } };
+    SCATTERED.set(part, g.n);
+    return null;
+  };
+  if (!subOK) { const sc = tryScatter(); if (sc) return sc; }
   const cur = prim.kind === 'mesh' ? { mesh: meshCostOf(prim, part) } : { line: primLineOf(prim) };
   let out = null;
   const better = (S) => !out || S < (out.panels ?? out.union ?? out.shell ?? out.sub).S;
@@ -1231,6 +1245,8 @@ function panelPrim(fit, part, prim, partIndex = -1) {
     COMPOSITE_MS.subTried = (COMPOSITE_MS.subTried ?? 0) + 1;
     if (gb && better(gb.S)) out = { kind: 'group', props: {}, body: gb.body, cols: fcols, at: mvC(fcols, gb.at), box: gb.box, fit: Math.max(0, Math.min(1, 1 - (gb.meanErr * M) / (4 * FID.tau * M))), err: fit.e, sub: { S: gb.S, was: gb.curS, kind: prim.kind, pieces: gb.pieces } };
   }
+  // 小场景、板件、外壳、并都没有结果：退回分散模型的写法（开头跳过了）
+  if (!out && subOK) return tryScatter();
   return out;
 }
 
@@ -1373,18 +1389,29 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const typePart = { ...rep, tris: local, matrix: null, role: roleP(rep) };
       const curT = bad ? { mesh: meshPrice(rep.tris, roleP(typePart), MESH_K) + ms.length * lineCost('src="x" size=1,1,1 pivot=1,1,1') } : { line: primLineOf(primitiveOf(fit, { ...rep, name: null }, srcFile)) };
       const I3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-      let sg = scatterWorth(typePart) && !['steps', 'tube', 'sweep'].includes(fit.shape) && (fit.e > TOL || fit.cover < COVER_MIN) ? scatterGeometry(local) : null;
-      if (sg && !scatterAccept(sg, typePart, curT, ms.length)) { for (const m of ms) SCATTERED.set(parts[m.i], sg.n); sg = null; }
+      // 分散的类型体：能当小场景拆的先试小场景（同普通部件），没有结果时才退回分散的写法（见下）
+      const subOK = subSceneWorth(fit, typePart);
+      const scatterT = () => {
+        const g = scatterWorth(typePart) && !['steps', 'tube', 'sweep'].includes(fit.shape) && (fit.e > TOL || fit.cover < COVER_MIN) ? scatterGeometry(local) : null;
+        if (g && !scatterAccept(g, typePart, curT, ms.length)) { for (const m of ms) SCATTERED.set(parts[m.i], g.n); return null; }
+        return g;
+      };
+      let sg = subOK ? null : scatterT();
       const pb = !sg && panelsWorth(fit, typePart) ? tryPanels(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
       // 基本体之并（类型体是几个基本体）：两种都成立时取分数低的
       const ub = !sg && unionWorth(fit, typePart) ? tryUnion(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
       const sb = !sg && shellWorth(fit, typePart) ? tryShell(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
-      const cb = sg ? { ...sg, kind: 'group', fit: 1 - fit.e / TOL } : [pb, ub, sb].filter(Boolean).sort((x, y) => x.S - y.S)[0] ?? null;
+      // 大部件当小场景（同普通部件）：和板件、并、外壳里最好的那个比
+      const best0 = [pb, ub, sb].filter(Boolean).sort((x, y) => x.S - y.S)[0];
+      const gs = !sg && subOK ? trySubScene(local, typePart, best0 ? { S: best0.S } : curT, ms.length) : null;
+      const gb = gs && { kind: 'group', c0: gs.at, box: gs.box, body: gs.body, fit: Math.max(0, Math.min(1, 1 - (gs.meanErr * M) / (4 * FID.tau * M))), S: gs.S, curS: gs.curS, pieces: gs.pieces };
+      if (subOK && !gb && !best0) sg = scatterT();
+      const cb = sg ? { ...sg, kind: 'group', fit: 1 - fit.e / TOL } : [pb, ub, sb, gb].filter(Boolean).sort((x, y) => x.S - y.S)[0] ?? null;
       if (bad && !cb) continue; // 拟合不了的（会退回网格引用）不做类型
       let prim, c0, lo, hi;
       if (cb) {
         c0 = cb.c0; lo = add(c0, cb.box.min); hi = add(c0, cb.box.max);
-        prim = { kind: cb.kind ?? 'group', props: {}, body: cb.body, cols: I3, at: c0, box: cb.box, ...(cb.n ? { scatter: { blocks: cb.n } } : cb === ub ? { union: { S: ub.S, was: ub.curS, prims: ub.prims } } : cb === sb ? { shell: { S: sb.S, was: sb.curS, openings: sb.openings, arches: sb.arches, interior: sb.interior } } : { panels: { S: pb.S, was: pb.curS } }) };
+        prim = { kind: cb.kind ?? 'group', props: {}, body: cb.body, cols: I3, at: c0, box: cb.box, ...(cb.n ? { scatter: { blocks: cb.n } } : cb === ub ? { union: { S: ub.S, was: ub.curS, prims: ub.prims } } : cb === sb ? { shell: { S: sb.S, was: sb.curS, openings: sb.openings, arches: sb.arches, interior: sb.interior } } : cb === gb ? { sub: { S: gb.S, was: gb.curS, pieces: gb.pieces } } : { panels: { S: pb.S, was: pb.curS } }) };
       } else {
         prim = primitiveOf(fit, { ...rep, name: null }, srcFile);
         // 类型体的原点放在包络的底面中心：实例的定位规则就和普通基本体一样
@@ -1936,7 +1963,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     shells: [...types.filter((T) => T.prim.shell).map((T) => ({ type: T.name, instances: T.count, ...T.prim.shell })), ...objs.filter((o) => o.shell).map((o) => ({ id: nm(o.id), ...o.shell, instead: o.shell.kind }))],
     scattered: [...types.filter((T) => T.prim.scatter).map((T) => ({ type: T.name, instances: T.count, blocks: T.prim.scatter.blocks })), ...objs.filter((o) => o.scatter).map((o) => ({ id: nm(o.id), blocks: o.scatter.blocks }))],
     unions: [...types.filter((T) => T.prim.union).map((T) => ({ type: T.name, instances: T.count, prims: T.prim.union.prims, S: T.prim.union.S, was: T.prim.union.was })), ...objs.filter((o) => o.union).map((o) => ({ id: nm(o.id), prims: o.union.prims, S: o.union.S, was: o.union.was, instead: o.union.kind }))],
-    subs: objs.filter((o) => o.sub).map((o) => ({ id: nm(o.id), pieces: o.sub.pieces, S: o.sub.S, was: o.sub.was, instead: o.sub.kind })),
+    subs: [...types.filter((T) => T.prim.sub).map((T) => ({ type: T.name, instances: T.count, pieces: T.prim.sub.pieces, S: T.prim.sub.S, was: T.prim.sub.was })), ...objs.filter((o) => o.sub).map((o) => ({ id: nm(o.id), pieces: o.sub.pieces, S: o.sub.S, was: o.sub.was, instead: o.sub.kind }))],
     roles: Object.fromEntries([...parts.reduce((m, p) => m.set(roleP(p), (m.get(roleP(p)) ?? 0) + 1), new Map())].sort()),
     helpers: helpers.map((p) => p.uid ?? p.name ?? p.from),
     covered: kept.reduce((s, u) => s + u.children.reduce((t, c) => t + c.members.length, 0), 0),
