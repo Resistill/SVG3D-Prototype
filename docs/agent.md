@@ -34,16 +34,29 @@ reverse [--fidelity=…] [--unit=…] [--fresh]                               �
 | `state/selection.json` | 人在界面里选中的物体 `{paths, camera}` | 界面写，AI 读 |
 | `score.json` | 最近一次评分 | `score` 写 |
 | `renders/` | 渲染图 | `render` 写 |
+| `roles.json` | 可选：源部件角色的规则，排在按名字判定的前面（见下「角色」） | 人 |
+| `state/source-roles.json` | 每个源部件的角色（`名字` 或 `名字@k` → 角色），界面的源模型叠加层按它分角色显示 | `reverse` 写 |
 
 层文件里用到网格的曲面锚点（`on=地形.top[u,w]`）时，每个命令先读源模型（有磁盘缓存），编译才有网格表面的数据；读不到时退回包围盒的顶面，编译结果的 `warnings` 里会说明。
 
 重跑逆向（`reverse`）时，上一次的 `base.s3d` 是名字记忆：几何上对得上的物体沿用原来的名字，所以 `edits.s3d` 里的路径不会失效。
 
+### 角色
+
+每个源部件有一个角色：`structure`（结构：楼的墙、楼梯、平台、围栏、门）、`decor`（装饰：家具、灯、标牌、植被、车……）、`terrain`（地形：地面、路面）、`decal`（贴花：贴在别的表面上的薄片）、`helper`（辅助：白模体积、雾、碰撞体，不是看得见的东西）。逆向写成 `~role=…`（结构是默认，不写），容器里的物体跟着容器。
+
+- 判定（`tools/roles.mjs`）：先看工程的 `roles.json`，再看名字里的词——节点名最后一段按下划线、数字、驼峰切成词；有贴花、辅助的词就是它；否则取最后一个有归属的词（英文复合词的中心词在后：`WallLamp` 是灯、`ConcreteWall` 是墙）；名字里没有线索的按几何（又薄又散的是贴花，其余当结构）。默认名（`Cube`、`Box`…）、三角形很少、却整个包住 10 个以上别的部件的是白模体积（辅助）。
+- 逆向按角色取舍：辅助不写进几何（只在文件头的注释里列出），不计分；装饰写成基本体代理或网格引用，不试板件、外壳、并、扫掠；贴花保留网格引用、不当别人的参照物。
+- **分散的模型**：一个模型里装着很多互不相连的块、各块包围盒体积之和不到整体包围盒的 10%（几片外墙、几根柱子、一地的碎片）：结构、装饰拆成一组基本体 `group 名字 { box … }`（拆开后的局部分数不超过原写法的 1.25 倍才拆；块数超过 60 不拆）；不拆的标 `~scatter=块数`，同样不当参照物。
+- `roles.json` 是规则数组，先匹配先生效：`[{ "role": "decor", "name": "Antenna" }, { "role": "structure", "meta": { "category": "^Wall" } }]`。`name` 匹配完整节点名（含分组路径），`material` 匹配材质名，`meta` 匹配旁路表的列；都是不分大小写的正则。改了以后 `reverse` 才生效。
+
 ## 看
 
 ```
-render [--view=iso|iso2|top|front|back|left|right] [--mode=labels|color|id|error] [--focus=<路径>|selection] [--size=1024] [--source] [--box=…] [--ortho]
+render [--view=iso|iso2|top|front|back|left|right] [--mode=labels|color|id|error] [--focus=<路径>|selection] [--size=1024] [--source] [--box=…] [--ortho] [--only=structure,…]
 ```
+
+- `--only`：只画这些角色（逗号分隔）。源模型按部件的角色，重建按 `~role`。`--only=structure` 加 `--source` 各渲一张对照，家具、贴花挡不住，结构上的问题（实心体块盖住了空心楼、楼梯成了斜板）一眼就能看出来。界面上同样有按角色的开关（工具栏「结构 / 地形 / 装饰 / 贴花 / 辅助」，场景里只有一种角色时不显示），源模型叠加层跟着一起隐藏。
 
 - `labels`（默认）：在每个物体的可见部分标编号，返回的 `legend` 给出编号 → 路径。用来把图上的东西和代码对应起来。
 - `--focus`：只标注被聚焦的物体，并且把它画在最上层（不会被挡住），其余物体变淡作为参照。
@@ -95,6 +108,7 @@ score [--objects]
 - `R_recon` 重建物体表面到源表面的距离：凭空多出来的东西很贵。
 - 换形状不用改名：`over 物体 : 种类 新参数…`（例如 `over hall : subtract { box outer … ; box door … }`、`over road : pipe path=[…] r=…`），名字与引用都不变。改阵列的模板：`over 阵列 { drop 部件 ; 新语句 }` 作用到每个实例。
 - `explain = 1 − S / S_mesh`：相对“全部写成网格引用”的基线解释了多少，是进度条。
+- `byRole`：按角色分开的 `S`、各项与解释率。重建一侧（`L_stmt`、`L_mesh`、`R_recon`）按物体的 `~role`，源一侧（`R_src`、基线 `S_mesh`）按源部件的角色；各角色的 `S` 加上 `unattributed` 等于总分。结构的解释率是最该看的数：装饰靠享元类型、阵列很容易压缩，会把总的解释率抬上去。
 - `worst`：代价最高的重建物体；`worstSources`：解释得最差的源部件（`explainedBy` 是它被归到的重建物体：`~src` 指向它的物体优先，没有时是离它的采样点最近的物体）。逐物体的描述长度：嵌套语句沿路径归到最近的有几何的物体；曲线、类型定义、材质这类不属于任何物体的语句合计在 `unattributed` 里。
 - `check --score`：空跑一段语句并给出分数变化，不生成提议、不占预算。`refine` 同时报告按目标档位 δ 与按工程 δ 的分数变化（`delta` / `delta_project`），两者方向不同时有 `warning`；`--apply` 默认按工程的 δ 判断。
 - 同一个进程里（MCP 服务、`refine --auto`、`preview` / `accept`）的评分是增量的：第一次全量，之后只重算改动影响到的部分，分数与全量一致。命令行每次是新进程：评分状态存在工程的 `state/cache/score.bin`（源模型或评分代码变了自动作废），新进程读回来接着增量算，宿舍区一次 `score` 约 5 s → 2.3 s（其中评分 0.9 s，其余是启动与编译）。`S3D_TIMING=1` 把各阶段耗时和重算了多少打到 stderr。
