@@ -1074,27 +1074,29 @@ let SUB_DEPTH = 0, SUBS = true, SUB_WHOLE = null;
 const subSceneWorth = (fit, part) => SUBS && SUB_DEPTH === 0 && !['steps', 'tube', 'sweep', 'revolve'].includes(fit.shape) && !coarseRole(part) && !part.force && FID.name !== 'semantic' && meshPriceMode(roleP(part), MESH_K) === 'full'
   && part.tris.length >= PANEL_MIN_TRIS && !(1 - fit.e / TOL >= 0.5 && fit.cover >= COVER_MIN) && Math.max(...sub(fit.aabb.max, fit.aabb.min)) >= PANEL_MIN_SIZE * M;
 // 一组块（每块一组三角形，坐标在 frame 里）→ 子场景的语句（相对 c0：全部块的包络底面中心）。模块里的状态（各种缓存、当前设置）存下、做完恢复
-function subSceneLines(pieces, part) {
-  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
-  for (const tris of pieces) for (const tri of tris) for (const v of tri) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], v[k]); hi[k] = Math.max(hi[k], v[k]); }
-  const c0 = [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2];
+// ctx（同一种拆法的几个变体共用）：c0 用全部块的；area 是整个部件的表面积——全场评分里这个部件是一个整体，各块的局部评分按它分权重
+function subSceneLines(pieces, part, ctx) {
+  const c0 = ctx.c0;
   // 材质同这个部件，设成默认材质：组里的语句不写 mat=，继承组的材质
   // 名字：板件分解出来的块带着 wall、slab 这类名字（挂在三角形数组的 name 上）；分量没有名字
   // 原样保留的块（tris.keep：板件已经写好的“大矩形挖洞”，重新拟合会丢掉洞）不交给逆向
   const kept = pieces.filter((t) => t.keep), fitted = pieces.filter((t) => !t.keep);
-  const subParts = fitted.map((tris) => ({ name: tris.name ?? null, tris: tris.map((tri) => tri.map((v) => sub(v, c0))), role: roleP(part), material: part.material ?? { name: null, color: '#c9c9c9' } }));
+  const mk = (tris) => ({ name: tris.name ?? null, tris: tris.map((tri) => tri.map((v) => sub(v, c0))), role: roleP(part), material: part.material ?? { name: null, color: '#c9c9c9' } });
+  const subParts = fitted.map((tris) => { if (!ctx.parts.has(tris)) ctx.parts.set(tris, mk(tris)); return ctx.parts.get(tris); });
   let lines = [];
   if (subParts.length) {
     const saved = [SUB_WHOLE, FID, S, M, DIGITS, SUBS, PARTS_FILE, PANELS, UNIONS, PREFIT, SHELLS, COMPOSITE_MS, UNION_SEEN, SWEEP_SEEN, SWEEP_FAILED, MESH_USE, JUDGES, SCATTERED, PART_ROLE, HEIGHT, cleanName, MESH_K];
     SUB_DEPTH++;
-    SUB_WHOLE = { area: pieces.reduce((a, ts) => a + ts.reduce((b, [p, q, r]) => b + len(cross(sub(q, p), sub(r, p))) / 2, 0), 0) };
+    SUB_WHOLE = { area: ctx.area };
     let out;
+    const t0 = performance.now();
     try {
       out = reverse(subParts, { srcFile: 'x', level: 'L1', fidelity: FID.name, unit: 1 / M, types: false, defaultMaterial: true, names: false, meshPrice: MESH_K.meshPrice, panels: PANELS, shells: SHELLS, unions: UNIONS });
     } finally {
       [SUB_WHOLE, FID, S, M, DIGITS, SUBS, PARTS_FILE, PANELS, UNIONS, PREFIT, SHELLS, COMPOSITE_MS, UNION_SEEN, SWEEP_SEEN, SWEEP_FAILED, MESH_USE, JUDGES, SCATTERED, PART_ROLE, HEIGHT, cleanName, MESH_K] = saved;
       SUB_DEPTH--;
     }
+    COMPOSITE_MS.subRev = (COMPOSITE_MS.subRev ?? 0) + performance.now() - t0;
     // 去掉材质声明与 mat=（各块的材质都同这个部件，继承组的材质）、拟合度这类元数据
     lines = out.src.split('\n').filter((l) => l.trim() && !/^\s*\/\//.test(l) && !/^material /.test(l)).map((l) => l.replace(/ ~(fit|err|src|scatter)=("[^"]*"|\S+)/g, '').replace(/ mat=\S+/g, ''));
     if (lines.some((l) => /^\s*mesh /.test(l))) return null;
@@ -1138,7 +1140,7 @@ function trySubScene(ftris, part, cur, n = 1) {
   if (sc.comps && sc.comps.length >= 2 && sc.comps.length <= SUB_MAX_PIECES) tries.push(sc.comps.map((ids) => ids.map((i) => ftris[i])));
   else if (!sc.comps || sc.comps.length < 2) {
     const tau = FID.tau * M, opts = { thick: Math.max(2 * FID.tau, 0.1) * M, maxThick: 1 * M, digits: DIGITS };
-    for (const cell of [2 * tau, 4 * tau, 8 * tau]) {
+    for (const cell of [8 * tau, 4 * tau, 2 * tau]) { // 粗的先试（便宜，先给出一个好的分数）
       const p = panelLines(ftris, { ...opts, cell, maxBoxes: SUB_MAX_PIECES });
       if (!p) continue;
       // 按语句分块：单行的盒子、楔形各是一块（交给子场景找阵列、关系）；多行的（subtract：大矩形挖洞）原样保留
@@ -1163,24 +1165,39 @@ function trySubScene(ftris, part, cur, n = 1) {
   // 按面积只留大块（同 refine 的候选）：外墙壳的主体是几面墙、屋顶与楼板，细碎的小板、小洞写出来不划算的，比分数时自然舍掉。
   // 粗的先试：它们便宜，先得到一个好的分数，细的候选描述长度超过它就不必评残差
   const areaOfT = (ts) => ts.reduce((a, [p, q, r]) => a + len(cross(sub(q, p), sub(r, p))) / 2, 0);
-  const variants = [];
-  for (const pieces of tries) {
-    const byArea = pieces.map((ts) => ({ ts, a: areaOfT(ts) })).sort((x, y) => y.a - x.a), all = byArea.reduce((a, x) => a + x.a, 0);
+  // 每组（一种拆法）里的变体从粗到细；同一组里细的块更多、描述只会更长：描述长度已经超过最好的分数、
+  // 或者总分比上一个（更粗的）还差，更细的就不再试（子场景的逆向是这里的大头）
+  const lists = tries.map((pieces) => {
+    const byArea = pieces.map((ts) => ({ ts, a: areaOfT(ts) })).sort((x, y) => y.a - x.a), all = byArea.reduce((a, x) => a + x.a, 0), vs = [];
     for (const q of [0.75, 0.9, 0.97]) {
       let acc = 0, k = 0;
       while (k < byArea.length && acc < q * all) acc += byArea[k++].a;
-      if (k >= 1 && k < pieces.length && !variants.some((v) => v.length === k)) variants.push(byArea.slice(0, k).map((x) => x.ts));
+      if (k >= 1 && k < pieces.length && !vs.some((v) => v.length === k)) vs.push(byArea.slice(0, k).map((x) => x.ts));
     }
-    variants.push(pieces);
-  }
+    vs.push(pieces);
+    return vs;
+  });
   let best = null;
-  for (const pieces of variants) {
-    const sub0 = subSceneLines(pieces, part);
-    if (!sub0) continue;
-    const L = sub0.lines.reduce((a, l) => a + lineCost(l), 0);
-    if (L >= Math.min(curS, best?.S ?? Infinity)) continue;
-    const ls = evalLines([`group g at=${vec(sub0.c0)} pin=origin {`, ...sub0.lines.map((l) => '  ' + l), '}']);
-    if (ls && total(ls) < Math.min(curS, best?.S ?? Infinity)) best = { S: total(ls), ls, ...sub0, pieces: pieces.length };
+  const area = areaOfT(ftris);
+  for (const vs of lists) {
+    let prev = Infinity;
+    const all = vs[vs.length - 1], lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+    for (const tris of all) for (const tri of tris) for (const v of tri) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], v[k]); hi[k] = Math.max(hi[k], v[k]); }
+    const ctx = { c0: [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2], area, parts: new WeakMap() };
+    for (const pieces of vs) {
+      COMPOSITE_MS.subCalls = (COMPOSITE_MS.subCalls ?? 0) + 1;
+      const sub0 = subSceneLines(pieces, part, ctx);
+      if (!sub0) continue;
+      const L = sub0.lines.reduce((a, l) => a + lineCost(l), 0);
+      if (L >= Math.min(curS, best?.S ?? Infinity)) break;
+      const t1 = performance.now(), ls = evalLines([`group g at=${vec(sub0.c0)} pin=origin {`, ...sub0.lines.map((l) => '  ' + l), '}']);
+      COMPOSITE_MS.subEval = (COMPOSITE_MS.subEval ?? 0) + performance.now() - t1;
+      if (!ls) continue;
+      const S0 = total(ls);
+      if (S0 < Math.min(curS, best?.S ?? Infinity)) best = { S: S0, ls, ...sub0, pieces: pieces.length };
+      if (S0 > prev) break;
+      prev = S0;
+    }
   }
   if (!best) return null;
   // 组按包络的底面中心放：语句不动，组的位置 = c0 + 语句包络的底面中心
@@ -1358,22 +1375,16 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   // 分块逆向（tiles.mjs）：名字清理按全场的名字统计，各块一致
   cleanName = nameCleaner(nameStats ?? parts.map((p) => p.name));
   // 计时：S3D_TIMING=1 时把各阶段耗时打到 stderr（实战里定位瓶颈用）
-  const T0 = performance.now(), lap = (what) => process.env.S3D_TIMING && console.error(`[reverse] ${what} ${Math.round(performance.now() - T0)}ms`);
+  const T0 = performance.now(), lap = (what) => process.env.S3D_TIMING && (!SUB_DEPTH || process.env.S3D_TIMING_SUB) && console.error(`[reverse] ${what} ${Math.round(performance.now() - T0)}ms`);
   // ── 享元：同一个网格（加同样的缩放、同样的镜像）被多个节点用到 → 一个类型（def），只拟合一次 ──
   const typeOf = new Map(), types = [];
   if (useTypes) {
     const groups = new Map();
     parts.forEach((p, i) => {
-      if (!p.matrix || p.mesh == null || p.force || roleP(p) === 'helper') return;
-      const M = p.matrix, cs = [[M[0], M[1], M[2]], [M[4], M[5], M[6]], [M[8], M[9], M[10]]], sc = cs.map(len);
-      if (sc.some((x) => x < 1e-9)) return;
-      let R = cs.map((c, k) => scl(c, 1 / sc[k]));
-      if (Math.abs(dot(R[0], R[1])) > 1e-4 || Math.abs(dot(R[0], R[2])) > 1e-4 || Math.abs(dot(R[1], R[2])) > 1e-4) return; // 有切变：不是刚体 + 缩放
-      const sign = det3c(R) < 0 ? -1 : 1;
-      if (sign < 0) R = [scl(R[0], -1), R[1], R[2]]; // 镜像实例：反射吸收进类型自己的坐标系
-      const key = `${p.mesh}|${sc.map((x) => x.toFixed(3)).join(',')}|${sign}`;
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push({ i, R, t: [M[12], M[13], M[14]] });
+      const tk = typeKey(p, roleP(p));
+      if (!tk) return;
+      if (!groups.has(tk.key)) groups.set(tk.key, []);
+      groups.get(tk.key).push({ i, R: tk.R, t: tk.t });
     });
     const typeNames = new Set();
     for (const [key, ms] of groups) {
@@ -1431,7 +1442,9 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   // prefit：worker 线程里预先算好的拟合（fitpool.mjs，部件很多时），结果与这里现算的一样
   // worker 预先拟合时不知道角色：装饰、贴花拿到的扫掠不用，现拟合（与单线程一样）
   const preOf = (p, i) => { const f = !p.force && prefit?.fitOf(p, i); return f && !(f.shape === 'sweep' && coarseRole(p)) ? f : null; };
-  const fits = parts.map((p, i) => (typeOf.has(i) || roleP(p) === 'helper' ? null : preOf(p, i) || fitPart(p, i, PRIMS.has(p.force) ? p.force : null)));
+  // preUsed：用了 worker 的拟合的部件——它们的组合写法也可以取 worker 预先算好的（prefitComposite）
+  const preUsed = new Set();
+  const fits = parts.map((p, i) => { if (typeOf.has(i) || roleP(p) === 'helper') return null; const f = preOf(p, i); if (f) { preUsed.add(i); return f; } return fitPart(p, i, PRIMS.has(p.force) ? p.force : null); });
   lap(`拟合 ${parts.length} 个部件（${types.length} 种类型覆盖 ${typeOf.size} 个实例）`);
   // 名字：L0 用源节点名；没有名字时按形状编号
   const used = new Map(), counters = {};
@@ -1449,7 +1462,10 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
         fit: Math.max(0, Math.min(1, 1 - T.fit.e / TOL)), err: T.fit.e, vol: (b.max[0] - b.min[0]) * (b.max[1] - b.min[1]) * (b.max[2] - b.min[2]), symY: false, instance: true };
     }
     const prim0 = primitiveOf(fits[i], p, srcFile);
-    const prim = panelPrim(fits[i], p, prim0, i) ?? prim0;
+    // worker 预先算好的组合写法（同样的源文件名、部件文件与开关才取用）
+    const pc = preUsed.has(i) ? prefit?.compOf?.(p, i, { srcFile, partsFile: PARTS_FILE, panels: PANELS, shells: SHELLS, unions: UNIONS, subs: SUBS }) : undefined;
+    if (pc?.sc != null) SCATTERED.set(p, pc.sc);
+    const prim = (pc !== undefined ? pc.out : panelPrim(fits[i], p, prim0, i)) ?? prim0;
     const nm = p.name && !/^part_\d+$|^merged_/.test(p.name) ? cleanName(p.name) : null;
     const id = p.forceName ? uniqueId(sanitize(p.forceName), true) : uniqueId(nm ? sanitize(nm) : `${prim.kind}${(counters[prim.kind] = (counters[prim.kind] ?? 0) + 1)}`);
     const vol = (prim.box.max[0] - prim.box.min[0]) * (prim.box.max[1] - prim.box.min[1]) * (prim.box.max[2] - prim.box.min[2]);
@@ -1512,7 +1528,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
 
   // 空间事实（全坐标版本）
   const r0 = compile(absSrc, { factEps: FACT_EPS * M, heightAt: HEIGHT });
-  lap(`全坐标版本编译（其中板件 ${Math.round(COMPOSITE_MS.panels)}ms、基本体之并 ${Math.round(COMPOSITE_MS.unions)}ms、外壳 ${Math.round(COMPOSITE_MS.shells)}ms、子场景 ${Math.round(COMPOSITE_MS.subs ?? 0)}ms / ${COMPOSITE_MS.subTried ?? 0} 个）`);
+  lap(`全坐标版本编译（其中板件 ${Math.round(COMPOSITE_MS.panels)}ms、基本体之并 ${Math.round(COMPOSITE_MS.unions)}ms、外壳 ${Math.round(COMPOSITE_MS.shells)}ms、子场景 ${Math.round(COMPOSITE_MS.subs ?? 0)}ms / ${COMPOSITE_MS.subTried ?? 0} 个、子逆向 ${COMPOSITE_MS.subCalls ?? 0} 遍 ${Math.round(COMPOSITE_MS.subRev ?? 0)}ms、评分 ${Math.round(COMPOSITE_MS.subEval ?? 0)}ms）`);
   const byId = new Map(objs.map((o) => [o.id, o]));
   const onOf = new Map(), againstOf = new Map(), nearOf = new Map();
   const related = new Map();
@@ -2635,6 +2651,40 @@ export function prefitPart(tris, i, role = 'structure', meshPriceCfg = null) {
   MESH_K = { ...SCORE_DEFAULTS, meshPrice: meshPriceCfg ?? {} };
   const fit = fitPart({ tris, role }, i);
   return { fit, union: FID.name !== 'semantic' && fit.e > TOL && tris.length >= 8 ? unionGeometry(tris) : undefined };
+}
+// 享元类型的分组键：同一个网格、同样的缩放与镜像（不能成类型的返回 null）；R 是去掉缩放与镜像的旋转，t 是平移。fitpool.mjs 也用它
+export function typeKey(p, role) {
+  if (!p.matrix || p.mesh == null || p.force || role === 'helper') return null;
+  const M = p.matrix, cs = [[M[0], M[1], M[2]], [M[4], M[5], M[6]], [M[8], M[9], M[10]]], sc = cs.map(len);
+  if (sc.some((x) => x < 1e-9)) return null;
+  let R = cs.map((c, k) => scl(c, 1 / sc[k]));
+  if (Math.abs(dot(R[0], R[1])) > 1e-4 || Math.abs(dot(R[0], R[2])) > 1e-4 || Math.abs(dot(R[1], R[2])) > 1e-4) return null; // 有切变：不是刚体 + 缩放
+  const sign = det3c(R) < 0 ? -1 : 1;
+  if (sign < 0) R = [scl(R[0], -1), R[1], R[2]]; // 镜像实例：反射吸收进类型自己的坐标系
+  return { key: `${p.mesh}|${sc.map((x) => x.toFixed(3)).join(',')}|${sign}`, R, t: [M[12], M[13], M[14]] };
+}
+// worker 线程里：拟合之后接着算组合写法（板件、外壳、并、小场景，即 panelPrim）——这是大场景逆向的大头，串行时 H1 要一分多钟。
+// 结果与主线程现算的逐字一致：只依赖这个部件自己的三角形、角色、名字（网格引用的源）、档位与这几个开关；
+// 只对不共用网格的部件预先算（共用的走享元类型；不共用时网格引用的价钱不用分摊，MESH_USE 视为 1）。
+// 共用网格、但没成类型的部件（镜像或缩放不同的实例）也可以：同一个网格的部件在同一个 worker 里按序号依次算（扫掠、并的缓存按网格与矩阵，
+// 行为与主线程相同），网格的实例数（MESH_USE）由主线程给。先调一次 prefitCompositeInit，再逐个调 prefitComposite。
+// item：部件的可序列化部分（tris、name、uid、from、mesh、material、matrix、force）；返回 { fit, union, comp: { out, sc（分散的块数）} }
+export function prefitCompositeInit({ meshUse = [], meshPrice = null, partsFile = null, panels = true, shells = true, unions = true, subs = true }) {
+  MESH_K = { ...SCORE_DEFAULTS, meshPrice: meshPrice ?? {} };
+  PARTS_FILE = partsFile; PANELS = panels; SHELLS = shells; UNIONS = unions; SUBS = subs;
+  MESH_USE = new Map(meshUse); JUDGES = new WeakMap(); SCATTERED = new WeakMap(); PART_ROLE = new WeakMap(); HEIGHT = null;
+  COMPOSITE_MS = { panels: 0, unions: 0, shells: 0 }; UNION_SEEN = new Map(); SWEEP_SEEN = new Map(); SWEEP_FAILED = new Set();
+}
+export function prefitComposite(item, i, { role = 'structure', srcFile }) {
+  const part = { ...item, role };
+  const fit = fitPart(part, i);
+  const union = FID.name !== 'semantic' && fit.e > TOL && item.tris.length >= 8 ? unionGeometry(item.tris) : undefined;
+  PREFIT = { unionOf: () => union };
+  try {
+    const prim0 = primitiveOf(fit, part, srcFile);
+    const out = panelPrim(fit, part, prim0, i);
+    return { fit, union, comp: { out, sc: SCATTERED.get(part) ?? null } };
+  } finally { PREFIT = null; }
 }
 
 export function _debugFits(part, i) {

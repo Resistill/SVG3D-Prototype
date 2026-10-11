@@ -216,7 +216,7 @@ export async function runReverse(P, { fresh = false, fidelity = null, unit = nul
   const tiled = parts.length > T.threshold && !decisions?.trim();
   const ropts = { srcFile: P.cfg.source, level: 'project', previous, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, decisions, partsFile: 'parts.glb', meshPrice: P.cfg.score?.meshPrice ?? null };
   const out = tiled ? await reverseTiled(parts, ropts, { maxParts: T.maxParts })
-    : reverse(parts, { ...ropts, prefit: await prefit(parts, { fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, meshPrice: P.cfg.score?.meshPrice ?? null }) });
+    : reverse(parts, { ...ropts, prefit: await prefit(parts, { fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit, meshPrice: P.cfg.score?.meshPrice ?? null, composite: { srcFile: ropts.srcFile, partsFile: ropts.partsFile } }) });
   await writePartsFile(P, parts, out.objs);
   writeBase(P, out.src);
   P.write('base.report.json', JSON.stringify(out.report, null, 2) + '\n');

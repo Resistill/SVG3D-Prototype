@@ -59,6 +59,11 @@ test('并行拟合：worker 线程预先算的拟合与单线程逐字一致', a
   const a = reverse(parts, { srcFile: 'x.glb', level: 'L1', fidelity: 'structure' });
   const b = reverse(parts, { srcFile: 'x.glb', level: 'L1', fidelity: 'structure', prefit: pre });
   assert.equal(b.src, a.src);
+  // 组合写法（板件、外壳、并、小场景）也在 worker 里预先算：结果同样逐字一致；源文件名不同时不取用
+  const pc = await prefit(parts, { fidelity: 'structure', unit: 1, threads: 3, min: 0, composite: { srcFile: 'x.glb' } });
+  assert.equal(reverse(parts, { srcFile: 'x.glb', level: 'L1', fidelity: 'structure', prefit: pc }).src, a.src);
+  assert.ok([...parts.keys()].some((i) => pc.compOf(parts[i], i, { srcFile: 'x.glb', panels: true, shells: true, unions: true, subs: true })?.out), '有部件用上了预先算的组合写法');
+  assert.equal(pc.compOf(parts[0], 0, { srcFile: 'y.glb', panels: true, shells: true, unions: true, subs: true }), undefined);
 });
 
 test('分块逆向：k-d 划分成几块并行逆向后合并，零编译错误；材质与类型只声明一次、物体不重名；分数与整体逆向相差不大', async () => {

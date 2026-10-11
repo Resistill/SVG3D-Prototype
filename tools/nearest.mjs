@@ -215,7 +215,8 @@ export function closestMany(items) {
   chunks.set(segs);
   const ctrl = alloc(Int32Array, 2), n = segs.length / 3;
   const task = { ctrl, chunks, jobs };
-  const parallel = SHARE && total >= PARALLEL_MIN && qs.every((q) => q.data.nodes instanceof SharedArrayBuffer);
+  // worker 线程里（并行拟合、分块逆向）不再开嵌套的线程池：外面已经并行了，再开只会把 CPU 挤满
+  const parallel = SHARE && WT.isMainThread && total >= PARALLEL_MIN && qs.every((q) => q.data.nodes instanceof SharedArrayBuffer);
   if (parallel) {
     const msg = { ...task, qs: qs.map((q) => q.data) };
     for (const w of workers()) w.postMessage(msg);
