@@ -12,8 +12,9 @@
 //           那一行只计名字、定位与材质（形状参数作废了）
 //   R_recon 重建物体表面到源表面的距离，同样计价；复杂度权重以顶层语句为单位、内部按面积分摊（惩罚凭空多出来的东西，但不惩罚拆分）
 // 解释率 explain = 1 − S / S_mesh，S_mesh 是“全部写成 mesh 引用、世界坐标定位”的基线。
-import * as THREE from 'three';
 import { MeshBVH } from 'three-mesh-bvh';
+import { BufferGeometry, BufferAttribute } from 'three';
+import { nearestData, nearestQuery, closestMany, pointArray } from './nearest.mjs';
 import { samplePoints } from './reverse.mjs';
 import { sceneObjects, trisToArray } from './worldtris.mjs';
 
@@ -78,7 +79,6 @@ const areaOf = (tris) => tris.reduce((s2, t) => s2 + len3(cross3(sub3(t[1], t[0]
 const sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const len3 = (a) => Math.hypot(a[0], a[1], a[2]);
-const toGeom = (pos) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); return g; };
 const triList = (pos) => { const out = []; for (let i = 0; i < pos.length; i += 9) out.push([[pos[i], pos[i + 1], pos[i + 2]], [pos[i + 3], pos[i + 4], pos[i + 5]], [pos[i + 6], pos[i + 7], pos[i + 8]]]); return out; };
 
 // 把若干物体合成一棵 BVH，记住每个三角形属于哪个物体
@@ -88,11 +88,9 @@ function bvhOf(objs, ids = objs.map((_, k) => k)) {
   let off = 0;
   objs.forEach((o, k) => { pos.set(o.pos, off); owner.fill(ids[k], off / 9, (off + o.pos.length) / 9); off += o.pos.length; });
   if (!n) return null;
-  const geom = toGeom(pos);
-  const bvh = new MeshBVH(geom);
-  // MeshBVH 建树时会重排索引：faceIndex 是重排后的编号，要经过索引换回原来的三角形
-  const index = geom.index.array;
-  return { bvh, owner, triOf: (fi) => Math.floor(index[3 * fi] / 3) };
+  const g = new BufferGeometry();
+  g.setAttribute('position', new BufferAttribute(pos, 3));
+  return { q: nearestQuery(nearestData(new MeshBVH(g), g.index.array, pos)), owner };
 }
 
 // 按材质颜色分组的表面集合：{ byColor: Map(颜色 → BVH), all: BVH }
@@ -108,18 +106,40 @@ function surfaces(objs) {
 
 // 到一组表面的最近距离：nearest(target, k)(color) 给出 p → [d, 最近的物体]（没有目标、或 dMax 以内没有表面：[dMax, −1]）。
 // 距离优先量到同材质的表面；没有同材质的表面时量到全部表面，并多计一个 δ
+const pick = (target, k, color) => {
+  const same = target && color != null ? target.byColor.get(colorKey(color)) : null;
+  return { bvh: same ?? target?.all ?? null, penalty: target && color != null && !same ? k.delta : 0 };
+};
 function nearest(target, k) {
-  const v = new THREE.Vector3(), hit = {};
   return (color = null) => {
-    const same = target && color != null ? target.byColor.get(colorKey(color)) : null;
-    const bvh = same ?? target?.all ?? null;
-    const penalty = target && color != null && !same ? k.delta : 0;
+    const { bvh, penalty } = pick(target, k, color);
     return (p) => {
       if (!bvh) return [k.dMax, -1];
-      const res = bvh.bvh.closestPointToPoint(v.set(p[0], p[1], p[2]), hit, 0, k.dMax);
-      return res ? [Math.min(res.distance + penalty, k.dMax), bvh.owner[bvh.triOf(res.faceIndex)]] : [k.dMax, -1];
+      const t = bvh.q.closest(p[0], p[1], p[2], k.dMax);
+      return t >= 0 ? [Math.min(bvh.q.distance + penalty, k.dMax), bvh.owner[t]] : [k.dMax, -1];
     };
   };
+}
+// 一批点集各自到一组表面的距离（与逐点调用 nearest 的结果逐位相同，点多时分给 worker 线程）：
+//   sets [{ pts（samplePoints 的结果）, color }] → 每项 { d: Float64Array, own: Int32Array（最近的物体，−1 表示没有） }
+function nearestMany(target, k, sets) {
+  const items = [], picks = sets.map(({ pts, color }) => {
+    const pk = pick(target, k, color);
+    if (pk.bvh && pts.length) {
+      const a = pointArray(pts.length);
+      pts.forEach((p, i) => { a[3 * i] = p[0]; a[3 * i + 1] = p[1]; a[3 * i + 2] = p[2]; });
+      pk.item = items.push({ q: pk.bvh.q, pts: a, max: k.dMax }) - 1;
+    }
+    return pk;
+  });
+  const res = closestMany(items);
+  return sets.map(({ pts }, j) => {
+    const { bvh, penalty, item } = picks[j], n = pts.length, d = new Float64Array(n), own = new Int32Array(n);
+    if (item == null) { d.fill(k.dMax); own.fill(-1); return { d, own }; }
+    const { d: raw, t } = res[item];
+    for (let i = 0; i < n; i++) { if (t[i] >= 0) { d[i] = Math.min(raw[i] + penalty, k.dMax); own[i] = bvh.owner[t[i]]; } else { d[i] = k.dMax; own[i] = -1; } }
+    return { d, own };
+  });
 }
 // 逐点距离 → { r（平均代价）, mean, max }；按点的顺序累加（增量评分与全量评分逐位一致）
 function aggregate(d, k) {
@@ -127,13 +147,6 @@ function aggregate(d, k) {
   for (let i = 0; i < d.length; i++) { rs += Math.log2(1 + Math.max(0, d[i] - k.delta) / k.delta); sum += d[i]; mx = Math.max(mx, d[i]); }
   const n = d.length || 1;
   return { r: rs / n, mean: sum / n, max: mx };
-}
-// 点集到一组表面的距离；返回 { r, mean, max, owners（每个点最近的物体） }
-function residual(points, target, k, color = null) {
-  const f = nearest(target, k)(color);
-  const d = new Float64Array(points.length), owners = new Array(points.length);
-  points.forEach((p, i) => { [d[i], owners[i]] = f(p); });
-  return { ...aggregate(d, k), owners };
 }
 // 一个源部件的逐点结果 → 代价与归属。权重 = 这块表面在当前精度下有多少个 δ 见方的格子（取对数）：
 // 表面越大、精度要求越细，同样的误差越贵；归到最近点最多落在其上的那个重建物体（who、owners 是物体编号）
@@ -260,13 +273,11 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
     const { added } = delta;
     // 新增的物体单独建一组表面：包围盒初筛之后，按真实几何判断新增的东西是不是比现在的距离更近（同材质规则、多计的 δ 与正式查询一样）
     const addedSurf = added.length ? surfaces(added.map((a) => recon[a.j])) : null;
-    const v = new THREE.Vector3(), hitA = {};
     const closer = (p, color, same, limit) => {
       const g = same ? addedSurf.byColor.get(colorKey(color)) : addedSurf.all;
       const pen = !same && color != null ? k.delta : 0;
       if (!g || limit - pen <= 0) return false;
-      const res = g.bvh.closestPointToPoint(v.set(p[0], p[1], p[2]), hitA, 0, limit - pen);
-      return !!res && res.distance + pen < limit;
+      return g.q.closest(p[0], p[1], p[2], limit - pen) >= 0 && g.q.distance + pen < limit;
     };
     delta.closer = closer;
   }
@@ -278,6 +289,12 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   let Rsrc = 0, touchedParts = 0, touchedPoints = 0, byRemoval = 0;
   const srcOut = [], srcRes = [];
   const near = nearest(reconBVH, k);
+  // 全量时按块批量查询（一块几百个部件：点数够分给 worker，又不必同时留着全部采样点）
+  const BLOCK = 256, full = new Map();
+  if (!delta) for (let b = 0; b < src.length; b += BLOCK) {
+    const block = src.slice(b, b + BLOCK);
+    nearestMany(reconBVH, k, block.map((s) => ({ pts: samplePoints(s.tris, k.samples, s.i + 1), color: s.color }))).forEach((x, j) => full.set(block[j].i, x));
+  }
   for (const s of src) {
     const was = delta ? state.srcRes[s.i] : null;
     let x = was;
@@ -299,11 +316,11 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
         touchedParts++;
       }
     } else {
-      const pts = samplePoints(s.tris, k.samples, s.i + 1), f = near(s.color);
-      const d = new Float64Array(pts.length), own = new Int32Array(pts.length);
-      pts.forEach((p, i) => { const [di, oi] = f(p); d[i] = di; own[i] = oi >= 0 ? reconId[oi] : -1; });
+      const { d, own } = full.get(s.i);
+      full.delete(s.i);
+      for (let i = 0; i < own.length; i++) if (own[i] >= 0) own[i] = reconId[own[i]];
       x = partResult(s, d, own, k);
-      touchedParts++; touchedPoints += pts.length;
+      touchedParts++; touchedPoints += d.length;
     }
     srcRes.push(x);
     Rsrc += x.c;
@@ -318,14 +335,18 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   const triArea = (t) => len3(cross3(sub3(t[1], t[0]), sub3(t[2], t[0]))) / 2;
   let fresh = 0;
   const reconRes = new Map();
+  // 没有缓存的物体按块批量查询（同 R_src）
+  const todo = recon.map((o, j) => j).filter((j) => !state?.recon.get(keys[j])), computed = new Map();
+  for (let b = 0; b < todo.length; b += BLOCK) {
+    const block = todo.slice(b, b + BLOCK).map((j) => ({ j, tris: triList(recon[j].pos) }));
+    nearestMany(srcBVH, k, block.map(({ j, tris }) => ({ pts: samplePoints(tris, k.samples, seedOf(recon[j].path)), color: recon[j].color }))).forEach(({ d }, m) => {
+      const { j, tris } = block[m], res = aggregate(d, k);
+      computed.set(j, { r: res.r, mean: res.mean, max: res.max, tris: tris.length, area: tris.reduce((s2, t) => s2 + triArea(t), 0) });
+    });
+  }
   const rec = recon.map((o, j) => {
     let x = state?.recon.get(keys[j]);
-    if (!x) {
-      const tris = triList(o.pos);
-      const res = residual(samplePoints(tris, k.samples, seedOf(o.path)), srcBVH, k, o.color);
-      x = { r: res.r, mean: res.mean, max: res.max, tris: tris.length, area: tris.reduce((s2, t) => s2 + triArea(t), 0) };
-      fresh++;
-    }
+    if (!x) { x = computed.get(j); fresh++; }
     reconRes.set(keys[j], x);
     return { o, res: x, tris: x.tris, area: x.area, top: o.path.split('.')[0] };
   });
@@ -383,13 +404,11 @@ export function neighborhoodScorer({ parts, near, others, reconColors, consts = 
   });
   const otherSurf = others.length ? surfaces(others) : null;
   const srcSurf = surfaces(near.map((i) => ({ pos: trisToArray(parts[i].tris), color: parts[i].material?.color })));
-  const v = new THREE.Vector3(), hit = {};
   // 到一组表面里某种颜色（same）或全部表面的距离，封顶 limit
   const dist = (surf, c, same, pen, p, limit) => {
     const g = surf && (same ? surf.byColor.get(c) : surf.all);
     if (!g || limit - pen <= 0) return limit;
-    const res = g.bvh.closestPointToPoint(v.set(p[0], p[1], p[2]), hit, 0, limit - pen);
-    return res ? Math.min(res.distance + pen, limit) : limit;
+    return g.q.closest(p[0], p[1], p[2], limit - pen) >= 0 ? Math.min(g.q.distance + pen, limit) : limit;
   };
   return (objs, lines = []) => {
     const recon = objs.filter((o) => o.pos.length);

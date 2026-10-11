@@ -31,26 +31,27 @@ export function voxelBoxes(tris, { voxel, maxBoxes = 40, maxCells = 96 } = {}) {
   const closed = isClosed(tris);
   for (let attempt = 0; attempt < 6; attempt++, v *= 1.6) {
     const n = ext.map((e) => Math.max(1, Math.ceil(e / v - 1e-9)));
-    const idx = (i, j, k) => (k * n[1] + j) * n[0] + i;
-    const cellOf = (p) => [0, 1, 2].map((a) => Math.min(n[a] - 1, Math.max(0, Math.floor((p[a] - lo[a]) / v))));
-    const solid = new Uint8Array(n[0] * n[1] * n[2]);
-    // 表面体素：在三角形上按半个体素的间距采样
+    const [n0, n1, n2] = n, [lo0, lo1, lo2] = lo;
+    const idx = (i, j, k) => (k * n1 + j) * n0 + i;
+    const cell = (x, l, na) => Math.min(na - 1, Math.max(0, Math.floor((x - l) / v)));
+    const solid = new Uint8Array(n0 * n1 * n2);
+    // 表面体素：在三角形上按半个体素的间距采样（标量写法，与逐点建数组的算术顺序相同）
     for (const [A, B, C] of tris) {
       const m = Math.max(1, Math.ceil(Math.max(Math.hypot(...sub(B, A)), Math.hypot(...sub(C, A)), Math.hypot(...sub(C, B))) / (v / 2)));
+      const bx = B[0] - A[0], by = B[1] - A[1], bz = B[2] - A[2], cx = C[0] - A[0], cy = C[1] - A[1], cz = C[2] - A[2];
       for (let a = 0; a <= m; a++) for (let b = 0; b <= m - a; b++) {
-        const u = a / m, w = b / m, p = [0, 1, 2].map((q) => A[q] + (B[q] - A[q]) * u + (C[q] - A[q]) * w);
-        const c = cellOf(p);
-        solid[idx(...c)] = 1;
+        const u = a / m, w = b / m;
+        solid[idx(cell(A[0] + bx * u + cx * w, lo0, n0), cell(A[1] + by * u + cy * w, lo1, n1), cell(A[2] + bz * u + cz * w, lo2, n2))] = 1;
       }
     }
     // 从外面泛洪，没被泛洪到的就是内部（网格有漏缝时泛洪会灌进去，自然退化成只有表面的薄壳）
     {
       const outside = new Uint8Array(solid.length), stack = [];
-      const push = (i, j, k) => { if (i < 0 || j < 0 || k < 0 || i >= n[0] || j >= n[1] || k >= n[2]) return; const q = idx(i, j, k); if (outside[q] || solid[q]) return; outside[q] = 1; stack.push([i, j, k]); };
-      for (let i = 0; i < n[0]; i++) for (let j = 0; j < n[1]; j++) { push(i, j, 0); push(i, j, n[2] - 1); }
-      for (let i = 0; i < n[0]; i++) for (let k = 0; k < n[2]; k++) { push(i, 0, k); push(i, n[1] - 1, k); }
-      for (let j = 0; j < n[1]; j++) for (let k = 0; k < n[2]; k++) { push(0, j, k); push(n[0] - 1, j, k); }
-      while (stack.length) { const [i, j, k] = stack.pop(); push(i + 1, j, k); push(i - 1, j, k); push(i, j + 1, k); push(i, j - 1, k); push(i, j, k + 1); push(i, j, k - 1); }
+      const push = (i, j, k) => { if (i < 0 || j < 0 || k < 0 || i >= n0 || j >= n1 || k >= n2) return; const q = idx(i, j, k); if (outside[q] || solid[q]) return; outside[q] = 1; stack.push(q); };
+      for (let i = 0; i < n0; i++) for (let j = 0; j < n1; j++) { push(i, j, 0); push(i, j, n2 - 1); }
+      for (let i = 0; i < n0; i++) for (let k = 0; k < n2; k++) { push(i, 0, k); push(i, n1 - 1, k); }
+      for (let j = 0; j < n1; j++) for (let k = 0; k < n2; k++) { push(0, j, k); push(n0 - 1, j, k); }
+      while (stack.length) { const q = stack.pop(), i = q % n0, j = Math.floor(q / n0) % n1, k = Math.floor(q / (n0 * n1)); push(i + 1, j, k); push(i - 1, j, k); push(i, j + 1, k); push(i, j - 1, k); push(i, j, k + 1); push(i, j, k - 1); }
       for (let q = 0; q < solid.length; q++) if (!outside[q]) solid[q] = 1;
     }
     // 贪心合并：沿 x 延伸，再沿 z，再沿 y
