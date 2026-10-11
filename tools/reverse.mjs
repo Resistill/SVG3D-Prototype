@@ -15,6 +15,7 @@ import { parseDecisions, applyDecisions, applyLocks, PRIMS } from './decisions.m
 import { planesOf, panelLines, shellLines } from './panels.mjs';
 import { patchesOf } from './patches.mjs';
 import { fitSweep } from './sweepfit.mjs';
+import { heightField } from './heights.mjs';
 
 // ───────── 小工具 ─────────
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -753,6 +754,8 @@ function tryPanels(tris, cols, t, part, cur, n = 1) {
 // 局部评分：只看这一个源部件（与全场评分同一套计价）。板件、基本体之并都拿它和现在的写法比；
 // 源部件的采样与 BVH 用到时才建，同一个部件的几种候选共用（每次逆向开始时清空：档位不同，计价不同）
 let JUDGES = new WeakMap();
+// 网格表面的高度（heights.mjs）：发射出来的 on=地形.top[u,w] 要按它编译、校验
+let HEIGHT = null;
 function judgeOf(part) {
   let J = JUDGES.get(part);
   if (J) return J;
@@ -1071,6 +1074,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   SWEEP_FAILED = new Set();
   MESH_USE = new Map();
   JUDGES = new WeakMap();
+  HEIGHT = heightField(parts);
   for (const p of parts) if (p.mesh != null) MESH_USE.set(p.mesh, (MESH_USE.get(p.mesh) ?? 0) + 1);
   // 决定层：先作用到源部件上（忽略、合并、指定形状 / 名字 / 类型名），锁定在最后按上一次的结果替换
   let decided = null;
@@ -1209,7 +1213,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   const absSrc = header.concat(objs.map(absLine)).join('\n');
 
   // 空间事实（全坐标版本）
-  const r0 = compile(absSrc, { factEps: FACT_EPS * M });
+  const r0 = compile(absSrc, { factEps: FACT_EPS * M, heightAt: HEIGHT });
   lap(`全坐标版本编译（其中板件 ${Math.round(COMPOSITE_MS.panels)}ms、基本体之并 ${Math.round(COMPOSITE_MS.unions)}ms、外壳 ${Math.round(COMPOSITE_MS.shells)}ms）`);
   const byId = new Map(objs.map((o) => [o.id, o]));
   const onOf = new Map(), againstOf = new Map(), nearOf = new Map();
@@ -1287,6 +1291,22 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   };
   // 两种写法取短的：归一化锚点 B[u,v,w]，或者参照点加父坐标系里的米制偏移 B offset=…（描述长度按 score 的计价）
   const shorter = (...alts) => alts.reduce((a, b) => (lineCost(b) < lineCost(a) ? b : a));
+  // 地形判定（网格才有）：竖直方向的范围不到占地短边的 30%，朝上的面投影到水平面上大约只有一层（0.5–1.3 倍包围盒的占地）——
+  // 起伏的地面、路面是；房间的网格（地板、天花板两层）、楼不是
+  const TERRAIN = new Map();
+  const terrainLike = (B) => {
+    if (TERRAIN.has(B.id)) return TERRAIN.get(B.id);
+    const part = parts.find((q) => (q.uid ?? q.name ?? q.from) === B.src);
+    let ok = false;
+    if (part) {
+      const sz = sub(B.box.max, B.box.min), fp = sz[0] * sz[2];
+      let up = 0;
+      for (const [a, b, c] of part.tris) up += Math.max(0, cross(sub(b, a), sub(c, a))[1]) / 2;
+      ok = sz[1] <= 0.3 * Math.min(sz[0], sz[2]) && up >= 0.5 * fp && up <= 1.3 * fp;
+    }
+    TERRAIN.set(B.id, ok);
+    return ok;
+  };
   const chooseFor = (A, p, cand, name0, tau = 0.005 * S, frame = null) => {
     const name = (B) => name0(B);
     // 世界向量 → 父坐标系（顶层是世界；阵列里是实例的坐标系）
@@ -1305,6 +1325,25 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const off = toParent(sub(p, topOf(sup)));
       const place = shorter(`on=${name(sup)}[${anchorTxt(sup, [uvw[0], 1, uvw[2]], tau)}]`, `on=${name(sup)} offset=${offsetTxt(off, tau)}`);
       return { place, ref: sup, kind: 'on' };
+    }
+    // 立在网格地形上（起伏的地面、路面：包围盒的顶面不是它的表面）：A 的底面中心正好落在一个网格的真实表面上，
+    // 这个网格俯视包含 A、占地至少是 A 的四倍 → on=地形.top[u,w]（竖直射线取表面，见 heights.mjs）。只用于顶层的物体
+    if (HEIGHT && !frame && Math.abs(A.cols[1][1] - 1) < 1e-6) {
+      const foot = (B) => (B.box.max[0] - B.box.min[0]) * (B.box.max[2] - B.box.min[2]);
+      let best = null;
+      for (const B0 of objs) {
+        if (B0.kind !== 'mesh' || B0 === A || !cand(B0) || foot(B0) < 4 * foot(A) || !terrainLike(B0)) continue;
+        const B = poseOf(B0), l = toB(B, p), uvw = norm(B, l);
+        if (Math.abs(uvw[0]) > 1 || Math.abs(uvw[2]) > 1) continue;
+        // 写出来的 u、w 取整之后再取表面高度（编译器就是这样算的）
+        const txt = anchorTxt(B, [uvw[0], 1, uvw[2]], tau).split(','), u = +txt[0], w = +txt[2];
+        const c = [0, 1, 2].map((k) => (B.box.min[k] + B.box.max[k]) / 2), hh = [0, 1, 2].map((k) => (B.box.max[k] - B.box.min[k]) / 2);
+        const pv = B.props.pivot.split(',').map(Number), sy = HEIGHT(JSON.parse(B.props.src), c[0] + hh[0] * u + pv[0], c[2] + hh[2] * w + pv[2]);
+        if (sy == null) continue;
+        const dy = Math.abs(p[1] - sy);
+        if (dy <= boxTol && (!best || dy < best.dy)) best = { B, dy, place: `on=${name(B)}.top[${txt[0]},${txt[2]}]` };
+      }
+      if (best) return { place: best.place, ref: best.B, kind: 'on' };
     }
     // 贴着的那个面：A 的包围盒上朝向 B 那一面的中心（B 自身坐标、归一化）；它必须真的落在 B 的包围盒那一面上
     const againstAt = (x) => {
@@ -1527,7 +1566,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   for (let round = 0; round < 6; round++) {
     out = emit(dissolved, fallback);
     lap(`第 ${round} 轮发射`);
-    const r1 = compile(out.text, { factEps: FACT_EPS * M });
+    const r1 = compile(out.text, { factEps: FACT_EPS * M, heightAt: HEIGHT });
     lap(`第 ${round} 轮编译`);
     if (process.env.S3D_DUMP && round === 0) dumpText(process.env.S3D_DUMP, out.text);
     const byPath = new Map(r1.nodes.map((n) => [n.path, n]));
@@ -1559,7 +1598,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   // 语义命名：没有源名字的部件按识别出的概念改名（box46 → terrain，cyls_2 → columns）；
   // 给了上一次的结果（previous）时，对得上的物体沿用上一次的名字
   lap('校验结束');
-  const named = names ? semanticNames(out.text, { previous, metre: M }) : { text: out.text, map: {}, renamed: 0 };
+  const named = names ? semanticNames(out.text, { previous, metre: M, heightAt: HEIGHT }) : { text: out.text, map: {}, renamed: 0 };
   // 扫掠的曲线（物体名_path）跟着物体改名
   for (const [a, b] of Object.entries(named.map)) {
     const re = new RegExp(`(?<![\\p{L}\\p{N}_.])${a}_path(?![\\p{L}\\p{N}_])`, 'gu');
@@ -1572,8 +1611,8 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     decisionReport = { ...decided.report };
     if (decided.locks.length) {
       const lk = applyLocks(named.text, previous, decided.locks);
-      const before = new Set(compile(named.text, { factEps: FACT_EPS * M }).errors.map((e) => e.message));
-      const errs = compile(lk.text, { factEps: FACT_EPS * M }).errors.filter((e) => !before.has(e.message));
+      const before = new Set(compile(named.text, { factEps: FACT_EPS * M, heightAt: HEIGHT }).errors.map((e) => e.message));
+      const errs = compile(lk.text, { factEps: FACT_EPS * M, heightAt: HEIGHT }).errors.filter((e) => !before.has(e.message));
       if (errs.length) decisionReport.unsatisfied.push(...lk.report.applied.map((x) => ({ ...x, why: `锁定之后编译出错：${errs[0].message}` })));
       else { named.text = lk.text; decisionReport.applied.push(...lk.report.applied); }
       decisionReport.unsatisfied.push(...lk.report.unsatisfied);

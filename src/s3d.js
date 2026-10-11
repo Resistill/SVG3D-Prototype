@@ -16,6 +16,9 @@ export const DIRS = {
 const FACES = ['left', 'right', 'front', 'back', 'top', 'bottom'];
 const MEASURES = new Set(['w', 'h', 'd']);
 const CURVE_POINTS = { start: 0, mid: 0.5, end: 1 };
+// 曲面锚点：B.top[u,w]（顶面在包围盒归一化坐标 (u,w) 处的那一点：网格用竖直射线取真实表面，球、圆台、旋转体按形状）、
+// B.side[θ,v]（圆柱、圆台、旋转体的侧面：绕轴的角度，0° 指向局部 +x、俯视逆时针；高度比例 0..1）、B.surface[θ,φ]（球面：方位角、仰角）
+const SURFACES = new Set(['top', 'side', 'surface']);
 const AXES = { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] };
 
 const PLACEMENT = new Set(['at', 'pin', 'on', 'under', 'against', 'inside', 'gap', 'offset', 'align', 'alignto',
@@ -894,6 +897,11 @@ function evalPath(ast, ctx) {
     }
     base = r.node; restSegs = r.rest;
   }
+  if (ast.coords && restSegs.length === 1 && SURFACES.has(restSegs[0])) {
+    const c = evalAst(ast.coords, ctx);
+    if (!Array.isArray(c) || c.length !== 2 || !c.every((x) => typeof x === 'number')) throw new S3DError(`曲面锚点写成 ${base.id ?? 'B'}.${restSegs[0]}[a,b]（两个数）`);
+    return mkRef(base, { surf: restSegs[0], uv: c });
+  }
   if (ast.coords) {
     if (restSegs.length) throw new S3DError(`${base.path} 中没有 “${restSegs.join('.')}”`);
     const c = evalAst(ast.coords, ctx);
@@ -1320,9 +1328,12 @@ class SetNode {
 }
 
 class Solver {
-  constructor(root, flat) {
+  constructor(root, flat, opts = {}) {
     this.root = root;
     this.flat = flat;
+    // 网格表面的高度（B.top[u,w] 用）：heightAt(src, x, z) → 源文件坐标里竖直射线碰到的最高点的 y，没有就 null
+    this.heightAt = opts.heightAt ?? null;
+    this.warnings = [];
     this.sets = new Map();
     this.rebuildIndex();
   }
@@ -1485,6 +1496,7 @@ class Solver {
 
   anchorLocal(n, a) {
     if (a === 'origin') return { p: [0, 0, 0], nrm: [0, 0, 0] };
+    if (a && a.surf) return this.surfaceAnchor(n, a);
     if (a && a.t !== undefined) {
       if (!CURVES.has(K(n))) throw new S3DError(`${n.path} 不是曲线，不能用 [t] 取点`, n.line, n);
       const c = curveAt(this.curve(n), a.t);
@@ -1494,6 +1506,64 @@ class Solver {
     const c = scl(add(b.min, b.max), 0.5), h = scl(sub(b.max, b.min), 0.5);
     return { p: [c[0] + h[0] * a[0], c[1] + h[1] * a[1], c[2] + h[2] * a[2]], nrm: dominant(a) };
   }
+  // 曲面锚点（自身框架）：{ p, nrm }
+  surfaceAnchor(n, { surf, uv: [a, b] }) {
+    const box = this.box(n), g = n.geom ?? {}, kind = g.type;
+    const c = scl(add(box.min, box.max), 0.5), h = scl(sub(box.max, box.min), 0.5);
+    const rad = (d) => (d * Math.PI) / 180;
+    if (surf === 'top') {
+      const x = c[0] + h[0] * a, z = c[2] + h[2] * b, up = [0, 1, 0];
+      let y = box.max[1];
+      if (kind === 'mesh') {
+        const sy = this.heightAt ? this.heightAt(g.src, x + g.pivot[0], z + g.pivot[2]) : null;
+        if (sy != null && Number.isFinite(sy)) y = sy - g.pivot[1];
+        else this.warn(n, this.heightAt ? `${n.path}.top[${a},${b}]：竖直射线没有碰到网格，用包围盒的顶面` : `${n.path}.top[…]：没有网格数据，用包围盒的顶面（位置是近似的）`);
+      } else if (kind === 'sphere') {
+        const r = g.r, q = x * x + z * z;
+        y = q <= r * r ? r + Math.sqrt(r * r - q) : r;
+      } else if (kind === 'cyl' && g.axis === 'y' && g.r2 !== g.r1) {
+        // 圆台：顶面半径以内是平的，之外沿斜面
+        const rho = Math.hypot(x, z), lo = Math.min(g.r1, g.r2), hi = Math.max(g.r1, g.r2);
+        if (rho > lo) y = rho >= hi ? 0 : g.r2 < g.r1 ? (g.h * (g.r1 - rho)) / (g.r1 - g.r2) : g.h;
+      } else if (kind === 'revolve') {
+        // 旋转体：轮廓上半径不小于 ρ 的最高处
+        const rho = Math.hypot(x, z), P = g.prof;
+        let best = -Infinity;
+        for (let k = 1; k < P.length; k++) {
+          const [r0, y0] = P[k - 1], [r1, y1] = P[k];
+          if ((r0 - rho) * (r1 - rho) <= 0 && r0 !== r1) best = Math.max(best, y0 + ((rho - r0) * (y1 - y0)) / (r1 - r0));
+          else if (r0 >= rho && r1 >= rho) best = Math.max(best, y0, y1);
+        }
+        if (best > -Infinity) y = best;
+      }
+      return { p: [x, y, z], nrm: up };
+    }
+    if (surf === 'side') {
+      if (kind !== 'cyl' && kind !== 'revolve') throw new S3DError(`${n.path} 没有侧面锚点 side[θ,v]（只有圆柱、圆台、旋转体有）`);
+      const th = rad(a), cs = Math.cos(th), sn = Math.sin(th);
+      if (kind === 'cyl') {
+        const r = g.r1 + (g.r2 - g.r1) * b, slope = (g.r1 - g.r2) / g.h;
+        if (g.axis === 'y') return { p: [r * cs, b * g.h, -r * sn], nrm: unit([cs, slope, -sn]) };
+        // 横放的圆柱：轴心线在 y = R 处；0° 指向局部 +y（朝上），绕轴正向转
+        const R = Math.max(g.r1, g.r2), t = -g.h / 2 + b * g.h;
+        if (g.axis === 'x') return { p: [t, R + r * cs, r * sn], nrm: unit([-slope, cs, sn]) };
+        return { p: [r * sn, R + r * cs, t], nrm: unit([sn, cs, -slope]) };
+      }
+      // 旋转体：高度比例 → 轮廓上的半径（取这一高度上最大的半径）
+      const P = g.prof, ys = P.map((p) => p[1]), y = Math.min(...ys) + b * (Math.max(...ys) - Math.min(...ys));
+      let r = 0;
+      for (let k = 1; k < P.length; k++) {
+        const [r0, y0] = P[k - 1], [r1, y1] = P[k];
+        if ((y0 - y) * (y1 - y) <= 0) r = Math.max(r, y1 === y0 ? Math.max(r0, r1) : r0 + ((y - y0) * (r1 - r0)) / (y1 - y0));
+      }
+      return { p: [r * cs, y, -r * sn], nrm: [cs, 0, -sn] };
+    }
+    // surface：球面
+    if (kind !== 'sphere') throw new S3DError(`${n.path} 没有球面锚点 surface[θ,φ]（只有球有）`);
+    const th = rad(a), ph = rad(b), d = [Math.cos(ph) * Math.cos(th), Math.sin(ph), -Math.cos(ph) * Math.sin(th)];
+    return { p: add([0, g.r, 0], scl(d, g.r)), nrm: d };
+  }
+  warn(n, message) { if (!this.warnings.some((w) => w.message === message)) this.warnings.push({ line: n.line ?? null, file: n.file ?? null, message }); }
   anchorIn(ref, F, dflt) {
     const a = this.anchorLocal(ref.node, ref.anchor ?? dflt);
     const R = this.relTo(ref.node, F);
@@ -1521,7 +1591,8 @@ class Solver {
     }
     if (n.props.has('against')) {
       const r = this.ref(n, 'against');
-      if (!Array.isArray(r.anchor)) throw new S3DError(`${n.path}：against 要指明贴哪个面，如 ${r.node.id ?? 'B'}.left`, n.line, n);
+      // 贴面要有法线：包围盒的面（B.left），或者曲面锚点（B.side[θ,v]、B.surface[θ,φ]，法线沿径向）
+      if (!Array.isArray(r.anchor) && !r.anchor?.surf) throw new S3DError(`${n.path}：against 要指明贴哪个面，如 ${r.node.id ?? 'B'}.left 或 ${r.node.id ?? 'B'}.side[90,0.5]`, n.line, n);
       const a = this.anchorIn(r, P);
       let face = pin;
       if (!face) {
@@ -2421,7 +2492,7 @@ function compileOnce(src, plan, opts) {
   const program = loadProgram(src, opts, errors);
   const elab = elaborate(program, errors, opts);
   const { root, flat, materials, defs, semantic } = elab;
-  const S = new Solver(root, flat);
+  const S = new Solver(root, flat, opts);
   const fail = (e, n) => {
     if (e instanceof Cycle) return new S3DError(`循环依赖：${e.node.path} 的位置最终依赖于它自己`, e.node.line, e.node);
     if (e instanceof S3DError) { e.line ??= n.line; e.node ??= n; e.file ??= e.node?.file ?? n.file; return e; }
@@ -2572,6 +2643,7 @@ function compileOnce(src, plan, opts) {
     result: {
       items, curves, facts, factProviders: providers.map((p) => p.name), nodes, concepts, patterns, variants: variantSummary, checks, defs: [...defs.keys()], materials: Object.fromEntries(materials),
       errors: errors.map((e) => ({ line: e.line ?? null, file: e.file ?? e.node?.file ?? null, message: e.message })),
+      warnings: S.warnings,
     },
   };
 }

@@ -495,6 +495,8 @@ export async function runCommand(name, dir, args = {}) {
   if (c.noProject) return c.run(dir, args);
   const P = openProject(dir);
   const t0 = Date.now();
+  // 层文件里用到网格的曲面锚点（B.top[u,w] 落在网格的真实表面上）：先读源部件，编译时才有网格数据
+  try { if (P.usesSurfaceAnchors()) await P.sourceParts(); } catch { /* 读不到源模型：编译退回包围盒并给警告 */ }
   let out, err = null;
   try { out = await c.run(P, args); return out; } catch (e) { err = e.message; throw e; } finally {
     // 每次调用都记下来（可以回放、可以分析 agent 的行为）

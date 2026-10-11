@@ -10,6 +10,7 @@ import { join, relative, resolve, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compile, FACT_EPS } from '../src/s3d.js';
 import { readParts, reverse, FIDELITY, partsNode } from './reverse.mjs';
+import { heightField } from './heights.mjs';
 import { Document, NodeIO } from '@gltf-transform/core';
 import { SCORE_DEFAULTS, scoreCache } from './score.mjs';
 import { splitSource, joinSource, importedFiles } from './split.mjs';
@@ -78,8 +79,11 @@ export function openProject(dir) {
     compile(extra = '', overrides = {}) {
       const main = 'scene.s3d';
       const text = P.read(main) + (extra ? '\n' + extra : '');
-      return compile(text, { file: main, factEps: FACT_EPS / (cfg.unit ?? 1), metre: 1 / (cfg.unit ?? 1), resolve: (p) => overrides[p] ?? readFileSync(resolve(dir, p), 'utf8') });
+      return compile(text, { file: main, factEps: FACT_EPS / (cfg.unit ?? 1), metre: 1 / (cfg.unit ?? 1), heightAt: P._parts ? (P._heights ??= heightField(P._parts)) : null, resolve: (p) => overrides[p] ?? readFileSync(resolve(dir, p), 'utf8') });
     },
+    // 几何层里有没有 .top[…] 这样的曲面锚点（有的话编译需要源网格）
+    usesSurfaceAnchors: () => { try { return P.geometryFiles().some((x) => /\.top\[/.test(x.text)); } catch { return false; } },
+    _heights: null,
     // 计入描述长度的文本
     // 基础层可能拆成了多个文件（base.s3d 是索引），修改层可能 import 细化结果（edits/refine-*.s3d），import 的文件一并计入
     geometryFiles: (overrides = {}) => GEOMETRY_LAYERS.flatMap((f) => importedFiles((x) => overrides[x] ?? P.read(x), f))

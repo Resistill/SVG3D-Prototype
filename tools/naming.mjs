@@ -38,8 +38,8 @@ const iou = (a, b) => {
 };
 
 // metre：一米是多少个场景单位（语义库的长度阈值按米写）
-export function semanticNames(text, { library = SEMANTICS, previous = null, metre = 1 } = {}) {
-  const r = compile(`${text}\n${library}`, { metre });
+export function semanticNames(text, { library = SEMANTICS, previous = null, metre = 1, heightAt = null } = {}) {
+  const r = compile(`${text}\n${library}`, { metre, heightAt });
   if (r.errors.length) return { text, map: {}, renamed: 0 };
   const byPath = new Map(r.nodes.map((n) => [n.path, n]));
   const conceptOf = (n) => {

@@ -201,3 +201,50 @@ test('扫掠：弯曲的路面、拱写成圆弧 + sweep，螺旋扶手、坡道
   assert.match(sp, /^helix spiral_rail_path r=2\.1 pitch=6\.2\d* turns=(1|0\.99\d)/m);
   assert.match(sp, /^sweep spiral_rail path=spiral_rail_path r=0\.05 /m);
 });
+
+test('曲面锚点：B.top[u,w] 落在网格的真实表面（没有网格数据时退回包围盒并警告）、球顶；B.side[θ,v] 与 B.surface[θ,φ] 可以 against', () => {
+  const src = `mesh hill src="x.glb#hill" size=20,4,20 pivot=0,0,0
+box a size=1,1,1 on=hill.top[0.5,0]
+sphere ball r=2 at=10,0,0
+box c size=0.4,0.4,0.4 on=ball.top[0.25,0]
+cyl tank r=3 h=8 at=-10,0,0
+box pipe size=1,0.5,0.5 against=tank.side[90,0.5]
+box d size=0.2,0.2,0.2 against=ball.surface[0,90]`;
+  const bottom = (r, p) => r.nodes.find((n) => n.path === p).box.min;
+  const flat = compile(src);
+  assert.deepEqual(flat.errors, []);
+  assert.equal(flat.warnings.length, 1, '没有网格数据：警告一次');
+  assert.ok(Math.abs(bottom(flat, 'a')[1] - 4) < 1e-9, '退回包围盒的顶面');
+  const r = compile(src, { heightAt: (s, x, z) => (s === 'x.glb#hill' ? 4 - 0.01 * (x * x + z * z) : null) });
+  assert.deepEqual(r.warnings, []);
+  assert.ok(Math.abs(bottom(r, 'a')[1] - 3.75) < 1e-9, `网格表面：${bottom(r, 'a')}`);
+  assert.ok(Math.abs(bottom(r, 'c')[1] - (2 + Math.sqrt(4 - 0.25))) < 1e-9, '球顶');
+  const pipe = r.nodes.find((n) => n.path === 'pipe').box;
+  assert.ok(Math.abs(pipe.max[2] + 3) < 1e-9 && Math.abs((pipe.min[1] + pipe.max[1]) / 2 - 4) < 1e-9, `圆柱侧面 90°（−z 一侧）、半高：${JSON.stringify(pipe)}`);
+  assert.ok(Math.abs(bottom(r, 'd')[1] - 4) < 1e-9, '球面的北极：贴上去的是底面');
+  assert.match(compile('box a size=1,1,1\nbox b size=1,1,1 against=a.side[0,0.5]').errors[0].message, /没有侧面锚点/);
+});
+
+test('地形取点：立在起伏网格地形上的物体写成 on=地形.top[u,w]，编译后落在表面上；房间这类多层的网格不算地形', async () => {
+  const { heightField } = await import('../tools/heights.mjs');
+  const H = (x, z) => 2 * Math.sin(x / 9) + 1.5 * Math.cos(z / 7);
+  const grid = (f, y0 = 0) => { const t = [], N = 30, S = 2; for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { const P = (a, b) => [-30 + a * S, f(-30 + a * S, -30 + b * S) + y0, -30 + b * S]; t.push([P(i, j), P(i, j + 1), P(i + 1, j)], [P(i + 1, j), P(i, j + 1), P(i + 1, j + 1)]); } return t; };
+  const grey = { name: 'grey', color: '#777777' }, red = { name: 'red', color: '#cc3333' };
+  const crates = [[-12, 5], [3, -8], [14, 14], [-20, -18]];
+  const parts = [{ name: 'terrain', tris: grid(H), material: grey }, ...crates.map(([x, z]) => ({ name: `crate_${x}_${z}`, tris: cubeTris([x - 1, H(x, z), z - 1], [x + 1, H(x, z) + 2, z + 1]), material: red }))];
+  const out = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure' });
+  assert.equal((out.src.match(/ on=terrain\.top\[-?[\d.]+,-?[\d.]+\]/g) ?? []).length, 4, out.src);
+  const r = compile(out.src, { heightAt: heightField(parts) });
+  assert.deepEqual(r.errors, []);
+  for (const n of r.nodes.filter((x) => /crate/.test(x.path))) {
+    const x = (n.box.min[0] + n.box.max[0]) / 2, z = (n.box.min[2] + n.box.max[2]) / 2;
+    assert.ok(Math.abs(n.box.min[1] - H(x, z)) < 0.05, `${n.path} 离表面 ${n.box.min[1] - H(x, z)}`);
+  }
+  // 箱子立在“两层”网格（两层朝上的楼板，角上一根更高的柱子，包围盒的顶面不在楼板上）的上层：射线碰到的确实是上层楼板，
+  // 但这个网格不是地形（朝上的面投影起来是两层），不写 .top[]；同样的布置换成单层的起伏地面就写
+  const y3 = H(3, 3) + 3, crate2 = { name: 'crate', tris: cubeTris([2, y3, 2], [4, y3 + 2, 4]), material: red };
+  const layered = [...grid(H), ...grid(H, 3), ...cubeTris([26, 0, 26], [28, 8, 28])];
+  assert.doesNotMatch(reverse([{ name: 'room', tris: layered, material: grey }, crate2], { srcFile: 'x.glb', fidelity: 'structure' }).src, /\.top\[/);
+  const single = [...grid(H, 3), ...cubeTris([26, 0, 26], [28, 8, 28])];
+  assert.match(reverse([{ name: 'ground', tris: single, material: grey }, crate2], { srcFile: 'x.glb', fidelity: 'structure' }).src, /on=ground\.top\[/);
+});
