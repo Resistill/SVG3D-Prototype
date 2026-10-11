@@ -306,6 +306,21 @@ test('增量评分：连续改动（删除、换形、新材质、移动、恢�
   const r = compile(base);
   assert.equal(score({ result: r, files: [{ file: null, text: base }], sourceParts: parts, consts: { delta: 0.25 }, cache }).S,
     score({ result: r, files: [{ file: null, text: base }], sourceParts: parts, consts: { delta: 0.25 } }).S);
+  // 跨进程：状态存进磁盘缓存（persist），新的缓存对象（新进程）读回来接着增量评分，结果与全量逐位一致；代码的键变了就读不到
+  const disk = new Map();
+  const persist = (tag) => ({ load: (kind, params) => disk.get(`${tag}|${kind}|${JSON.stringify(params)}`) ?? null, save: (kind, params, meta, blobs) => disk.set(`${tag}|${kind}|${JSON.stringify(params)}`, { meta: JSON.parse(JSON.stringify(meta)), blobs: Object.fromEntries(Object.entries(blobs).map(([k2, a]) => [k2, a.slice()])) }) });
+  const run = (text, c) => score({ result: compile(text), files: [{ file: null, text }], sourceParts: parts, consts: { delta: 0.05 }, cache: c });
+  run(base, scoreCache(persist('v1')));
+  assert.ok([...disk.keys()].some((x) => x.startsWith('v1|score|')), '评分状态存进了磁盘缓存');
+  for (const [i, text] of steps.slice(1, 4).entries()) {
+    const c = scoreCache(persist('v1'));
+    const inc = run(text, c), full = run(text, null);
+    assert.equal(strip(inc), strip(full), `新进程第 ${i + 1} 步`);
+    assert.ok(c.states.size === 1 && [...c.states.values()][0].srcRes, '读到了上一次的状态');
+  }
+  const other = scoreCache(persist('v2'));
+  run(base, other);
+  assert.ok(disk.has(`v2|score|${JSON.stringify({ ckey: JSON.stringify([0.05, 2, 600, 4]) })}`) || [...disk.keys()].some((x) => x.startsWith('v2|score|')), '键不同：重新算、另存一份');
 });
 
 test('文件拆分按楼栋聚组：立在楼上、在楼里的物体与楼进同一个文件；地面这样的大面不当组的根', () => {

@@ -170,6 +170,8 @@ const boxDist = (p, b) => Math.hypot(...[0, 1, 2].map((j) => Math.max(b.lo[j] - 
 //   新增的物体只会让距离变小，只影响比现在的距离离它更近的点（同材质的目标存在时只看同材质的新增物体）；
 //   某种颜色的重建物体整组出现或消失时，这种颜色的源部件全部重算（同材质优先的目标变了）；改动太多时全部重算。
 // 常数不同（细化时用目标档位的 δ）各自一份状态
+// 跨进程：工程给了 persist 时，评分后把状态存进源模型一侧的磁盘缓存（种类 score，键里有评分代码的哈希与常数），
+// 新进程里这组常数还没有状态时先读它——命令行每次调用的第一次评分也是增量的。重建一侧变了多少由增量算法自己核对，结果与全量一致
 // persist：源模型一侧的磁盘缓存（工程给，见 project.mjs）：{ load(种类, 参数, alloc) → { meta, blobs } | null, save(种类, 参数, meta, blobs) }
 export function scoreCache(persist = null) { return { parts: null, shared: null, states: new Map(), persist }; }
 
@@ -204,6 +206,30 @@ function sharedOf(sourceParts, cache) {
   return shared;
 }
 
+// 评分状态 ↔ 磁盘：逐点的距离与最近的物体按源部件顺序拼成两个大数组，其余（上一次的物体表、每个物体的残差、路径编号）按 JSON 存；
+// 源部件的汇总（代价、均值、最近物体的投票）读回来时按逐点数据重算，和当时算出来的一样
+function saveState(state, shared, ckey) {
+  try {
+    const n = state.srcRes.reduce((a, x) => a + x.d.length, 0), d = new Float64Array(n), own = new Int32Array(n), offsets = new Int32Array(state.srcRes.length + 1);
+    let o = 0;
+    state.srcRes.forEach((x, i) => { d.set(x.d, o); own.set(x.own, o); o += x.d.length; offsets[i + 1] = o; });
+    const meta = { prev: [...state.prev].map(([key, x]) => [key, x.j, x.path, x.box, x.color]), recon: [...state.recon], ids: state.ids.path };
+    shared.persist.save('score', { ckey }, meta, { d, own, offsets });
+  } catch { /* 存不了就算了 */ }
+}
+function loadState(state, shared, k, ckey) {
+  try {
+    const saved = shared.persist.load('score', { ckey });
+    if (!saved) return;
+    const { meta, blobs: { d, own, offsets } } = saved;
+    if (offsets.length !== shared.src.length + 1) return;
+    state.srcRes = shared.src.map((s, i) => partResult(s, d.slice(offsets[i], offsets[i + 1]), own.slice(offsets[i], offsets[i + 1]), k));
+    state.prev = new Map(meta.prev.map(([key, j, path, box, color]) => [key, { j, path, box, color }]));
+    state.recon = new Map(meta.recon);
+    state.ids = { path: meta.ids, of: new Map(meta.ids.map((p, i) => [p, i])) };
+  } catch { state.srcRes = null; state.prev = null; state.recon = new Map(); }
+}
+
 // result：compile() 的结果；files：描述文本（[{file, text}]，已包括 import 的文件）；sourceParts：readParts() 的源部件；
 // cache：scoreCache()，可选（给了就增量评分）
 export function score({ result, files, sourceParts, consts = {}, cache = null }) {
@@ -214,6 +240,7 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   const shared = sharedOf(sourceParts, cache), { src, srcBVH } = shared;
   const ckey = JSON.stringify([k.delta, k.dMax, k.samples, k.cRes]);
   const state = cache ? (cache.states.get(ckey) ?? cache.states.set(ckey, { recon: new Map(), prev: null, srcRes: null }).get(ckey)) : null;
+  if (state && !state.srcRes && shared.persist) loadState(state, shared, k, ckey);
   lap('sceneObjects');
   const D0 = descriptionLength(files);
   // 有效描述：声明物体的行，物体还在才计
@@ -236,7 +263,9 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   for (const n of result.nodes) { const c = byLine.get(`${n.file ?? ''}:${n.line}`); if (c && !n.ghost && n.kind !== 'instance' && !stmtOf.has(`${n.file ?? ''}:${n.line}`)) stmtOf.set(`${n.file ?? ''}:${n.line}`, { path: n.path, cost: c }); }
 
   lap('description');
-  const reconBVH = surfaces(recon);
+  // 重建物体的树：用到时才建（增量评分里什么都没变时用不着）
+  let reconBVH0 = null;
+  const reconBVH = () => (reconBVH0 ??= surfaces(recon));
   lap('bvh');
   const per = new Map(recon.map((o) => [o.path, { path: o.path, stmt: 0, mesh: 0, rSrc: 0, rRecon: 0, meanErr: 0, maxErr: 0, src: [] }]));
   // 描述长度归到物体：自己有几何就归自己，否则归第一个有几何的子物体，再不行沿路径向上找（subtract 的子语句归到 subtract）
@@ -296,12 +325,12 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   //   最近的物体被删掉了的点；离某个新增物体的包围盒比现在的距离还近的点（同材质的目标存在时只看同材质的新增物体）
   let Rsrc = 0, touchedParts = 0, touchedPoints = 0, byRemoval = 0;
   const srcOut = [], srcRes = [];
-  const near = nearest(reconBVH, k);
+  const near = (color) => nearest(reconBVH(), k)(color);
   // 全量时按块批量查询（一块几百个部件：点数够分给 worker，又不必同时留着全部采样点）
   const BLOCK = 256, full = new Map(), srcPts = srcSamples(shared, k.samples);
   if (!delta) for (let b = 0; b < src.length; b += BLOCK) {
     const block = src.slice(b, b + BLOCK);
-    nearestMany(reconBVH, k, block.map((s) => ({ pts: srcPts[s.i], color: s.color }))).forEach((x, j) => full.set(block[j].i, x));
+    nearestMany(reconBVH(), k, block.map((s) => ({ pts: srcPts[s.i], color: s.color }))).forEach((x, j) => full.set(block[j].i, x));
   }
   for (const s of src) {
     const was = delta ? state.srcRes[s.i] : null;
@@ -370,7 +399,7 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
     p.rRecon += c; p.meanErr = Math.max(p.meanErr, res.mean); p.maxErr = Math.max(p.maxErr, res.max);
   }
   // 记住这一次的状态（只留这一次的物体，缓存不会越积越多）
-  if (state) { state.prev = now; state.srcRes = srcRes; state.recon = reconRes; state.ids = ids; }
+  if (state) { state.prev = now; state.srcRes = srcRes; state.recon = reconRes; state.ids = ids; if (shared.persist) saveState(state, shared, ckey); }
 
   lap(`R_recon（重算 ${fresh}/${recon.length}）`);
   // 基线：每个源部件写成一句世界坐标的 mesh 引用，误差为零（只取决于源部件与 cMesh）
