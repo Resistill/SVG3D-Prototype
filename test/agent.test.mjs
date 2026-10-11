@@ -349,7 +349,7 @@ box slab size=19.4,0.3,11.4 at=0,4,0
   assert.ok(p && p.boxes >= 6, JSON.stringify(p));
   const text = p.lines.join('\n');
   assert.match(text, /^box wall /m);
-  assert.match(text, /^box (floor|ceiling)\S* size=[\d.]+,0\.3,/m, '楼板的厚度来自配对的上下两个面');
+  assert.match(text, /^box slab\S* size=[\d.]+,0\.3,/m, '楼板的厚度来自配对的上下两个面');
   const rc = compile(text);
   assert.deepEqual(rc.errors, []);
   const scorer = neighborhoodScorer({ parts: [{ tris, material: null }], near: [0], others: [], reconColors: new Set(), consts: { delta: 0.05 } });

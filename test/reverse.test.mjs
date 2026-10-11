@@ -7,6 +7,7 @@ import { partsOfDocument, reverse, FIDELITY } from '../tools/reverse.mjs';
 import { score } from '../tools/score.mjs';
 import { evaluate } from '../tools/eval.mjs';
 import { compile, FACT_EPS } from '../src/s3d.js';
+import { sceneObjects as sceneObjectsOf } from '../tools/worldtris.mjs';
 
 const roundTrip = (file, level) => {
   const src = readFileSync(new URL(`../examples/${file}`, import.meta.url), 'utf8');
@@ -400,4 +401,43 @@ box crate2 size=1,1,1 at=3.4,1.6,-1.6 mat=n`;
   const out = reverse(parts, { srcFile: 'x.glb', level: 'L2', fidelity: 'structure' });
   assert.match(out.src, /steps=8/);
   assert.deepEqual(compile(out.src).errors, []);
+});
+
+test('板件：结构档第一遍就把空心的楼写成墙板与楼板（普通部件与享元类型都是），比实心盒子分数低；语义档不变', () => {
+  const r = compile(`
+subtract shell {
+  box outer size=20,8,12
+  box inner size=19.4,7.4,11.4 at=0,0.3,0
+  box door size=3,4,1 at=outer.front pin=center align=bottom
+}
+box slab size=19.4,0.3,11.4 at=0,4,0
+`);
+  const tris = [];
+  for (const o of sceneObjectsOf(r)) for (let i = 0; i < o.pos.length; i += 9) tris.push([0, 3, 6].map((k) => [o.pos[i + k], o.pos[i + k + 1], o.pos[i + k + 2]]));
+  const white = { name: 'white', color: '#ffffff' }, grey = { name: 'grey', color: '#808080' };
+  const cube = (a, b) => { const v = (i) => [i & 1 ? b[0] : a[0], i & 2 ? b[1] : a[1], i & 4 ? b[2] : a[2]]; return [[0, 1, 3, 2], [4, 6, 7, 5], [0, 4, 5, 1], [2, 3, 7, 6], [0, 2, 6, 4], [1, 5, 7, 3]].flatMap(([p, q, s, t]) => [[v(p), v(q), v(s)], [v(p), v(s), v(t)]]); };
+  const shift = (ts, d) => ts.map((t) => t.map((p) => [p[0] + d[0], p[1] + d[1], p[2] + d[2]]));
+  const ground = { name: 'ground', tris: cube([-30, -1, -30], [60, 0, 30]), material: grey };
+  // 屋顶上的一个箱子：立在板件拼成的楼上
+  const parts = [{ name: 'hall', tris, material: white }, ground, { name: 'crate', tris: cube([2, 8, -1], [4, 10, 1]), material: grey }];
+  const scoreOf = (out) => score({ result: compile(out.src), files: [{ file: 'x.s3d', text: out.src }], sourceParts: parts, consts: { delta: 0.05 } }).S;
+  const out = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure' });
+  assert.deepEqual(compile(out.src).errors, []);
+  assert.match(out.src, /^group hall .*\{\n(  (box|subtract) .*\n)+/m, '楼写成一组板件');
+  assert.match(out.src, /^\s+box wall\S* size=/m);
+  assert.match(out.src, /^\s+box slab\S* size=[\d.]+,0\.3,/m, '楼板的厚度来自配对的上下两个面');
+  assert.match(out.src, /^box crate .*on=hall/m, '箱子仍然立在楼上');
+  assert.deepEqual(out.report.fallback, [], '定位全部通过校验');
+  assert.equal(out.report.panels.length, 1);
+  const solid = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure', panels: false });
+  assert.match(solid.src, /^box hall /m);
+  assert.ok(scoreOf(out) < scoreOf(solid) - 20, `板件 ${scoreOf(out)} < 实心盒子 ${scoreOf(solid)}`);
+  assert.equal(reverse(parts, { srcFile: 'x.glb', fidelity: 'semantic' }).report.panels.length, 0, '语义档仍用基本体当代理');
+  // 享元：同一个网格的两栋楼 → 一个类型，类型体是板件
+  const M = (tx) => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, tx, 0, 0, 1];
+  const typed = reverse([{ ...parts[0], name: 'hallA', mesh: '0:0', matrix: M(0) }, { name: 'hallB', tris: shift(tris, [35, 0, 0]), material: white, mesh: '0:0', matrix: M(35) }, ground], { srcFile: 'x.glb', fidelity: 'structure' });
+  assert.deepEqual(compile(typed.src).errors, []);
+  assert.match(typed.src, /^def hallA \{\n  group body \{/m);
+  assert.equal(typed.report.panels[0]?.instances, 2);
+  assert.deepEqual(typed.report.fallback, []);
 });

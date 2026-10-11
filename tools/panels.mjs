@@ -163,7 +163,8 @@ export function panelLines(tris, { cell, thick, maxThick, maxBoxes = 60, digits 
       };
       const cols = F.cols(F), orient = orientText(cols);
       const vec = (v) => v.map((x) => fmt(x, digits)).join(',');
-      const kind = s.kind;
+      // 名字：墙、坡道；水平的板不分楼板与屋顶（朝上的外表面既可能是楼面也可能是屋面），一律叫 slab
+      const kind = s.kind === 'wall' || s.kind === 'ramp' ? s.kind : 'slab';
       if (holes.length && fill >= 0.6 && 2 + holes.length < full.length) {
         // 一个大矩形挖掉几个洞：subtract 的原点是外包矩形的底面中心，洞在它的坐标系里
         const body = { i0: bi0, i1: bi1, j0: bj0, j1: bj1 }, B = place(body), Bab = toAB(body);
