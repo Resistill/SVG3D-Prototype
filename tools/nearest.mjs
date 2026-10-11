@@ -112,6 +112,53 @@ export function nearestQuery(data) {
       out.distance = Math.sqrt(best);
       return tri[bestTri];
     },
+    // 射线（起点 o、方向 d）穿过的表面：打到背面（方向与三角形按顶点顺序的法线同向：从封闭网格里出去）+1，打到正面 −1。
+    // 和大于 0：起点在某个封闭网格里（几个封闭网格互相穿插也对）。体积误差（volume.mjs）用
+    crossings(ox, oy, oz, dx, dy, dz) {
+      const ix = 1 / dx, iy = 1 / dy, iz = 1 / dz, best = Infinity;
+      let sum = 0, sp = 0;
+      // 射线与包围盒（slab 法）：返回进入的距离，不相交时 Infinity
+      const enter = (n32) => {
+        let t0 = 0, t1 = best;
+        let a = (f32[n32] - ox) * ix, b = (f32[n32 + 3] - ox) * ix;
+        if (a > b) { const c = a; a = b; b = c; }
+        t0 = Math.max(t0, a); t1 = Math.min(t1, b);
+        a = (f32[n32 + 1] - oy) * iy; b = (f32[n32 + 4] - oy) * iy;
+        if (a > b) { const c = a; a = b; b = c; }
+        t0 = Math.max(t0, a); t1 = Math.min(t1, b);
+        a = (f32[n32 + 2] - oz) * iz; b = (f32[n32 + 5] - oz) * iz;
+        if (a > b) { const c = a; a = b; b = c; }
+        t0 = Math.max(t0, a); t1 = Math.min(t1, b);
+        return t0 <= t1 ? t0 : Infinity;
+      };
+      stackN[sp++] = 0;
+      while (sp > 0) {
+        const n32 = stackN[--sp];
+        if (enter(n32) >= best) continue;
+        const n16 = n32 * 2;
+        if (u16[n16 + 15] === IS_LEAF) {
+          const off = u32[n32 + 6], cnt = u16[n16 + 14];
+          for (let i = off, end = off + cnt; i < end; i++) {
+            // Möller–Trumbore
+            const o = 9 * i, ax = tp[o], ay = tp[o + 1], az = tp[o + 2];
+            const e1x = tp[o + 3] - ax, e1y = tp[o + 4] - ay, e1z = tp[o + 5] - az, e2x = tp[o + 6] - ax, e2y = tp[o + 7] - ay, e2z = tp[o + 8] - az;
+            const px = dy * e2z - dz * e2y, py = dz * e2x - dx * e2z, pz = dx * e2y - dy * e2x, det = e1x * px + e1y * py + e1z * pz;
+            if (Math.abs(det) < 1e-12) continue;
+            const inv = 1 / det, sx = ox - ax, sy = oy - ay, sz = oz - az, u = (sx * px + sy * py + sz * pz) * inv;
+            if (u < 0 || u > 1) continue;
+            const qx = sy * e1z - sz * e1y, qy = sz * e1x - sx * e1z, qz = sx * e1y - sy * e1x, v = (dx * qx + dy * qy + dz * qz) * inv;
+            if (v < 0 || u + v > 1) continue;
+            // det < 0：方向与法线 e1 × e2 同向，打到的是背面
+            if ((e2x * qx + e2y * qy + e2z * qz) * inv > 1e-9) sum += det < 0 ? 1 : -1;
+          }
+          continue;
+        }
+        if (sp + 2 > stackN.length) throw new Error('nearestQuery: 树太深');
+        stackN[sp++] = n32 + u32[n32 + 6] * UINT32_PER_NODE;
+        stackN[sp++] = n32 + UINT32_PER_NODE;
+      }
+      return sum;
+    },
   };
   return out;
 }

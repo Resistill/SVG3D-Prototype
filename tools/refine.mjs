@@ -105,7 +105,7 @@ export function toLocal(tris, world) {
 // ── 生成细化的提议 ──
 import { fitPart, orientText, setFidelity, FIDELITY, digitsFor, splitComponents, reverse as reverseParts } from './reverse.mjs';
 import { sceneObjects } from './worldtris.mjs';
-import { neighborhoodScorer, SCORE_DEFAULTS, reshapeSaving } from './score.mjs';
+import { neighborhoodScorer, SCORE_DEFAULTS, reshapeSaving, groupContext } from './score.mjs';
 import { panelLines } from './panels.mjs';
 import { compile, FACT_EPS } from '../src/s3d.js';
 
@@ -229,7 +229,7 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
     : { path: n.path, target: n.path, kind: 'object', envelope: env, text: `over ${n.path} : group${envTxt} {\n${body.map((l) => '  ' + l).join('\n')}\n}` });
   // 类型：改 def 会让所有实例一起变好（享元），残差的变化按实例数计；描述只写一次
   const N = n.types ? Math.max(1, result.nodes.filter((m) => m.types?.[0] === n.types[0] && !m.path.includes('.') === !n.path.includes('.')).length) : 1;
-  const total = (x) => +(x.L + N * (x.R_src + x.R_recon)).toFixed(2);
+  const total = (x) => +(x.L + N * (x.R_src + x.R_recon + x.R_vol)).toFixed(2);
   const current = hood.scorer(hood.cur);
   const base = !n.types && baseLineOf ? baseLineOf(n.path) : null, saving = base ? reshapeSaving(base) : 0;
   current.S = total(current);
@@ -290,10 +290,11 @@ export function refineProposal(result, parts, path, { to = 'structure', unit = 1
   const best = ok[0];
   return {
     ...best, current, instances: N, gain: +(best.local.S - current.S).toFixed(2),
-    candidates: cands.map((c) => ({ name: c.name, ...(c.error ? { error: c.error } : { boxes: c.boxes, S: c.local.S, L: c.local.L, R: +(c.local.R_src + c.local.R_recon).toFixed(2) }) })),
+    candidates: cands.map((c) => ({ name: c.name, ...(c.error ? { error: c.error } : { boxes: c.boxes, S: c.local.S, L: c.local.L, R: +(c.local.R_src + c.local.R_recon + c.local.R_vol).toFixed(2) }) })),
   };
 }
-// 邻域：这个物体的源部件 + 离它不超过 dMax 的其他源部件；附近其他的重建物体（世界坐标）。
+// 邻域：这个物体的源部件 + 离它（源部件或物体现在的几何，取两者的包围盒）不超过 dMax 的其他源部件；附近其他的重建物体（世界坐标）。
+// 物体比它的源部件大得多时（一段楼梯的 ~src 只是其中一级踏步）也要把它覆盖到的源部件算进来，否则远端的表面与内部都被当成“源模型里没有”
 // 同一个编译结果、同一组源部件反复细化（--auto）时，整个场景的几何与源部件的包围盒只算一次
 const WORLD = new WeakMap(), BOXES = new WeakMap();
 const boxMeet = (a, b, pad) => [0, 1, 2].every((j) => a.min[j] - pad <= b.max[j] && b.min[j] <= a.max[j] + pad);
@@ -302,15 +303,17 @@ function neighborhood(result, parts, n, part, consts) {
   let boxes = BOXES.get(parts);
   if (!boxes) BOXES.set(parts, (boxes = parts.map((p) => boxOf([{ pos: p.tris.flat(2) }]))));
   const own = parts.indexOf(part);
-  const near = [own, ...parts.map((_, i) => i).filter((i) => i !== own && boxMeet(boxes[i], boxes[own], pad))];
-  const U = near.reduce((u, i) => ({ min: u.min.map((x, j) => Math.min(x, boxes[i].min[j])), max: u.max.map((x, j) => Math.max(x, boxes[i].max[j])) }), { min: [...boxes[own].min], max: [...boxes[own].max] });
   let world = WORLD.get(result);
   if (!world) WORLD.set(result, (world = sceneObjects(result, { sourceParts: parts }).filter((o) => o.pos.length).map((o) => ({ ...o, box: boxOf([o]) }))));
   const mine = (p) => p === n.path || p.startsWith(n.path + '.');
+  const join = (a, b) => ({ min: a.min.map((x, j) => Math.min(x, b.min[j])), max: a.max.map((x, j) => Math.max(x, b.max[j])) });
+  const B0 = world.filter((o) => mine(o.path)).reduce((u, o) => join(u, o.box), boxes[own]);
+  const near = [own, ...parts.map((_, i) => i).filter((i) => i !== own && boxMeet(boxes[i], B0, pad))];
+  const U = near.reduce((u, i) => join(u, boxes[i]), B0);
   const rest = world.filter((o) => !mine(o.path));
   return {
     cur: world.filter((o) => mine(o.path)),
-    scorer: neighborhoodScorer({ parts, near, others: rest.filter((o) => boxMeet(o.box, U, pad)), reconColors: new Set(rest.map((o) => String(o.color ?? '').toLowerCase())), consts, sharedMeshes: new Set(rest.filter((o) => o.mesh).map((o) => o.mesh.key ?? o.mesh.src)) }),
+    scorer: neighborhoodScorer({ parts, near, others: rest.filter((o) => boxMeet(o.box, U, pad)), reconColors: new Set(rest.map((o) => String(o.color ?? '').toLowerCase())), consts, sharedMeshes: new Set(rest.filter((o) => o.mesh).map((o) => o.mesh.key ?? o.mesh.src)), group: groupContext(rest.filter((o) => o.path.split('.')[0] === n.path.split('.')[0]), consts) }),
   };
 }
 // 物体（及其内部各部件）现在的几何，变换到物体自己的坐标系

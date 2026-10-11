@@ -46,7 +46,7 @@ const CACHE_CODE = { parts: ['parts.mjs', 'sidecar.mjs', 'srccache.mjs'] };
 CACHE_CODE.surfaces = [...CACHE_CODE.parts, 'surfaces.mjs', 'nearest.mjs', 'worldtris.mjs'];
 CACHE_CODE.samples = CACHE_CODE.parts;
 // 评分状态（跨进程的增量评分）：还取决于评分本身的代码
-CACHE_CODE.score = [...CACHE_CODE.surfaces, 'score.mjs'];
+CACHE_CODE.score = [...CACHE_CODE.surfaces, 'score.mjs', 'volume.mjs'];
 // 源模型的键：源文件与旁路表的内容、拆分方式、旁路表的配置；读不到文件时返回 null（不用缓存，照常读、照常报错）
 function sourceKey(dir, cfg, path) {
   try {

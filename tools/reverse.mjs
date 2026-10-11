@@ -778,14 +778,14 @@ function tryPanels(tris, cols, t, part, cur, n = 1) {
   const areaAll = local.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0);
   if (pl.reduce((s2, q) => s2 + q.area, 0) < PANEL_PLANAR * areaAll) return null;
   const { evalLines } = judgeOf(part);
-  const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon);
+  const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon + ls.R_vol);
   let curS = Infinity;
   if (cur.mesh != null) curS = cur.mesh;
   else {
     const ls = evalLines([cur.line]);
     if (ls) curS = total(ls);
     // 现在的基本体已经解释了这个部件（残差很小）：板件至少要好几块盒子，不可能更短
-    if (ls && n * (ls.R_src + ls.R_recon) < 20) return null;
+    if (ls && n * (ls.R_src + ls.R_recon + ls.R_vol) < 20) return null;
   }
   if (6 * Math.ceil(pl.length / 2) >= curS) return null;
   const tau = FID.tau * M, opts = { thick: Math.max(2 * FID.tau, 0.1) * M, maxThick: 1 * M, digits: DIGITS };
@@ -822,7 +822,7 @@ function judgeOf(part) {
   if (J) return J;
   const consts = { ...SCORE_DEFAULTS, delta: FID.tau, unit: 1 / M };
   let scorer = null;
-  const score = (objs, lines) => (scorer ??= neighborhoodScorer({ parts: [{ tris: part.tris, material: part.material }], near: [0], others: [], reconColors: new Set(), consts }))(objs, lines);
+  const score = (objs, lines) => (scorer ??= neighborhoodScorer({ parts: [{ tris: part.tris, material: part.material }], near: [0], others: [], reconColors: new Set(), consts, whole: SUB_WHOLE }))(objs, lines);
   const color = part.material?.color;
   const evalLines = (lines) => {
     const r = compile(lines.join('\n'), { factEps: FACT_EPS * M });
@@ -948,7 +948,7 @@ function tryUnion(tris, cols, t, part, cur, n = 1, pre = undefined) {
   if (!g) return null;
   const { lines, c0 } = g;
   const { evalLines } = judgeOf(part);
-  const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon);
+  const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon + ls.R_vol);
   const curS = cur.mesh != null ? cur.mesh : (() => { const ls = evalLines([cur.line]); return ls ? total(ls) : Infinity; })();
   const orient = orientText(cols), head = `group g at=${vec(add(t, mvC(cols, c0)))} pin=origin${orient ? ' ' + orient : ''} {`;
   const L = [head, ...lines.map((l) => '  ' + l), '}'];
@@ -974,7 +974,7 @@ function tryShell(tris, cols, t, part, cur, n = 1) {
   const sh = shellLines(local, { tau, digits: DIGITS, maxThick: 2 * M, thick: Math.max(2 * FID.tau, 0.1) * M, cell: 2 * tau, maxBoxes: 60 });
   if (!sh) return null;
   const { evalLines } = judgeOf(part);
-  const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon);
+  const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon + ls.R_vol);
   const curS = cur.mesh != null ? cur.mesh : (() => { const ls = evalLines([cur.line]); return ls ? total(ls) : Infinity; })();
   const shellBlock = [`subtract shell at=${vec(sh.at)} {`, ...sh.shell.map((l) => '  ' + l), '}'];
   // 楼里没有别的东西：物体本身就是 subtract；有楼板、内墙：group { subtract shell … ; 板件 }
@@ -1036,13 +1036,111 @@ function scatterGeometry(tris) {
 // 拆开的写法（物体坐标系里、相对 g.c0）与现在的写法比局部分数；n：类型的实例数
 function scatterAccept(g, part, cur, n = 1) {
   const { evalLines } = judgeOf(part);
-  const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon);
+  const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon + ls.R_vol);
   const curS = cur.mesh != null ? cur.mesh : (() => { const ls = evalLines([cur.line]); return ls ? total(ls) : Infinity; })();
   const ls = evalLines([`group g at=${vec(g.c0)} {`, ...g.body.map((l) => '  ' + l), '}']);
   return !!ls && total(ls) <= SCATTER_SLACK * curS;
 }
 // 分散、但没拆开的部件（块数）：不当别人的参照物
 let SCATTERED = new WeakMap();
+
+// ── 部件当小场景（大部件的拆解）──
+// 结构、地形里拟合不好的大部件（整栋楼的外墙壳、桁架塔、一圈弧形扶手）：网格按真实信息量计价，不能再退回网格引用，
+// 而一个粗糙的基本体既对不上表面、又把楼里的空间填实了（R_vol）。先把它拆成块——互不相连的分量；只有一块时用板件分解出的盒子——
+// 再把这些块交给逆向管线本身（拟合、阵列、镜像、关系），写成一个组：一排等距的肋条成了一条 repeat，桁架的横杆、扶手的立柱同样，
+// 单块照常试扫掠、旋转体、台阶。递归一层：子场景里不再拆子场景。与现在的写法比局部分数（同板件），更低才用
+// 门槛：已经认出来的形状（台阶、管、扫掠、旋转体）不拆；现在的写法分数不到 SUB_MIN_S 的不拆（子场景至少好几行，每行 8–10，赢不了）
+const SUB_MAX_PIECES = 400, SUB_MIN_S = 120;
+// SUB_WHOLE：正在拆的大部件的表面积（子场景里各块的局部评分按面积分到这个部件的那一份权重，见 neighborhoodScorer 的 whole）
+let SUB_DEPTH = 0, SUBS = true, SUB_WHOLE = null;
+const subSceneWorth = (fit, part) => SUBS && SUB_DEPTH === 0 && !['steps', 'tube', 'sweep', 'revolve'].includes(fit.shape) && !coarseRole(part) && !part.force && FID.name !== 'semantic' && meshPriceMode(roleP(part), MESH_K) === 'full'
+  && part.tris.length >= PANEL_MIN_TRIS && !(1 - fit.e / TOL >= 0.5 && fit.cover >= COVER_MIN) && Math.max(...sub(fit.aabb.max, fit.aabb.min)) >= PANEL_MIN_SIZE * M;
+// 一组块（每块一组三角形，坐标在 frame 里）→ 子场景的语句（相对 c0：全部块的包络底面中心）。模块里的状态（各种缓存、当前设置）存下、做完恢复
+function subSceneLines(pieces, part) {
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (const tris of pieces) for (const tri of tris) for (const v of tri) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], v[k]); hi[k] = Math.max(hi[k], v[k]); }
+  const c0 = [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2];
+  // 材质同这个部件，设成默认材质：组里的语句不写 mat=，继承组的材质
+  // 名字：板件分解出来的块带着 wall、slab 这类名字（挂在三角形数组的 name 上）；分量没有名字
+  const subParts = pieces.map((tris) => ({ name: tris.name ?? null, tris: tris.map((tri) => tri.map((v) => sub(v, c0))), role: roleP(part), material: part.material ?? { name: null, color: '#c9c9c9' } }));
+  const saved = [SUB_WHOLE, FID, S, M, DIGITS, SUBS, PARTS_FILE, PANELS, UNIONS, PREFIT, SHELLS, COMPOSITE_MS, UNION_SEEN, SWEEP_SEEN, SWEEP_FAILED, MESH_USE, JUDGES, SCATTERED, PART_ROLE, HEIGHT, cleanName, MESH_K];
+  SUB_DEPTH++;
+  SUB_WHOLE = { area: pieces.reduce((a, ts) => a + ts.reduce((b, [p, q, r]) => b + len(cross(sub(q, p), sub(r, p))) / 2, 0), 0) };
+  let out;
+  try {
+    out = reverse(subParts, { srcFile: 'x', level: 'L1', fidelity: FID.name, unit: 1 / M, types: false, defaultMaterial: true, names: false, meshPrice: MESH_K.meshPrice, panels: PANELS, shells: SHELLS, unions: UNIONS });
+  } finally {
+    [SUB_WHOLE, FID, S, M, DIGITS, SUBS, PARTS_FILE, PANELS, UNIONS, PREFIT, SHELLS, COMPOSITE_MS, UNION_SEEN, SWEEP_SEEN, SWEEP_FAILED, MESH_USE, JUDGES, SCATTERED, PART_ROLE, HEIGHT, cleanName, MESH_K] = saved;
+    SUB_DEPTH--;
+  }
+  // 去掉材质声明与 mat=（各块的材质都同这个部件，继承组的材质）、拟合度这类元数据
+  let lines = out.src.split('\n').filter((l) => l.trim() && !/^\s*\/\//.test(l) && !/^material /.test(l)).map((l) => l.replace(/ ~(fit|err|src|scatter)=("[^"]*"|\S+)/g, '').replace(/ mat=\S+/g, ''));
+  if (lines.some((l) => /^\s*mesh /.test(l))) return null;
+  // 摊平：顶层放在原点、不带别的属性的组（板件、并写出来的组，内容已按包络的底面中心摆好）把内容提上来；名字冲突时不摊平
+  const names = () => new Set(lines.filter((l) => /^\S/.test(l)).map((l) => l.split(/\s+/)[1]));
+  for (let i = 0; i < lines.length; i++) {
+    if (!/^group \S+ at=0,0,0 \{$/.test(lines[i])) continue;
+    let j = i + 1;
+    while (j < lines.length && lines[j] !== '}') j++;
+    const body = lines.slice(i + 1, j).map((l) => l.replace(/^  /, '')), own = new Set(body.filter((l) => /^\S/.test(l)).map((l) => l.split(/\s+/)[1]));
+    const rest = names();
+    rest.delete(lines[i].split(/\s+/)[1]);
+    const ref = new RegExp(`=${lines[i].split(/\s+/)[1]}(?![\\w])`);
+    if ([...own].some((n) => rest.has(n)) || lines.some((l, k) => k !== i && ref.test(l))) continue;
+    lines = [...lines.slice(0, i), ...body, ...lines.slice(j + 1)];
+    i += body.length - 1;
+  }
+  return { lines, c0 };
+}
+// 子场景的候选：分量（2–400 块）；只有一块时，板件分解的盒子（格子从细到粗）。frame 里的三角形 ftris，cols、cur 同 tryPanels。
+// 返回 { body, at（frame 里，组的包络底面中心）, box, S, curS, pieces } 或 null
+function trySubScene(ftris, part, cur) {
+  const { evalLines } = judgeOf(part);
+  const total = (ls) => ls.L + ls.R_src + ls.R_recon + ls.R_vol;
+  // cur.S：已经有更好的候选（板件、外壳、并）时直接给它的分数
+  const curS = cur.S ?? (cur.mesh != null ? cur.mesh : (() => { const ls = evalLines([cur.line]); return ls ? total(ls) : Infinity; })());
+  if (curS < SUB_MIN_S) return null;
+  const tries = [];
+  const sc = scatterOf({ tris: ftris });
+  if (sc.comps && sc.comps.length >= 2 && sc.comps.length <= SUB_MAX_PIECES) tries.push(sc.comps.map((ids) => ids.map((i) => ftris[i])));
+  else if (!sc.comps || sc.comps.length < 2) {
+    const tau = FID.tau * M, opts = { thick: Math.max(2 * FID.tau, 0.1) * M, maxThick: 1 * M, digits: DIGITS };
+    for (const cell of [2 * tau, 4 * tau, 8 * tau]) {
+      const p = panelLines(ftris, { ...opts, cell, maxBoxes: SUB_MAX_PIECES });
+      if (!p) continue;
+      const objs = sceneObjects(compile(p.lines.join('\n'), { factEps: FACT_EPS * M }));
+      if (objs.length >= 2) tries.push(objs.map((o) => { const t = []; for (let i = 0; i < o.pos.length; i += 9) t.push([[o.pos[i], o.pos[i + 1], o.pos[i + 2]], [o.pos[i + 3], o.pos[i + 4], o.pos[i + 5]], [o.pos[i + 6], o.pos[i + 7], o.pos[i + 8]]]); t.name = o.path.replace(/_\d+$/, ''); return t; }));
+    }
+  }
+  // 按面积只留大块（同 refine 的候选）：外墙壳的主体是几面墙、屋顶与楼板，细碎的小板、小洞写出来不划算的，比分数时自然舍掉。
+  // 粗的先试：它们便宜，先得到一个好的分数，细的候选描述长度超过它就不必评残差
+  const areaOfT = (ts) => ts.reduce((a, [p, q, r]) => a + len(cross(sub(q, p), sub(r, p))) / 2, 0);
+  const variants = [];
+  for (const pieces of tries) {
+    const byArea = pieces.map((ts) => ({ ts, a: areaOfT(ts) })).sort((x, y) => y.a - x.a), all = byArea.reduce((a, x) => a + x.a, 0);
+    for (const q of [0.75, 0.9, 0.97]) {
+      let acc = 0, k = 0;
+      while (k < byArea.length && acc < q * all) acc += byArea[k++].a;
+      if (k >= 1 && k < pieces.length && !variants.some((v) => v.length === k)) variants.push(byArea.slice(0, k).map((x) => x.ts));
+    }
+    variants.push(pieces);
+  }
+  let best = null;
+  for (const pieces of variants) {
+    const sub0 = subSceneLines(pieces, part);
+    if (!sub0) continue;
+    const L = sub0.lines.reduce((a, l) => a + lineCost(l), 0);
+    if (L >= Math.min(curS, best?.S ?? Infinity)) continue;
+    const ls = evalLines([`group g at=${vec(sub0.c0)} pin=origin {`, ...sub0.lines.map((l) => '  ' + l), '}']);
+    if (ls && total(ls) < Math.min(curS, best?.S ?? Infinity)) best = { S: total(ls), ls, ...sub0, pieces: pieces.length };
+  }
+  if (!best) return null;
+  // 组按包络的底面中心放：语句不动，组的位置 = c0 + 语句包络的底面中心
+  const bl = [Infinity, Infinity, Infinity], bh = [-Infinity, -Infinity, -Infinity];
+  for (const o of sceneObjects(compile(best.lines.join('\n'), { factEps: FACT_EPS * M }))) for (let i = 0; i < o.pos.length; i += 3) for (let k = 0; k < 3; k++) { bl[k] = Math.min(bl[k], o.pos[i + k]); bh[k] = Math.max(bh[k], o.pos[i + k]); }
+  const c1 = [(bl[0] + bh[0]) / 2, bl[1], (bl[2] + bh[2]) / 2];
+  return { body: best.lines, at: add(best.c0, c1), box: { min: sub(bl, c1), max: sub(bh, c1) }, S: +best.S.toFixed(2), curS: +curS.toFixed(2), pieces: best.pieces, meanErr: best.ls.meanErr };
+}
 const fitScoreOf = (fit) => Math.max(0, Math.min(1, 1 - fit.e / TOL));
 const scatterWorth = (part) => !part.force && part.tris.length >= 6 && !['decal', 'helper'].includes(roleP(part));
 
@@ -1058,10 +1156,10 @@ function panelPrim(fit, part, prim, partIndex = -1) {
   }
   const cur = prim.kind === 'mesh' ? { mesh: meshCostOf(prim, part) } : { line: primLineOf(prim) };
   let out = null;
-  const better = (S) => !out || S < (out.panels ?? out.union ?? out.shell).S;
+  const better = (S) => !out || S < (out.panels ?? out.union ?? out.shell ?? out.sub).S;
   const up = fit.frame.cols[1];
   const fcols = up[1] > 0.999 ? fit.frame.cols : [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-  const ftris = panelsWorth(fit, part) || shellWorth(fit, part) ? part.tris.map((tri) => tri.map((v) => mvT(fcols, v))) : null;
+  const ftris = panelsWorth(fit, part) || shellWorth(fit, part) || subSceneWorth(fit, part) ? part.tris.map((tri) => tri.map((v) => mvT(fcols, v))) : null;
   if (panelsWorth(fit, part)) {
     const t0 = performance.now(), pb = tryPanels(ftris, fcols, [0, 0, 0], part, cur);
     COMPOSITE_MS.panels += performance.now() - t0;
@@ -1087,6 +1185,12 @@ function panelPrim(fit, part, prim, partIndex = -1) {
     const ub = tryUnion(part.tris, I, [0, 0, 0], part, cur, 1, pre);
     COMPOSITE_MS.unions += performance.now() - t0;
     if (ub && better(ub.S)) out = { kind: 'group', props: {}, body: ub.body, cols: I, at: ub.c0, box: ub.box, fit: ub.fit, err: fit.e, union: { S: ub.S, was: ub.curS, kind: prim.kind, prims: ub.prims } };
+  }
+  if (subSceneWorth(fit, part)) {
+    const t0 = performance.now(), gb = trySubScene(ftris, part, out ? { line: null, S: (out.panels ?? out.union ?? out.shell).S } : cur);
+    COMPOSITE_MS.subs = (COMPOSITE_MS.subs ?? 0) + performance.now() - t0;
+    COMPOSITE_MS.subTried = (COMPOSITE_MS.subTried ?? 0) + 1;
+    if (gb && better(gb.S)) out = { kind: 'group', props: {}, body: gb.body, cols: fcols, at: mvC(fcols, gb.at), box: gb.box, fit: Math.max(0, Math.min(1, 1 - (gb.meanErr * M) / (4 * FID.tau * M))), err: fit.e, sub: { S: gb.S, was: gb.curS, kind: prim.kind, pieces: gb.pieces } };
   }
   return out;
 }
@@ -1170,7 +1274,7 @@ function unifyBoxLabels(objs) {
 }
 
 // ───────── 3 & 4. 关系与校验 ─────────
-export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null, prefit = null, partsFile = null, defaultMaterial = true, panels = true, unions = true, shells = true, nameStats = null, typeSeed = null, roles: roleRules = null, meshPrice: meshPriceCfg = null } = {}) {
+export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null, prefit = null, partsFile = null, defaultMaterial = true, panels = true, unions = true, shells = true, subs = true, nameStats = null, typeSeed = null, roles: roleRules = null, meshPrice: meshPriceCfg = null } = {}) {
   setFidelity(fidelity, sceneUnit);
   MESH_K = { ...SCORE_DEFAULTS, meshPrice: meshPriceCfg ?? {} };
   PARTS_FILE = partsFile;
@@ -1178,6 +1282,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   UNIONS = unions;
   PREFIT = prefit;
   SHELLS = shells;
+  SUBS = subs;
   COMPOSITE_MS = { panels: 0, unions: 0, shells: 0 };
   UNION_SEEN = new Map();
   SWEEP_SEEN = new Map();
@@ -1341,7 +1446,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
 
   // 空间事实（全坐标版本）
   const r0 = compile(absSrc, { factEps: FACT_EPS * M, heightAt: HEIGHT });
-  lap(`全坐标版本编译（其中板件 ${Math.round(COMPOSITE_MS.panels)}ms、基本体之并 ${Math.round(COMPOSITE_MS.unions)}ms、外壳 ${Math.round(COMPOSITE_MS.shells)}ms）`);
+  lap(`全坐标版本编译（其中板件 ${Math.round(COMPOSITE_MS.panels)}ms、基本体之并 ${Math.round(COMPOSITE_MS.unions)}ms、外壳 ${Math.round(COMPOSITE_MS.shells)}ms、子场景 ${Math.round(COMPOSITE_MS.subs ?? 0)}ms / ${COMPOSITE_MS.subTried ?? 0} 个）`);
   const byId = new Map(objs.map((o) => [o.id, o]));
   const onOf = new Map(), againstOf = new Map(), nearOf = new Map();
   const related = new Map();
@@ -1792,6 +1897,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     shells: [...types.filter((T) => T.prim.shell).map((T) => ({ type: T.name, instances: T.count, ...T.prim.shell })), ...objs.filter((o) => o.shell).map((o) => ({ id: nm(o.id), ...o.shell, instead: o.shell.kind }))],
     scattered: [...types.filter((T) => T.prim.scatter).map((T) => ({ type: T.name, instances: T.count, blocks: T.prim.scatter.blocks })), ...objs.filter((o) => o.scatter).map((o) => ({ id: nm(o.id), blocks: o.scatter.blocks }))],
     unions: [...types.filter((T) => T.prim.union).map((T) => ({ type: T.name, instances: T.count, prims: T.prim.union.prims, S: T.prim.union.S, was: T.prim.union.was })), ...objs.filter((o) => o.union).map((o) => ({ id: nm(o.id), prims: o.union.prims, S: o.union.S, was: o.union.was, instead: o.union.kind }))],
+    subs: objs.filter((o) => o.sub).map((o) => ({ id: nm(o.id), pieces: o.sub.pieces, S: o.sub.S, was: o.sub.was, instead: o.sub.kind })),
     roles: Object.fromEntries([...parts.reduce((m, p) => m.set(roleP(p), (m.get(roleP(p)) ?? 0) + 1), new Map())].sort()),
     helpers: helpers.map((p) => p.uid ?? p.name ?? p.from),
     covered: kept.reduce((s, u) => s + u.children.reduce((t, c) => t + c.members.length, 0), 0),

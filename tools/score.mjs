@@ -1,7 +1,7 @@
 // 自评分数：不依赖真值，是 AI 的目标函数，也是人的进度条（docs/PLAN2.md 第 3 节）。
-//   S = L_stmt + L_mesh + R_src + R_recon，越低越好
+//   S = L_stmt + L_mesh + R_src + R_recon + R_vol，越低越好
 //   L_stmt  描述长度：名字、关键字、引用各 1；数字 1 + 0.5 × (小数位 − 1)；注释与 ~元数据不计
-//   L_mesh  仍以源网格引用保留的部分：结构、地形按真实信息量（4.5 × 顶点数 + 3 × 三角形数），装饰、贴花 c_mesh × log2(1 + 三角形数)（见 meshPrice）。同一个网格（享元）只在第一次出现时付，以后的实例只付那一行语句
+//   L_mesh  仍以源网格引用保留的部分：结构按真实信息量（4.5 × 顶点数 + 3 × 三角形数），地形、装饰、贴花 c_mesh × log2(1 + 三角形数)（见 meshPrice）。同一个网格（享元）只在第一次出现时付，以后的实例只付那一行语句
 //   长度都按米计（δ、dMax、输出的误差），场景单位不是米时按 unit 换算
 //   R_src   源模型的每个部件表面采样，到重建表面的距离 d → log2(1 + max(0, d − δ)/δ)，按 log2(1 + 面积/δ²) 加权
 //           （这块表面在当前精度下有多少个 δ 见方的格子：精度要求越细、表面越大，同样的误差越贵——评分标准随档位变化）。
@@ -11,12 +11,16 @@
 //   有效描述：基础层里声明的物体被删掉了，那一行不计长度（替换一个物体不应付两份钱）；被 over X : 种类 换了形的，
 //           那一行只计名字、定位与材质（形状参数作废了）
 //   R_recon 重建物体表面到源表面的距离，同样计价；复杂度权重以顶层语句为单位、内部按面积分摊（惩罚凭空多出来的东西，但不惩罚拆分）
+//   R_vol   体积误差：重建物体的实体里、源模型实体外面的部分（实心体块填满了空心楼），内部采样点同样计价，
+//           权重 c_res × log2(1 + 体积/δ³)，以顶层语句为单位、内部按体积分摊（volume.mjs）。网格引用、薄的物体不计
 // 解释率 explain = 1 − S / S_mesh，S_mesh 是“全部写成 mesh 引用、世界坐标定位”的基线。
 import { closestMany, pointArray, sharedArray } from './nearest.mjs';
 import { samplePoints, sourceSamples, uniqueVertices } from './parts.mjs';
 import { colorKey, surfaces, sourceSurfaces, saveSurfaces, loadSurfaces } from './surfaces.mjs';
 import { sceneObjects, trisToArray } from './worldtris.mjs';
 import { nodeRoles } from '../src/roles-view.js';
+import { interiorSamples, volumeResidual, solidStats } from './volume.mjs';
+import { assignRoles } from './roles.mjs';
 
 // 长度常数（delta、dMax）按米给出，unit 是每个场景单位多少米；计算前换算成场景单位（inScene），输出的误差（meanErr、maxErr）再换回米。
 // 换算之后分数与单位无关：残差是 d/δ，面积权重是 面积/δ²，都是无量纲的
@@ -25,10 +29,11 @@ const inScene = (k) => ({ ...k, delta: k.delta / k.unit, dMax: k.dMax / k.unit }
 
 // 网格引用的价钱（L_mesh），按网格所属源部件的角色（roles.mjs）：
 //   full：真实信息量——把这个网格用语言逐点写出来的长度：每个顶点 3 个数（按两位小数的数计，各 1.5），每个三角形 3 个引用（各 1）。
-//         结构、地形默认这样计：重建场景就是要把它们写成语言，引用网格不能比拆开写便宜。
-//   ref： c_mesh × log2(1 + 三角形数)——只是引用一个现成的资产。装饰、贴花默认这样计（重建地图时可以整个去掉，用网格也可以）。
+//         结构默认这样计：重建场景就是要把它们写成语言，引用网格不能比拆开写便宜。
+//   ref： c_mesh × log2(1 + 三角形数)——只是引用一个现成的资产。装饰、贴花默认这样计（重建地图时可以整个去掉，用网格也可以）；
+//         地形也是：起伏的地面本来就是不规则的面，语言里没有高度场，拆成几十块斜放的盒子既不准、语义也不对（平整的路面照样拟合成盒子）。
 // 工程的 project.json 里 score.meshPrice 按角色改，例如 { "decor": "full" }
-export const MESH_PRICE = { structure: 'full', terrain: 'full', decor: 'ref', decal: 'ref', helper: 'ref' };
+export const MESH_PRICE = { structure: 'full', terrain: 'ref', decor: 'ref', decal: 'ref', helper: 'ref' };
 const VERTS = new WeakMap();
 const vertexCount = (tris) => { let n = VERTS.get(tris); if (n == null) VERTS.set(tris, (n = uniqueVertices(tris).length)); return n; };
 export const meshPriceMode = (role, k = SCORE_DEFAULTS) => ({ ...MESH_PRICE, ...(k.meshPrice ?? {}) }[role ?? 'structure'] ?? 'full');
@@ -208,12 +213,15 @@ const boxesMeet = (a, b, pad) => [0, 1, 2].every((j) => a.lo[j] - pad <= b.hi[j]
 // 源侧：只取决于源部件，与常数无关
 function sharedOf(sourceParts, cache) {
   if (cache?.parts === sourceParts && cache.shared) return cache.shared;
+  // 部件没挂角色（不经过工程直接评分）时按默认规则判，与逆向一致（逆向同样这样判）
+  const roles = sourceParts.every((p) => p.role) ? null : assignRoles(sourceParts);
   const src = sourceParts.map((p, i) => {
     // 包围盒按原始坐标取（基线里的数字要和全量评分一模一样）
     const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
     for (const t of p.tris) for (const v of t) for (let j = 0; j < 3; j++) { if (v[j] < lo[j]) lo[j] = v[j]; if (v[j] > hi[j]) hi[j] = v[j]; }
     // role：工程按 roles.json 判的角色（roles.mjs）；辅助部件（白模体积、雾、碰撞体）不属于场景，不计 R_src、不进基线
-    return { i, role: p.role ?? null, skip: p.role === 'helper', name: p.uid ?? p.name ?? p.from ?? `part_${i}`, meshKey: p.mesh != null ? `m:${p.mesh}` : null, tris: p.tris, color: p.material?.color, area: areaOf(p.tris), box: { lo, hi } };
+    const role = p.role ?? roles?.[i] ?? null;
+    return { i, role, skip: role === 'helper', name: p.uid ?? p.name ?? p.from ?? `part_${i}`, meshKey: p.mesh != null ? `m:${p.mesh}` : null, tris: p.tris, color: p.material?.color, area: areaOf(p.tris), box: { lo, hi } };
   });
   // 源表面的树：磁盘缓存里有就直接恢复（不重新建树）
   const persist = cache?.persist, saved = persist?.load('surfaces', {});
@@ -256,7 +264,10 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   const T0 = performance.now(), lap = (what) => process.env.S3D_TIMING && console.error(`[score] ${what} ${Math.round(performance.now() - T0)}ms`);
   const recon = sceneObjects(result, { sourceParts }).filter((o) => o.pos.length);
   const shared = sharedOf(sourceParts, cache), { src, srcBVH } = shared;
-  const ckey = JSON.stringify([k.delta, k.dMax, k.samples, k.cRes, src.filter((x) => x.skip).map((x) => x.i).join()]);
+  // 网格引用的角色：部件没挂角色时取上面按默认规则判的（网格的价钱按角色）
+  const roleOfSrc = new Map(src.map((s) => [s.name, s.role]));
+  for (const o of recon) if (o.mesh && o.mesh.role == null) o.mesh.role = roleOfSrc.get(o.mesh.src) ?? null;
+  const ckey = JSON.stringify(['vol1', k.delta, k.dMax, k.samples, k.cRes, src.filter((x) => x.skip).map((x) => x.i).join()]);
   const state = cache ? (cache.states.get(ckey) ?? cache.states.set(ckey, { recon: new Map(), prev: null, srcRes: null }).get(ckey)) : null;
   if (state && !state.srcRes && shared.persist) loadState(state, shared, k, ckey);
   lap('sceneObjects');
@@ -285,7 +296,7 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
   let reconBVH0 = null;
   const reconBVH = () => (reconBVH0 ??= surfaces(recon));
   lap('bvh');
-  const per = new Map(recon.map((o) => [o.path, { path: o.path, stmt: 0, mesh: 0, rSrc: 0, rRecon: 0, meanErr: 0, maxErr: 0, src: [] }]));
+  const per = new Map(recon.map((o) => [o.path, { path: o.path, stmt: 0, mesh: 0, rSrc: 0, rRecon: 0, rVol: 0, meanErr: 0, maxErr: 0, src: [] }]));
   // 描述长度归到物体：自己有几何就归自己，否则归第一个有几何的子物体，再不行沿路径向上找（subtract 的子语句归到 subtract）
   const ownerOfPath = (path) => {
     if (per.has(path)) return per.get(path);
@@ -397,7 +408,8 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
     const block = todo.slice(b, b + BLOCK).map((j) => ({ j, tris: triList(recon[j].pos) }));
     nearestMany(srcBVH, k, block.map(({ j, tris }) => ({ pts: flatPoints(samplePoints(tris, k.samples, seedOf(recon[j].path))), color: recon[j].color }))).forEach(({ d }, m) => {
       const { j, tris } = block[m], res = aggregate(d, k);
-      computed.set(j, { r: res.r, mean: res.mean, max: res.max, tris: tris.length, area: tris.reduce((s2, t) => s2 + triArea(t), 0) });
+      const inner = recon[j].mesh ? null : interiorSamples(recon[j].pos, k, seedOf(recon[j].path));
+      computed.set(j, { r: res.r, mean: res.mean, max: res.max, tris: tris.length, area: tris.reduce((s2, t) => s2 + triArea(t), 0), vol: inner?.vol ?? 0, rv: inner ? volumeResidual(inner.pts, srcBVH?.all?.q, k) : 0 });
     });
   }
   const rec = recon.map((o, j) => {
@@ -407,8 +419,8 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
     return { o, res: x, tris: x.tris, area: x.area, top: o.path.split('.')[0] };
   });
   const groups = new Map();
-  for (const x of rec) { const g = groups.get(x.top) ?? { tris: 0, area: 0 }; g.tris += x.tris; g.area += x.area; groups.set(x.top, g); }
-  let Rrecon = 0;
+  for (const x of rec) { const g = groups.get(x.top) ?? { tris: 0, area: 0, vol: 0 }; g.tris += x.tris; g.area += x.area; g.vol += x.res.vol; groups.set(x.top, g); }
+  let Rrecon = 0, Rvol = 0;
   for (const { o, res, area, top } of rec) {
     const g = groups.get(top);
     // 每个顶层语句按它的表面积计权（与源侧同样的 log2(1 + 面积/δ²)），内部按面积分摊：拆分前后总面积不变，拆分本身不受罚
@@ -416,6 +428,8 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
     Rrecon += c;
     const p = per.get(o.path);
     p.rRecon += c; p.meanErr = Math.max(p.meanErr, res.mean); p.maxErr = Math.max(p.maxErr, res.max);
+    // 体积误差：同样以顶层语句为单位，权重按体积（log2(1 + 体积/δ³)），内部按体积分摊
+    if (res.rv > 0) { const cv = k.cRes * Math.log2(1 + g.vol / k.delta ** 3) * (res.vol / g.vol) * res.rv; Rvol += cv; p.rVol += cv; }
   }
   // 记住这一次的状态（只留这一次的物体，缓存不会越积越多）
   if (state) { state.prev = now; state.srcRes = srcRes; state.recon = reconRes; state.ids = ids; if (shared.persist) saveState(state, shared, ckey); }
@@ -436,24 +450,24 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
     baseOf[s.i] = Smesh - before;
   }
   lap('S_mesh');
-  const S = D.total + Lmesh + Rsrc + Rrecon;
+  const S = D.total + Lmesh + Rsrc + Rrecon + Rvol;
   // 按角色分开（roles.mjs）：重建一侧（描述长度、网格引用、R_recon）按物体的 ~role，源一侧（R_src、基线 S_mesh）按源部件的角色；
   // 每个角色里同样算解释率 1 − S / S_mesh。没归属的描述长度（unattributed）不分，所以各角色的 S 加起来比总分少这一点
   const roleOf = nodeRoles(result), byRole = {};
-  const R = (r) => (byRole[r] ??= { S: 0, L_stmt: 0, L_mesh: 0, R_src: 0, R_recon: 0, S_mesh: 0, objects: 0, sources: 0 });
-  for (const p of per.values()) { const b = R(roleOf(p.path)); b.L_stmt += p.stmt; b.L_mesh += p.mesh; b.R_recon += p.rRecon; b.objects++; }
+  const R = (r) => (byRole[r] ??= { S: 0, L_stmt: 0, L_mesh: 0, R_src: 0, R_recon: 0, R_vol: 0, S_mesh: 0, objects: 0, sources: 0 });
+  for (const p of per.values()) { const b = R(roleOf(p.path)); b.L_stmt += p.stmt; b.L_mesh += p.mesh; b.R_recon += p.rRecon; b.R_vol += p.rVol; b.objects++; }
   src.forEach((x, i) => { if (x.skip) return; const b = R(x.role ?? 'structure'); b.R_src += srcRes[i].c; b.S_mesh += baseOf[i]; b.sources++; });
   for (const b of Object.values(byRole)) {
-    b.S = b.L_stmt + b.L_mesh + b.R_src + b.R_recon;
+    b.S = b.L_stmt + b.L_mesh + b.R_src + b.R_recon + b.R_vol;
     b.explain = b.S_mesh ? +(1 - b.S / b.S_mesh).toFixed(4) : null;
-    for (const k of ['S', 'L_stmt', 'L_mesh', 'R_src', 'R_recon', 'S_mesh']) b[k] = +b[k].toFixed(2);
+    for (const k of ['S', 'L_stmt', 'L_mesh', 'R_src', 'R_recon', 'R_vol', 'S_mesh']) b[k] = +b[k].toFixed(2);
   }
-  const objects = [...per.values()].map((p) => ({ ...p, total: +(p.stmt + p.mesh + p.rSrc + p.rRecon).toFixed(3), stmt: +p.stmt.toFixed(2), mesh: +p.mesh.toFixed(2), rSrc: +p.rSrc.toFixed(3), rRecon: +p.rRecon.toFixed(3), meanErr: +(p.meanErr * u).toFixed(5), maxErr: +(p.maxErr * u).toFixed(5) }));
+  const objects = [...per.values()].map((p) => ({ ...p, total: +(p.stmt + p.mesh + p.rSrc + p.rRecon + p.rVol).toFixed(3), stmt: +p.stmt.toFixed(2), mesh: +p.mesh.toFixed(2), rSrc: +p.rSrc.toFixed(3), rRecon: +p.rRecon.toFixed(3), rVol: +p.rVol.toFixed(3), meanErr: +(p.meanErr * u).toFixed(5), maxErr: +(p.maxErr * u).toFixed(5) }));
   const r3 = (x) => +x.toFixed(2);
   return {
-    S: r3(S), L_stmt: r3(D.total), unattributed: r3(D.total - attributed), droppedLines: D.dropped, L_mesh: r3(Lmesh), R_src: r3(Rsrc), R_recon: r3(Rrecon), S_mesh: r3(Smesh), explain: +(1 - S / Smesh).toFixed(4),
+    S: r3(S), L_stmt: r3(D.total), unattributed: r3(D.total - attributed), droppedLines: D.dropped, L_mesh: r3(Lmesh), R_src: r3(Rsrc), R_recon: r3(Rrecon), R_vol: r3(Rvol), S_mesh: r3(Smesh), explain: +(1 - S / Smesh).toFixed(4),
     byRole, consts: k0, objects, sources: srcOut,
-    worst: [...objects].sort((a, b) => (b.mesh + b.rSrc + b.rRecon) - (a.mesh + a.rSrc + a.rRecon)).slice(0, 20).map((o) => ({ path: o.path, cost: +(o.mesh + o.rSrc + o.rRecon).toFixed(2), meanErr: o.meanErr, mesh: o.mesh > 0 })),
+    worst: [...objects].sort((a, b) => (b.mesh + b.rSrc + b.rRecon + b.rVol) - (a.mesh + a.rSrc + a.rRecon + a.rVol)).slice(0, 20).map((o) => ({ path: o.path, cost: +(o.mesh + o.rSrc + o.rRecon + o.rVol).toFixed(2), meanErr: o.meanErr, mesh: o.mesh > 0 })),
   };
 }
 
@@ -465,13 +479,19 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
 // 邻居源点到“其余物体”的距离只算一次；每个候选只算它到候选几何的距离，取两者中小的。坐标一律是世界坐标。
 //   parts：全部源部件；near：邻域里源部件的序号（第一个是这个物体自己的）；others：附近其他重建物体 [{pos, color}]；
 //   reconColors：场景里其他重建物体的颜色（colorKey）；返回 (objs:[{pos, color, path}], lines) → 分数
-export function neighborhoodScorer({ parts, near, others, reconColors, consts = {}, sharedMeshes = new Set() }) {
+//   group：同一个顶层语句里其余物体的表面积与体积（groupContext）——全场评分的 R_recon、R_vol 以顶层语句为单位计权、内部分摊，
+//   阵列里的一个成员只分到一小份权重；不给时候选物体自己是一个顶层语句
+//   whole：near[0] 只是一个更大的源部件里的一块（逆向把大部件当小场景拆开写时），whole.area 是整个部件的表面积——
+//   全场评分里这个部件是一个源部件、写出来的组是一个顶层语句，各一份权重；这一块按面积分到其中一份（源侧与重建侧都是）
+export function neighborhoodScorer({ parts, near, others, reconColors, consts = {}, sharedMeshes = new Set(), group = null, whole = null }) {
   const k0 = { ...SCORE_DEFAULTS, ...consts }, k = inScene(k0);
   const srcColors = new Set(parts.map((p) => colorKey(p.material?.color)));
-  const ents = near.map((i) => {
-    const p = parts[i], color = p.material?.color;
-    return { i, color, c: colorKey(color), pts: flatPoints(sourceSamples(p.tris, i, k.samples)), w: k.cRes * Math.log2(1 + areaOf(p.tris) / (k.delta * k.delta)), rest: new Map() };
+  const ents = near.map((i, m) => {
+    const p = parts[i], color = p.material?.color, a = areaOf(p.tris);
+    const w = m === 0 && whole?.area > a ? k.cRes * Math.log2(1 + whole.area / (k.delta * k.delta)) * (a / whole.area) : k.cRes * Math.log2(1 + a / (k.delta * k.delta));
+    return { i, color, c: colorKey(color), pts: flatPoints(sourceSamples(p.tris, i, k.samples)), w, rest: new Map() };
   });
+  if (whole && !group) group = { area: Math.max(0, whole.area - areaOf(parts[near[0]].tris)), vol: 0 };
   const otherSurf = others.length ? surfaces(others) : null;
   const srcSurf = surfaces(near.map((i) => ({ pos: trisToArray(parts[i].tris), color: parts[i].material?.color })));
   // 一批点集各自到一组表面里某种颜色（same）或全部表面的距离，封顶 limit（一个数，或逐点的数组）：
@@ -519,13 +539,33 @@ export function neighborhoodScorer({ parts, near, others, reconColors, consts = 
       return { area: areaOf(tris), c, same, pen: !same && o.color != null ? k.delta : 0, pts: flatPoints(samplePoints(tris, k.samples, seedOf(o.path ?? ''))), limit: k.dMax };
     });
     distMany(srcSurf, objSets).forEach((d, j) => { const res = aggregate(d, k); A += objSets[j].area; acc += objSets[j].area * res.r; });
-    const Rrecon = A > 0 ? k.cRes * Math.log2(1 + A / (k.delta * k.delta)) * (acc / A) : 0;
+    const GA = A + (group?.area ?? 0);
+    const Rrecon = A > 0 ? k.cRes * Math.log2(1 + GA / (k.delta * k.delta)) * (acc / GA) : 0;
+    // R_vol：候选物体的内部 → 邻域里的源部件（同全场：一组候选共享一个体积权重，内部按体积分摊）
+    let V = 0, accV = 0;
+    for (const o of recon) { if (o.mesh) continue; const inner = interiorSamples(o.pos, k, seedOf(o.path ?? '')); if (inner) { V += inner.vol; accV += inner.vol * volumeResidual(inner.pts, srcSurf.all?.q, k); } }
+    const GV = V + (group?.vol ?? 0);
+    const Rvol = V > 0 ? k.cRes * Math.log2(1 + GV / k.delta ** 3) * (accV / GV) : 0;
     // 网格引用（现在的写法可能就是一块网格）：c_mesh × log2(1 + 三角形数)，与全场的 L_mesh 一样
     const seen = new Set(sharedMeshes);
     const L = lines.reduce((s, l) => s + lineCost(l), 0) + recon.reduce((s, o) => { const key = o.mesh && (o.mesh.key ?? o.mesh.src); if (!o.mesh || seen.has(key)) return s; seen.add(key); return s + meshPriceOf(o.mesh, k); }, 0);
     const r3 = (x) => +x.toFixed(2);
-    return { S: r3(L + Rsrc + Rrecon), L: r3(L), R_src: r3(Rsrc), R_recon: r3(Rrecon), meanErr: +((own?.mean ?? 0) * k0.unit).toFixed(4), maxErr: +((own?.max ?? 0) * k0.unit).toFixed(4) };
+    return { S: r3(L + Rsrc + Rrecon + Rvol), L: r3(L), R_src: r3(Rsrc), R_recon: r3(Rrecon), R_vol: r3(Rvol), meanErr: +((own?.mean ?? 0) * k0.unit).toFixed(4), maxErr: +((own?.max ?? 0) * k0.unit).toFixed(4) };
   };
+}
+
+// 邻域评分的 group：一组重建物体（同一个顶层语句里、候选以外的那些）的表面积与体积，按全场评分的算法
+// （体积只算会撒内部采样点的：不是网格引用、不薄）
+export function groupContext(objs, consts = {}) {
+  const k = inScene({ ...SCORE_DEFAULTS, ...consts });
+  let area = 0, vol = 0;
+  for (const o of objs) {
+    if (!o.pos.length) continue;
+    const st = solidStats(o.pos);
+    area += st.area;
+    if (!o.mesh && o.pos.length >= 36 && st.vol > 0 && st.vol / st.area >= k.delta) vol += st.vol;
+  }
+  return { area, vol };
 }
 
 // 一个物体的误差落在哪里：它表面上离源模型最远的采样点（重建 → 源），以及它附近的源表面上离重建最远的采样点（源 → 重建）。
