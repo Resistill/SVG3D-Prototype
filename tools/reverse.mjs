@@ -7,7 +7,7 @@
 //   4. 校验：编译关系版本，逐个比对位置与朝向，不一致的退回坐标
 import { semanticNames } from './naming.mjs';
 import { chainsOf, fitAlong, alongPoses } from './curvefit.mjs';
-import { lineCost, neighborhoodScorer, SCORE_DEFAULTS } from './score.mjs';
+import { lineCost, neighborhoodScorer, SCORE_DEFAULTS, meshPrice, meshPriceMode } from './score.mjs';
 import { sceneObjects } from './worldtris.mjs';
 import { rng, bitsHash, readParts, partsOfDocument, splitComponents, uniqueVertices, samplePoints } from './parts.mjs';
 import { compile, _curves, FACT_EPS } from '../src/s3d.js';
@@ -511,13 +511,15 @@ export function fitPart(part, i, only = null, basic = false) {
   fits.sort((a, b) => effErr(a) - effErr(b));
   // 基本体拟合得不好时，试试管道（弯管、输料管）
   if (!only && !basic && fits[0].e > 0.02) { const t = fitTube(part, i, vol, fits[0].e); if (t && t.e < fits[0].e) fits.unshift({ ...t, frame: fits[0].frame }); }
-  // 拟合得不好时，试试旋转体（整流罩、天线）；语义档一律用基本体当代理（灰盒），不用旋转体
-  if (!only && !basic && FID.name !== 'semantic' && fits[0].e > 0.02) { const rv = fitRevolve(pts, verts, fits[0].frame, part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0), part.tris); if (rv && rv.e < fits[0].e && rv.prof.length <= 16) fits.unshift({ ...rv, frame: fits[0].frame }); }
+  // 拟合得不好时，试试旋转体（整流罩、天线）；语义档一律用基本体当代理（灰盒），不用旋转体。
+  // 轮廓最多 16 个点；网格按真实信息量计价的部件（结构、地形）放宽到 64 个——它们拟合不好时不再退回便宜的网格引用，长一点的轮廓也比粗糙的基本体好
+  if (!only && !basic && FID.name !== 'semantic' && fits[0].e > 0.02) { const rv = fitRevolve(pts, verts, fits[0].frame, part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0), part.tris); if (rv && rv.e < fits[0].e && rv.prof.length <= (meshPriceMode(roleP(part), MESH_K) === 'full' ? 64 : 16)) fits.unshift({ ...rv, frame: fits[0].frame }); }
   // 拟合得不好时，试试扫掠（截面不变、沿一条曲线走：弯曲的路面、螺旋坡道、拱、螺旋扶手；sweepfit.mjs）
   // 两个几乎不花时间的门槛（扫掠拟合每个部件要几毫秒到上百毫秒，真实场景里拟合差的部件有几百个，大多是家具这类别的东西）：
-  //   基本体拟合得很差（e > 0.15；示例里的路面、坡道、拱、扶手都在 0.16 以上）；
+  //   基本体拟合得很差（e > 0.15；示例里的路面、坡道、拱、扶手都在 0.16 以上）——网格按真实信息量计价的部件（结构、地形）
+  //   只要按本档的容差拟合失败（e > TOL）就试：拟合不好时它们不再退回便宜的网格引用，粗糙的基本体是唯一的别的选择；
   //   封闭网格要细长：V / A^1.5 < 0.04（扫掠体 = 截面 × 长度，示例里最大 0.03；立方体 0.068，10:1 的长条 0.037）
-  const areaP = part.tris.length >= 16 && fits[0].e > 0.15 ? part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0) : 0;
+  const areaP = part.tris.length >= 16 && fits[0].e > (meshPriceMode(roleP(part), MESH_K) === 'full' ? Math.min(0.15, TOL) : 0.15) ? part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0) : 0;
   if (!only && !basic && !part.noSweep && !coarseRole(part) && areaP > 0 && !(vol > 0 && vol / areaP ** 1.5 >= 0.04)) {
     // 同一个网格、同样的旋转与缩放的部件（没成类型的享元）只差一个平移：结果平移过去（只在主线程上遇到——worker 只预先拟合不共用网格的部件，
     // 所以有没有 worker 结果都一样）
@@ -528,7 +530,7 @@ export function fitPart(part, i, only = null, basic = false) {
     const fkey = key && `${part.mesh}|${[0, 4, 8].map((q) => Math.round(Math.hypot(Mx[q], Mx[q + 1], Mx[q + 2]) * 1e6)).join()}`;
     if (key && SWEEP_SEEN.has(key)) { const c = SWEEP_SEEN.get(key); sw = c.sw && moveSweep(c.sw, sub([Mx[12], Mx[13], Mx[14]], c.t)); }
     else if (fkey && SWEEP_FAILED.has(fkey)) sw = null;
-    else { sw = fitSweep(part.tris, { tau: FID.tau * M, seed: 1 + ((part.tris.length * 7919 + Math.round(areaP * 1000)) % 1000003) }); if (key) SWEEP_SEEN.set(key, { sw, t: [Mx[12], Mx[13], Mx[14]] }); if (!sw && fkey) SWEEP_FAILED.add(fkey); }
+    else { sw = fitSweep(part.tris, { tau: FID.tau * M, seed: 1 + ((part.tris.length * 7919 + Math.round(areaP / (M * M))) % 1000003) }); if (key) SWEEP_SEEN.set(key, { sw, t: [Mx[12], Mx[13], Mx[14]] }); if (!sw && fkey) SWEEP_FAILED.add(fkey); }
     if (sw && sw.e < fits[0].e) fits.unshift({ shape: 'sweep', ...sw, frame: fits[0].frame });
   }
   // 拟合得不好时，试试台阶（楼梯）
@@ -567,12 +569,13 @@ const COVER_MIN = 0.3;
 // 基本体的残差（按绝对的平均距离估算，与评分同一套计价，双向）比，基本体便宜就用基本体。精细档仍按相对误差
 let MESH_USE = new Map();
 function primCheaper(fit, part) {
-  if (FID.name === 'detail') return false;
+  // 精细档：引用价的网格（装饰、贴花）拟合不好就引用；按真实信息量计价的（结构、地形）照样比价钱
+  if (FID.name === 'detail' && meshPriceMode(roleP(part), MESH_K) === 'ref') return false;
   const h = fit.frame.h, scale = Math.max(Math.min(...h), 0.02 * Math.max(...h), 1e-6);
   const d = fit.e * scale, area = part.tris.reduce((s2, [a, b, c]) => s2 + len(cross(sub(b, a), sub(c, a))) / 2, 0);
   const tauS = FID.tau * M;
   const prim = 2 * 4 * Math.log2(1 + area / (tauS * tauS)) * Math.log2(1 + Math.max(0, d - tauS) / tauS);
-  const mesh = (10 * Math.log2(1 + part.tris.length)) / Math.max(1, MESH_USE.get(part.mesh) ?? 1);
+  const mesh = meshPrice(part.tris, roleP(part), MESH_K) / Math.max(1, MESH_USE.get(part.mesh) ?? 1);
   return prim < mesh;
 }
 // L2 的网格兜底：合并网格拆出来的分量在源文件里没有节点，拟合不了时引用工程里的部件文件（parts.glb，由调用方写出）；
@@ -996,7 +999,9 @@ const shellWorth = (fit, part) => {
 };
 const unionWorth = (fit, part) => UNIONS && FID.name !== 'semantic' && !coarseRole(part) && !part.force && fit.e > TOL && part.tris.length >= 8;
 // 网格引用的代价（与评分的 L_mesh 一样，同一个网格的实例分摊）加上这一行
-const meshCostOf = (prim, part) => lineCost(`mesh x src=${prim.props.src} size=${prim.props.size} pivot=${prim.props.pivot}`) + (SCORE_DEFAULTS.cMesh * Math.log2(1 + part.tris.length)) / Math.max(1, MESH_USE.get(part.mesh) ?? 1);
+// 网格的价钱按角色（score.mjs 的 meshPrice；工程可以按角色改，reverse 的 meshPrice 选项）
+let MESH_K = SCORE_DEFAULTS;
+const meshCostOf = (prim, part) => lineCost(`mesh x src=${prim.props.src} size=${prim.props.size} pivot=${prim.props.pivot}`) + meshPrice(part.tris, roleP(part), MESH_K) / Math.max(1, MESH_USE.get(part.mesh) ?? 1);
 // 有内容的物体（板件、基本体之并）：内容接在这一行后面，按缩进写
 const bodyOf = (o, ind = '') => (o.body ? [' {', ...o.body.map((l) => ind + '  ' + l), ind + '}'].join('\n') : '');
 const primLineOf0 = (prim) => [prim.kind, 'cur', ...Object.entries(prim.props).map(([k, v]) => `${k}=${v}`), prim.absolute ? '' : `at=${vec(prim.at)}`, prim.absolute ? '' : orientText(prim.cols)].filter(Boolean).join(' ');
@@ -1165,8 +1170,9 @@ function unifyBoxLabels(objs) {
 }
 
 // ───────── 3 & 4. 关系与校验 ─────────
-export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null, prefit = null, partsFile = null, defaultMaterial = true, panels = true, unions = true, shells = true, nameStats = null, typeSeed = null, roles: roleRules = null } = {}) {
+export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null, prefit = null, partsFile = null, defaultMaterial = true, panels = true, unions = true, shells = true, nameStats = null, typeSeed = null, roles: roleRules = null, meshPrice: meshPriceCfg = null } = {}) {
   setFidelity(fidelity, sceneUnit);
+  MESH_K = { ...SCORE_DEFAULTS, meshPrice: meshPriceCfg ?? {} };
   PARTS_FILE = partsFile;
   PANELS = panels;
   UNIONS = unions;
@@ -1221,7 +1227,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       const bad = fit.e > FID.fitTol || fit.cover < COVER_MIN || fit.shape === 'tube' || fit.shape === 'sweep';
       // 板件：拟合差的类型（一栋楼被多处使用）在类型坐标系里拆成墙板、楼板，和现在的写法（基本体，或各实例引用网格）比
       const typePart = { ...rep, tris: local, matrix: null, role: roleP(rep) };
-      const curT = bad ? { mesh: SCORE_DEFAULTS.cMesh * Math.log2(1 + rep.tris.length) + ms.length * lineCost('src="x" size=1,1,1 pivot=1,1,1') } : { line: primLineOf(primitiveOf(fit, { ...rep, name: null }, srcFile)) };
+      const curT = bad ? { mesh: meshPrice(rep.tris, roleP(typePart), MESH_K) + ms.length * lineCost('src="x" size=1,1,1 pivot=1,1,1') } : { line: primLineOf(primitiveOf(fit, { ...rep, name: null }, srcFile)) };
       const I3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
       let sg = scatterWorth(typePart) && !['steps', 'tube', 'sweep'].includes(fit.shape) && (fit.e > TOL || fit.cover < COVER_MIN) ? scatterGeometry(local) : null;
       if (sg && !scatterAccept(sg, typePart, curT, ms.length)) { for (const m of ms) SCATTERED.set(parts[m.i], sg.n); sg = null; }
@@ -2453,8 +2459,9 @@ function detectArrays(objs, related) {
 
 // 调试用：两个候选坐标系各自的最优拟合
 // fitworker.mjs 用：一个部件的拟合，加上它可能用到的“基本体之并”的几何（条件与 unionWorth 相同，决定层与选项留给主线程）
-export function prefitPart(tris, i) {
-  const fit = fitPart({ tris }, i);
+export function prefitPart(tris, i, role = 'structure', meshPriceCfg = null) {
+  MESH_K = { ...SCORE_DEFAULTS, meshPrice: meshPriceCfg ?? {} };
+  const fit = fitPart({ tris, role }, i);
   return { fit, union: FID.name !== 'semantic' && fit.e > TOL && tris.length >= 8 ? unionGeometry(tris) : undefined };
 }
 

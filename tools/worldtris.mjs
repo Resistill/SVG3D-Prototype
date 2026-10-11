@@ -41,7 +41,7 @@ export function sceneObjects(result, { sourceParts = [] } = {}) {
         pos = new Float32Array(sp.tris.length * 9);
         sp.tris.forEach((tri, i) => tri.forEach((v, j) => pos.set(xf(v, it.geom.pivot), i * 9 + j * 3)));
         // key：网格数据的身份——享元的同一个网格（引擎导出的 mesh 编号）算一份，否则是这个源部件自己
-        mesh = { src: name, tris: sp.tris.length, key: sp.mesh != null ? `m:${sp.mesh}` : name };
+        mesh = { src: name, tris: sp.tris.length, key: sp.mesh != null ? `m:${sp.mesh}` : name, srcTris: sp.tris, role: sp.role ?? null };
       } else {
         const { w, h, d } = it.geom;
         pos = new Float32Array(BOX.length * 3);

@@ -1,7 +1,7 @@
 // 自评分数：不依赖真值，是 AI 的目标函数，也是人的进度条（docs/PLAN2.md 第 3 节）。
 //   S = L_stmt + L_mesh + R_src + R_recon，越低越好
 //   L_stmt  描述长度：名字、关键字、引用各 1；数字 1 + 0.5 × (小数位 − 1)；注释与 ~元数据不计
-//   L_mesh  仍以源网格引用保留的部分：c_mesh × log2(1 + 三角形数)。同一个网格（享元）只在第一次出现时付，以后的实例只付那一行语句
+//   L_mesh  仍以源网格引用保留的部分：结构、地形按真实信息量（4.5 × 顶点数 + 3 × 三角形数），装饰、贴花 c_mesh × log2(1 + 三角形数)（见 meshPrice）。同一个网格（享元）只在第一次出现时付，以后的实例只付那一行语句
 //   长度都按米计（δ、dMax、输出的误差），场景单位不是米时按 unit 换算
 //   R_src   源模型的每个部件表面采样，到重建表面的距离 d → log2(1 + max(0, d − δ)/δ)，按 log2(1 + 面积/δ²) 加权
 //           （这块表面在当前精度下有多少个 δ 见方的格子：精度要求越细、表面越大，同样的误差越贵——评分标准随档位变化）。
@@ -13,7 +13,7 @@
 //   R_recon 重建物体表面到源表面的距离，同样计价；复杂度权重以顶层语句为单位、内部按面积分摊（惩罚凭空多出来的东西，但不惩罚拆分）
 // 解释率 explain = 1 − S / S_mesh，S_mesh 是“全部写成 mesh 引用、世界坐标定位”的基线。
 import { closestMany, pointArray, sharedArray } from './nearest.mjs';
-import { samplePoints, sourceSamples } from './parts.mjs';
+import { samplePoints, sourceSamples, uniqueVertices } from './parts.mjs';
 import { colorKey, surfaces, sourceSurfaces, saveSurfaces, loadSurfaces } from './surfaces.mjs';
 import { sceneObjects, trisToArray } from './worldtris.mjs';
 import { nodeRoles } from '../src/roles-view.js';
@@ -22,6 +22,22 @@ import { nodeRoles } from '../src/roles-view.js';
 // 换算之后分数与单位无关：残差是 d/δ，面积权重是 面积/δ²，都是无量纲的
 export const SCORE_DEFAULTS = { delta: 0.005, cRes: 4, cMesh: 10, dMax: 2, samples: 600, unit: 1 };
 const inScene = (k) => ({ ...k, delta: k.delta / k.unit, dMax: k.dMax / k.unit });
+
+// 网格引用的价钱（L_mesh），按网格所属源部件的角色（roles.mjs）：
+//   full：真实信息量——把这个网格用语言逐点写出来的长度：每个顶点 3 个数（按两位小数的数计，各 1.5），每个三角形 3 个引用（各 1）。
+//         结构、地形默认这样计：重建场景就是要把它们写成语言，引用网格不能比拆开写便宜。
+//   ref： c_mesh × log2(1 + 三角形数)——只是引用一个现成的资产。装饰、贴花默认这样计（重建地图时可以整个去掉，用网格也可以）。
+// 工程的 project.json 里 score.meshPrice 按角色改，例如 { "decor": "full" }
+export const MESH_PRICE = { structure: 'full', terrain: 'full', decor: 'ref', decal: 'ref', helper: 'ref' };
+const VERTS = new WeakMap();
+const vertexCount = (tris) => { let n = VERTS.get(tris); if (n == null) VERTS.set(tris, (n = uniqueVertices(tris).length)); return n; };
+export const meshPriceMode = (role, k = SCORE_DEFAULTS) => ({ ...MESH_PRICE, ...(k.meshPrice ?? {}) }[role ?? 'structure'] ?? 'full');
+export function meshPrice(tris, role, k = SCORE_DEFAULTS) {
+  const how = meshPriceMode(role, k);
+  if (how === 'full' && tris?.length) return 4.5 * vertexCount(tris) + 3 * tris.length;
+  return (k.cMesh ?? SCORE_DEFAULTS.cMesh) * Math.log2(1 + (tris?.length || 1));
+}
+const meshPriceOf = (m, k) => meshPrice(m.srcTris, m.role, k);
 
 // 一条语句拆成词：方括号、圆括号、引号里的空格不拆
 function splitTokens(line) {
@@ -288,7 +304,7 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
     const key = o.mesh.key ?? o.mesh.src;
     if (meshSeen.has(key)) continue;
     meshSeen.add(key);
-    const c = k.cMesh * Math.log2(1 + (o.mesh.tris || 1)); Lmesh += c; per.get(o.path).mesh += c;
+    const c = meshPriceOf(o.mesh, k); Lmesh += c; per.get(o.path).mesh += c;
   }
 
   // 这一次的重建物体：键（路径 + 颜色 + 几何）与包围盒；和上一次比，得到新增的物体与删掉的物体
@@ -416,7 +432,7 @@ export function score({ result, files, sourceParts, consts = {}, cache = null })
     if (s.meshKey) baseSeen.add(s.meshKey);
     const pv = [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2];
     const before = Smesh;
-    Smesh += lineCost(`mesh p src="x#${s.name}" size=${[0, 1, 2].map((j) => fmt(hi[j] - lo[j])).join(',')} pivot=${pv.map(fmt).join(',')} at=${pv.map(fmt).join(',')} mat=m`) + (first ? k.cMesh * Math.log2(1 + s.tris.length) : 0);
+    Smesh += lineCost(`mesh p src="x#${s.name}" size=${[0, 1, 2].map((j) => fmt(hi[j] - lo[j])).join(',')} pivot=${pv.map(fmt).join(',')} at=${pv.map(fmt).join(',')} mat=m`) + (first ? meshPrice(s.tris, s.role, k) : 0);
     baseOf[s.i] = Smesh - before;
   }
   lap('S_mesh');
@@ -506,7 +522,7 @@ export function neighborhoodScorer({ parts, near, others, reconColors, consts = 
     const Rrecon = A > 0 ? k.cRes * Math.log2(1 + A / (k.delta * k.delta)) * (acc / A) : 0;
     // 网格引用（现在的写法可能就是一块网格）：c_mesh × log2(1 + 三角形数)，与全场的 L_mesh 一样
     const seen = new Set(sharedMeshes);
-    const L = lines.reduce((s, l) => s + lineCost(l), 0) + recon.reduce((s, o) => { const key = o.mesh && (o.mesh.key ?? o.mesh.src); if (!o.mesh || seen.has(key)) return s; seen.add(key); return s + k.cMesh * Math.log2(1 + (o.mesh.tris || 1)); }, 0);
+    const L = lines.reduce((s, l) => s + lineCost(l), 0) + recon.reduce((s, o) => { const key = o.mesh && (o.mesh.key ?? o.mesh.src); if (!o.mesh || seen.has(key)) return s; seen.add(key); return s + meshPriceOf(o.mesh, k); }, 0);
     const r3 = (x) => +x.toFixed(2);
     return { S: r3(L + Rsrc + Rrecon), L: r3(L), R_src: r3(Rsrc), R_recon: r3(Rrecon), meanErr: +((own?.mean ?? 0) * k0.unit).toFixed(4), maxErr: +((own?.max ?? 0) * k0.unit).toFixed(4) };
   };

@@ -3,4 +3,4 @@ import { parentPort, workerData } from 'node:worker_threads';
 import { prefitPart, setFidelity } from './reverse.mjs';
 
 setFidelity(workerData.fidelity, workerData.unit);
-parentPort.postMessage(workerData.items.map(({ i, tris }) => ({ i, ...prefitPart(tris, i) })));
+parentPort.postMessage(workerData.items.map(({ i, tris, role }) => ({ i, ...prefitPart(tris, i, role, workerData.meshPrice) })));

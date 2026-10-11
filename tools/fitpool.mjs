@@ -3,18 +3,21 @@
 // 共享同一个网格的部件会走享元类型（类型只拟合一次），不预先拟合。部件不多时不值得起线程，返回 null
 import { Worker } from 'node:worker_threads';
 import { cpus } from 'node:os';
+import { assignRoles } from './roles.mjs';
 
 const WORKER = new URL('./fitworker.mjs', import.meta.url);
 
-export async function prefit(parts, { fidelity = 'detail', unit = 1, threads = Math.min(8, cpus().length - 1), min = 300 } = {}) {
+// 拟合的门槛按部件的角色与网格的价钱（score.mjs 的 meshPrice）：角色取部件上的（工程挂的），没有时按默认规则判；meshPrice 同 reverse 的选项
+export async function prefit(parts, { fidelity = 'detail', unit = 1, threads = Math.min(8, cpus().length - 1), min = 300, roles = null, meshPrice = null } = {}) {
   if (parts.length < min || threads < 2) return null;
+  const rs = parts.every((p) => p.role) ? parts.map((p) => p.role) : assignRoles(parts, roles ?? []);
   const meshUse = new Map();
   for (const p of parts) if (p.mesh != null) meshUse.set(p.mesh, (meshUse.get(p.mesh) ?? 0) + 1);
   const todo = parts.map((p, i) => i).filter((i) => !(parts[i].mesh != null && meshUse.get(parts[i].mesh) > 1));
   if (todo.length < min) return null;
   const chunks = Array.from({ length: threads }, (_, k) => todo.filter((_, j) => j % threads === k)).filter((c) => c.length);
   const results = await Promise.all(chunks.map((idx) => new Promise((resolve, reject) => {
-    const w = new Worker(WORKER, { workerData: { fidelity, unit, items: idx.map((i) => ({ i, tris: parts[i].tris })) } });
+    const w = new Worker(WORKER, { workerData: { fidelity, unit, meshPrice, items: idx.map((i) => ({ i, tris: parts[i].tris, role: rs[i] })) } });
     w.once('message', (m) => { resolve(m); w.terminate(); });
     w.once('error', reject);
   })));

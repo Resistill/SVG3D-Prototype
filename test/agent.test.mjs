@@ -143,7 +143,8 @@ test('档位：semantic 一律用基本体当语义代理、数字更短，阵�
   `;
   const parts = partsOfDocument(sceneToGLB(src, { level: 'L0' }).doc);
   const out = Object.fromEntries(['detail', 'structure', 'semantic'].map((f) => [f, reverse(parts, { srcFile: 'x.glb', fidelity: f })]));
-  assert.match(out.detail.src, /^mesh vase /m, '精细档：花瓶保留为网格引用');
+  // 结构的网格按真实信息量计价：精细档也把花瓶写成旋转体（轮廓长一些），不再引用网格
+  assert.match(out.detail.src, /^revolve vase /m, '精细档：花瓶写成旋转体');
   assert.match(out.semantic.src, /^(cyl|cone|box|sphere|wedge) vase /m, '语义档：花瓶用基本体代替');
   for (const f of Object.keys(out)) assert.ok(out[f].report.arrays.length >= 2, `${f} 保留阵列：${JSON.stringify(out[f].report.arrays)}`);
   const at = (f, delta) => scored(out[f].src, parts, delta);
@@ -429,8 +430,12 @@ test('计价规则：同一个网格只付一次；换了形的基础层语句�
   const mesh = (n, x) => `mesh ${n} src="x#${n}" size=1,1,1 pivot=${x + 0.5},0,0.5 at=${x + 0.5},0,0.5`;
   const text = [mesh('a', 0), mesh('b', 5), mesh('c', 10)].join('\n');
   const s1 = score({ result: compile(text), files: [{ file: null, text }], sourceParts: parts });
-  const one = 10 * Math.log2(1 + 12);
+  // 结构（默认角色）的网格按真实信息量：8 个顶点 × 4.5 + 12 个三角形 × 3
+  const one = 4.5 * 8 + 3 * 12;
   assert.ok(Math.abs(s1.L_mesh - 2 * one) < 0.01, `a、b 共用一个网格，只付一次：${s1.L_mesh}`);
+  // 装饰的网格只是引用一个资产：c_mesh × log2(1 + 三角形数)
+  const s1d = score({ result: compile(text), files: [{ file: null, text }], sourceParts: parts.map((p) => ({ ...p, role: 'decor' })) });
+  assert.ok(Math.abs(s1d.L_mesh - 2 * 10 * Math.log2(1 + 12)) < 0.01, `装饰：${s1d.L_mesh}`);
   // 换形：box a … + over a : cyl …，基础层那一行的 size 不再计
   const base = 'box a size=1,1,1 at=0.5,0,0.5 mat=m ~src="a"', over = 'over a : cyl r=0.5 h=1';
   const files = [{ file: 'base.s3d', text: 'material m color=#888888\n' + base }, { file: 'edits.s3d', text: over }];
