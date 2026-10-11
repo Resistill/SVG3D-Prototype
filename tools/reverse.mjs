@@ -168,9 +168,11 @@ function uprightFrame(pts) {
   for (let i = 0; i < h.length; i++) {
     const a = h[i], b = h[(i + 1) % h.length];
     const yaw = (Math.atan2(-(b[1] - a[1]), b[0] - a[0]) * 180) / Math.PI;
-    const R = Ry(yaw);
-    const xs = pts.map((p) => p[0] * R[0][0] + p[2] * R[0][2]), zs = pts.map((p) => p[0] * R[2][0] + p[2] * R[2][2]);
-    const area = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...zs) - Math.min(...zs));
+    const R = Ry(yaw), r00 = R[0][0], r02 = R[0][2], r20 = R[2][0], r22 = R[2][2];
+    // 逐点取最值（Math.max / Math.min 两两折叠，与展开成参数的结果相同）
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (const p of pts) { const x = p[0] * r00 + p[2] * r02, z = p[0] * r20 + p[2] * r22; x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+    const area = (x1 - x0) * (z1 - z0);
     if (!best || area < best.area - 1e-9) best = { area, yaw };
   }
   let yaw = best ? best.yaw : 0;
@@ -266,16 +268,37 @@ function sdTri2(px, py, A, B, C) {
 }
 
 // 封闭网格的体积（散度定理）；不封闭时返回 null，不做体积校验
+// 顶点按坐标四舍五入到 1e-4 焊接（整数编号代替字符串键：两个顶点同号当且仅当三个取整值都相等，与按字符串比较相同）
+function weldIds(tris, scale) {
+  const n = tris.length * 3;
+  let cap = 16;
+  while (cap < 2 * n) cap *= 2;
+  const table = new Int32Array(cap).fill(-1), keys = new Float64Array(3 * n), ids = new Int32Array(n);
+  const same = (a, b) => a === b || (a !== a && b !== b); // NaN 的字符串键也相等
+  let m = 0, k = 0;
+  for (const t of tris) for (const v of t) {
+    const x = Math.round(v[0] * scale), y = Math.round(v[1] * scale), z = Math.round(v[2] * scale);
+    // 哈希：−0 与 0 同值（+ 0 把 −0 变成 0），NaN 用固定的值
+    let h = 2166136261;
+    for (const c of [x, y, z]) h = c !== c ? Math.imul(h ^ 0x7ff8, 16777619) : bitsHash(h, c + 0);
+    h = (h >>> 0) & (cap - 1);
+    let id = -1;
+    for (let j; (j = table[h]) >= 0; h = (h + 1) & (cap - 1)) if (same(keys[3 * j], x) && same(keys[3 * j + 1], y) && same(keys[3 * j + 2], z)) { id = j; break; }
+    if (id < 0) { id = m++; table[h] = id; keys[3 * id] = x; keys[3 * id + 1] = y; keys[3 * id + 2] = z; }
+    ids[k++] = id;
+  }
+  return { ids, count: m };
+}
 function meshVolume(tris) {
-  const key = (p) => p.map((x) => Math.round(x * 1e4)).join(',');
+  const { ids, count } = weldIds(tris, 1e4);
   const edges = new Map();
-  for (const t of tris) for (let i = 0; i < 3; i++) {
-    const a = key(t[i]), b = key(t[(i + 1) % 3]);
+  for (let t = 0; t < tris.length; t++) for (let i = 0; i < 3; i++) {
+    const a = ids[3 * t + i], b = ids[3 * t + (i + 1) % 3];
     if (a === b) continue;
-    const k = a < b ? a + '|' + b : b + '|' + a;
+    const k = a < b ? a * count + b : b * count + a;
     edges.set(k, (edges.get(k) ?? 0) + 1);
   }
-  if ([...edges.values()].some((c) => c % 2)) return null;
+  for (const c of edges.values()) if (c % 2) return null;
   return Math.abs(tris.reduce((s, [a, b, c]) => s + dot(a, cross(b, c)), 0) / 6);
 }
 
@@ -378,7 +401,11 @@ function fitTube(part, i, vol, primE = Infinity) {
   const cumL = [0];
   for (let k = 1; k < poly.length; k++) cumL.push(cumL[k - 1] + len(sub(poly[k], poly[k - 1])));
   const at = (s2) => { let k = 1; while (k < cumL.length - 1 && cumL[k] < s2) k++; const u = (s2 - cumL[k - 1]) / (cumL[k] - cumL[k - 1] || 1); return add(poly[k - 1], scl(sub(poly[k], poly[k - 1]), u)); };
-  const segDist = (p, a, b) => { const ab = sub(b, a), t = Math.max(0, Math.min(1, dot(sub(p, a), ab) / (dot(ab, ab) || 1))); return len(sub(p, add(a, scl(ab, t)))); };
+  const segDist = (p, a, b) => {
+    const abx = b[0] - a[0], aby = b[1] - a[1], abz = b[2] - a[2];
+    const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * abx + (p[1] - a[1]) * aby + (p[2] - a[2]) * abz) / ((abx * abx + aby * aby + abz * abz) || 1)));
+    return Math.hypot(p[0] - (a[0] + abx * t), p[1] - (a[1] + aby * t), p[2] - (a[2] + abz * t));
+  };
   const pts = side.slice(0, 400).map((x) => x.p);
   let best = null;
   for (let M = 2; M <= Math.min(12, poly.length); M++) {
@@ -505,9 +532,7 @@ export function fitPart(part, i, only = null) {
       : best.shape === 'tube' || best.shape === 'steps' || best.shape === 'revolve' ? areaMesh : 8 * (h[0] * h[1] + h[0] * h[2] + h[1] * h[2]);
   const cover = areaPrim > 0 ? areaMesh / areaPrim : 1;
   const lo = [0, 1, 2].map((k) => Math.min(...pts.map((p) => p[k]))), hi = [0, 1, 2].map((k) => Math.max(...pts.map((p) => p[k])));
-  const uniq = new Map();
-  for (const t of part.tris) for (const v of t) uniq.set(vkey(v), v);
-  const vc = scl([...uniq.values()].reduce((s, v) => add(s, v), [0, 0, 0]), 1 / Math.max(1, uniq.size));
+  const vc = scl(verts.reduce((s, v) => add(s, v), [0, 0, 0]), 1 / Math.max(1, verts.length));
   return { ...best, aabb: { min: lo, max: hi }, vc, cover };
 }
 
