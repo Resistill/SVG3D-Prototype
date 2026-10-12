@@ -1692,7 +1692,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   };
   const chooseFor = (A, p, cand0, name0, tau = 0.005 * S, frame = null) => {
     // 贴花（地面、墙上的薄片）、分散的模型不当参照物：它们的包围盒常常很大、很空
-    const cand = (B) => cand0(B) && B.role !== 'decal' && !B.scattered;
+    const cand = (B) => cand0(B) && B.role !== 'decal' && B.role !== 'collision' && !B.scattered;
     const name = (B) => name0(B);
     // 世界向量 → 父坐标系（顶层是世界；阵列里是实例的坐标系）
     const toParent = (v) => (frame ? mvT(frame, v) : v);

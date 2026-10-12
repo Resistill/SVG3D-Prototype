@@ -5,7 +5,7 @@ import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { worldGeom, itemGeometry, makeEvaluator } from './geometry.js';
 import { VIEWS, camera as presetCam } from './views.js';
-import { nodeRoles } from './roles-view.js';
+import { nodeRoles, COLLISION_MAT } from './roles-view.js';
 
 // 几何条目超过这么多时合批（见 setScene）
 const BATCH_MIN = 2000;
@@ -192,13 +192,15 @@ export class Viewer {
     // 隔离、角色开关用实例显隐，点选用射线命中的实例号；大场景不画阴影。小场景照旧（每个物体一个 Mesh）
     const big = solids > BATCH_MIN;
     this.sun.castShadow = !big;
-    if (big) this.buildBatches(result, warnings);
+    // 碰撞块（~role=collision）画成半透明红色，与看得见的东西区分开；角色开关可以整个关掉
+    const roleOf = nodeRoles(result), matOf = (item) => (roleOf(item.path) === 'collision' ? COLLISION_MAT : item.material);
+    if (big) this.buildBatches(result, warnings, matOf);
     for (const item of big ? result.items.filter((i) => i.kind === 'solid' && i.geom.type === 'mesh') : result.items) {
       try {
         if (item.kind === 'solid' && item.geom.type === 'mesh') { this.addMeshRef(item); continue; }
         const geom = itemGeometry(item, this.evaluator);
-        const mesh = new THREE.Mesh(geom, this.material(item.material));
-        mesh.castShadow = mesh.receiveShadow = true;
+        const mat = matOf(item), mesh = new THREE.Mesh(geom, this.material(mat));
+        mesh.castShadow = mesh.receiveShadow = mat !== COLLISION_MAT;
         mesh.userData = { path: item.path, tags: item.tags, origMat: mesh.material };
         mesh.name = item.path;
         this.paint(mesh);
@@ -219,7 +221,6 @@ export class Viewer {
     }
     this.nodes = result.nodes;
     this.nodeMap = new Map(result.nodes.map((n) => [n.path, n]));
-    const roleOf = nodeRoles(result);
     this.roleCounts = {};
     for (const c of this.content.children) { if (c.isBatchedMesh) continue; c.userData.role = roleOf(c.name); this.roleCounts[c.userData.role] = (this.roleCounts[c.userData.role] ?? 0) + 1; }
     if (this.batch) for (const it of this.batch.items) { it.role = roleOf(it.path); this.roleCounts[it.role] = (this.roleCounts[it.role] ?? 0) + 1; }
@@ -231,7 +232,7 @@ export class Viewer {
   }
 
   // 合批：每个几何条目的世界坐标几何统一成“无索引、只有 position 与 normal”，按材质分组，每组一个 BatchedMesh
-  buildBatches(result, warnings) {
+  buildBatches(result, warnings, matOf = (item) => item.material) {
     const groups = new Map(), box = new THREE.Box3();
     for (const item of result.items) {
       if (item.kind === 'solid' && item.geom.type === 'mesh') continue;
@@ -245,9 +246,9 @@ export class Viewer {
       if (src !== g) src.dispose();
       geom.computeBoundingBox();
       box.union(geom.boundingBox);
-      const m = item.material ?? {}, key = JSON.stringify([m.metal ?? 0.05, m.rough ?? 0.78, m.opacity ?? 1]);
+      const m = matOf(item) ?? {}, key = JSON.stringify([m.metal ?? 0.05, m.rough ?? 0.78, m.opacity ?? 1]);
       if (!groups.has(key)) groups.set(key, { m, list: [] });
-      groups.get(key).list.push({ item, geom });
+      groups.get(key).list.push({ item, geom, m });
     }
     const items = [], meshes = [];
     for (const { m, list } of groups.values()) {
@@ -258,10 +259,10 @@ export class Viewer {
       // 也不逐个实例做视锥裁剪：裁剪的结果每帧变，绘制列表每帧重建一遍（整张 SpaceCenter：一帧 70–140 ms；不裁剪 40 ms）。俯瞰全场时本来都在视野里
       bm.perObjectFrustumCulled = false;
       bm.userData.batchItems = [];
-      for (const { item, geom } of list) {
+      for (const { item, geom, m: im } of list) {
         const id = bm.addInstance(bm.addGeometry(geom));
         geom.dispose();
-        const it = { path: item.path, tags: item.tags, color: new THREE.Color(item.material?.color ?? '#c9c9c9'), mesh: bm, id };
+        const it = { path: item.path, tags: item.tags, color: new THREE.Color(im?.color ?? '#c9c9c9'), mesh: bm, id };
         bm.setColorAt(id, it.color);
         bm.userData.batchItems[id] = it;
         items.push(it);

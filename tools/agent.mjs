@@ -11,7 +11,7 @@ import { FIDELITY } from './reverse.mjs';
 import { readdirSync, renameSync, mkdirSync, appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { safe } from './split.mjs';
-import { nodeRoles, ROLE_LABELS } from '../src/roles-view.js';
+import { nodeRoles, ROLE_LABELS, VISIBLE_ROLES } from '../src/roles-view.js';
 
 // ── 提议：AI 的修改先写成 proposals/NNN-标题.s3d，人（或按约定的 agent）预览后接受或否决 ──
 // 文件首行 // layer=edits why=…；可以有 // retract <行号>（撤销目标层的某一行）；其余是要追加到目标层的语句
@@ -328,7 +328,7 @@ export const COMMANDS = {
       const parts = await P.sourceParts();
       const { trisToArray } = await import('./worldtris.mjs');
       const only = a.only ? String(a.only).split(',').map((r) => r.trim()) : null;
-      const keep = (r) => r !== 'helper' && (!only || only.includes(r));
+      const keep = (r) => (only ? only.includes(r) : VISIBLE_ROLES.has(r));
       const src = parts.filter((p) => keep(p.role ?? 'structure')).map((p, i) => ({ path: p.uid ?? p.name ?? `part_${i}`, pos: trisToArray(p.tris), color: '#c9c9c9' }));
       const result = P.compile(), roleOf = nodeRoles(result);
       const rec = sceneObjects(result, { sourceParts: parts }).filter((o) => o.pos.length && (a.meshes || !o.mesh) && keep(roleOf(o.path))).map((o) => ({ ...o, color: '#c9c9c9' }));
@@ -378,11 +378,11 @@ export const COMMANDS = {
       let objs;
       if (a.source) {
         const { trisToArray } = await import('./worldtris.mjs');
-        objs = parts.filter((p) => !only || only.includes(p.role ?? 'structure')).map((p, i) => ({ path: p.uid ?? p.name ?? p.from ?? `part_${i}`, pos: trisToArray(p.tris), color: p.material?.color ?? '#c9c9c9' }));
+        objs = parts.filter((p) => (only ? only.includes(p.role ?? 'structure') : VISIBLE_ROLES.has(p.role ?? 'structure'))).map((p, i) => ({ path: p.uid ?? p.name ?? p.from ?? `part_${i}`, pos: trisToArray(p.tris), color: p.material?.color ?? '#c9c9c9' }));
       } else {
         const result = P.compile();
         objs = sceneObjects(result, { sourceParts: parts });
-        if (only) { const roleOf = nodeRoles(result); objs = objs.filter((o) => only.includes(roleOf(o.path))); }
+        { const roleOf = nodeRoles(result); objs = objs.filter((o) => (only ? only.includes(roleOf(o.path)) : VISIBLE_ROLES.has(roleOf(o.path)))); }
       }
       const view = a.view ?? 'iso', mode = a.mode ?? 'labels';
       if (mode === 'error') {

@@ -86,3 +86,20 @@ test('逆向按角色：辅助不写进几何（只在注释里）；贴花默�
   const sm = Object.values(s.byRole).reduce((a, b) => a + b.S_mesh, 0);
   assert.ok(Math.abs(sm - s.S_mesh) < 0.05, `${sm} 对 ${s.S_mesh}`);
 });
+
+test('碰撞：挡墙、空气墙（名字里的词、Block 打头的连写、分组路径里的 Blocker）单独成一类，写进几何、带 ~role=collision', () => {
+  const one = roleClassifier();
+  const r = (name) => one(part(name, boxTris([0, 0, 0], [1, 1, 1])));
+  assert.equal(r('Blocker/Lv_01/BlockWallCube@3'), 'collision');
+  assert.equal(r('Blocker/Lv_01/SM_EFX_BlockPlane'), 'collision');
+  assert.equal(r('Props/Collision_Box_02'), 'collision');
+  assert.equal(r('SM_StoneBlock_Wall'), 'structure');
+  assert.equal(r('SM_Block_01'), 'structure');
+  // 法线朝外的实心盒子（上面的 boxTris 朝里：体积误差会把它当空心的拆成板）
+  const solid = (lo, hi) => boxTris(lo, hi).map(([p, q, r]) => [p, r, q]);
+  const out = reverse([part('Blocker/L/BlockWallCube', solid([0, 0, 0], [10, 4, 0.5])), part('Wall_01', solid([0, 0, 2], [10, 3, 2.3]))], { srcFile: 'x.glb', fidelity: 'structure' });
+  assert.match(out.src, /^box BlockWallCube [^\n]*~role="collision"/m, out.src);
+  const roleOf = nodeRoles(compile(out.src));
+  assert.equal(roleOf('BlockWallCube'), 'collision');
+  assert.equal(roleOf('Wall_01'), 'structure');
+});

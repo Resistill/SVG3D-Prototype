@@ -34,7 +34,7 @@ const inScene = (k) => ({ ...k, delta: k.delta / k.unit, dMax: k.dMax / k.unit }
 //   ref： c_mesh × log2(1 + 三角形数)——只是引用一个现成的资产。工程可以按角色改成这样（例如允许装饰保留网格）。
 //   （D9 一度让地形、装饰、贴花默认按引用价，关掉网格后宿舍区的地面、广场全没了，缺三成）
 // 工程的 project.json 里 score.meshPrice 按角色改，例如 { "decor": "full" }
-export const MESH_PRICE = { structure: 'full', terrain: 'full', decor: 'full', decal: 'full', helper: 'ref' };
+export const MESH_PRICE = { structure: 'full', terrain: 'full', decor: 'full', decal: 'full', collision: 'full', helper: 'ref' };
 const VERTS = new WeakMap();
 const vertexCount = (tris) => { let n = VERTS.get(tris); if (n == null) VERTS.set(tris, (n = uniqueVertices(tris).length)); return n; };
 export const meshPriceMode = (role, k = SCORE_DEFAULTS) => ({ ...MESH_PRICE, ...(k.meshPrice ?? {}) }[role ?? 'structure'] ?? 'full');

@@ -1,17 +1,20 @@
 // 角色：每个源部件是什么——结构（楼的墙、楼梯、平台、围栏、门）、装饰（家具、灯具、标牌、植被、车……）、地形（地面、路面）、
-// 贴花（贴在别的表面上的薄片）、辅助（白模体积、雾、碰撞体：不是场景里看得见的东西）。
+// 贴花（贴在别的表面上的薄片）、碰撞（隐形挡墙、空气墙：看不见，但决定人能走到哪里）、辅助（白模体积、雾、触发区：不是场景里的东西）。
 // 逆向按角色取舍写法（装饰写成基本体代理或网格引用，不做板件这类花时间的拆解；贴花保留网格引用、不当别人的参照物；
-// 辅助不写进几何），写成 ~role= 元数据；界面、渲染可以只显示某几种角色，评分分角色报。
+// 碰撞照常拟合成基本体、但不当别人的参照物，辅助不写进几何），写成 ~role= 元数据；界面、渲染可以只显示某几种角色
+// （碰撞默认画成半透明红色，可以关掉；比对模糊图只比看得见的），评分分角色报。
 //
 // 判定顺序：工程目录里的 roles.json（规则数组，先匹配先生效）→ 名字里的词 → 几何。
 //   roles.json 的规则：{ role, name?: 正则（完整节点名，含分组路径）, material?: 正则, meta?: { 旁路表的列: 正则 } }
 //   名字里的词：节点名的最后一段按下划线、数字、大小写切成词（WallLamp → wall lamp）。出现贴花、辅助的词就是贴花、辅助；
 //   否则取最后一个有归属的词——英文复合名词的中心词在后面：WallLamp 是灯，ConcreteWall 是墙，Road_FlowerBed 是花坛
-export const ROLES = ['structure', 'decor', 'terrain', 'decal', 'helper'];
+export const ROLES = ['structure', 'decor', 'terrain', 'decal', 'collision', 'helper'];
 
 export const VOCAB = {
   decal: ['decal', 'decals', 'sticker'],
-  helper: ['fog', 'blockout', 'collision', 'collider', 'trigger', 'occluder', 'navmesh', 'killzone', 'spawn'],
+  // 碰撞：节点名里的词，或分组路径里的一段（关卡导出常把挡墙放在 Blocker 组里）；还有“block + wall / plane / volume”这种连写（BlockWallCube、SM_EFX_BlockPlane）
+  collision: ['blocker', 'blockers', 'collision', 'collider', 'colliders', 'playerclip', 'clip', 'invisiblewall', 'airwall', 'blockvolume'],
+  helper: ['fog', 'blockout', 'trigger', 'occluder', 'navmesh', 'killzone', 'spawn'],
   terrain: ['terrain', 'landscape', 'ground', 'road', 'street', 'pavement', 'sidewalk', 'asphalt', 'sand', 'soil', 'dirt'],
   structure: ['building', 'wall', 'exterwall', 'interwall', 'stair', 'stairs', 'staircase', 'step', 'steps', 'terrace', 'pillar', 'column', 'beam', 'roof', 'floor',
     'ceiling', 'slab', 'fence', 'railing', 'guardrail', 'handrail', 'rail', 'walkway', 'bridge', 'support', 'hsupport', 'frame', 'door', 'interdoor', 'gate',
@@ -36,6 +39,15 @@ export function nameWords(name) {
 }
 
 const re = (s) => new RegExp(s, 'i');
+// “Block” 打头的连写（BlockWallCube、SM_EFX_BlockPlane）；StoneBlock_Wall 这种前面还连着别的词的不算
+const BLOCK_RE = /(?:^|[^A-Za-z])block[_ ]?(?:wall|plane|volume)/i;
+function isCollision(name, words) {
+  if (words.some((w) => VOCAB.collision.includes(w))) return true;
+  if (BLOCK_RE.test(String(name ?? '').split('/').pop())) return true;
+  // 分组路径（最后一段之前）里有一段整个就是碰撞的词
+  const segs = String(name ?? '').split('/').slice(0, -1).map((x) => x.toLowerCase());
+  return segs.some((x) => VOCAB.collision.includes(x));
+}
 // 一个部件的角色（不看上下文）；extra：工程的规则
 export function roleClassifier(extra = []) {
   const rules = (extra ?? []).map((r) => ({ ...r, nameRe: r.name ? re(r.name) : null, matRe: r.material ? re(r.material) : null, metaRe: r.meta ? Object.entries(r.meta).map(([k, v]) => [k, re(v)]) : null }));
@@ -49,6 +61,7 @@ export function roleClassifier(extra = []) {
       return r.role;
     }
     const words = nameWords(name);
+    if (isCollision(name, words)) return 'collision';
     if (words.some((w) => VOCAB.decal.includes(w))) return 'decal';
     if (words.some((w) => VOCAB.helper.includes(w))) return 'helper';
     for (let k = words.length - 1; k >= 0; k--) { const r = ROLE_OF.get(words[k]); if (r) return r; }
