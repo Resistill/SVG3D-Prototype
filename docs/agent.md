@@ -211,3 +211,17 @@ claude mcp add svg3d -- node --import ./bin/node-hooks.mjs bin/s3d-mcp.mjs --pro
 - `preview --all` 列出全部变化的物体（默认只列变化 ≥ 0.5 的前 20 个），每个物体的 `desc` 是描述的变化、`res` 是残差的变化。
 - 撤回（`propose --retract=`）一条旧提议的全部语句时，它的注释头也一起删掉。
 
+
+## Roblox：用基本型拼出来
+
+```
+node bin/roblox.mjs <工程目录> [--stud=0.34] [--chunk=4000]
+```
+
+把编译结果换算成 Roblox 的 Part / WedgePart（Block、Wedge、Cylinder、Ball），写到 `<工程>/roblox/index.json` 与 `chunk_<k>.json`（`tools/roblox.mjs`）。Studio 里打开 `HttpService.HttpEnabled`、预览服务器起着，跑 `tools/roblox_build.luau`（填好 BASE 与块号范围；重复跑会跳过拼过的块），拼完把 HttpEnabled 关回去。
+
+- **比例**：`--stud` 是每 stud 多少米（默认 0.34，即 5 stud = 1.7 m）；坐标与尺寸乘 工程单位 / stud。整体竖直平移，让地面（地形零件中心高度的中位数）落在 y = 1（Studio 默认基板的顶面在 0）。
+- **层级**：`SpaceCenter`（Model）→ 角色（Structure / Terrain / Decor / Decal / Collision，Folder）→ 子关卡（源部件名的第二段，Folder）→ 物体（多块的是 Model，单块的直接是 Part）→ 组、阵列成员（Model）→ 零件。阵列、组本身不带角色与来源时，角色按零件的多数、子关卡取最近的有来源的物体。
+- **语义**：物体上的属性 Role / Source / Concepts / Collidable / Fit / Kind；概念另外打成 CollectionService 标签 `S3D_<概念>`（wall、slab、column、step、platform…）。
+- **碰撞**：碰撞块 Transparency 1、CanCollide；贴花与旁路表 `~collidable=0` 的 CanCollide false。**不用 Union / 挖洞的 CSG**（会影响碰撞）：盒子挖盒子按所有盒子的边切成格子、去掉洞里的、合并成尽量大的盒子；平板挖平板三角化。
+- **几何**：楔形换轴（Roblox 的楔形高边在 +Z）；圆台、旋转体切成几段圆柱；扫掠每段一块；不是矩形的平板、大凸包切成三角形，每个三角形两块 WedgePart；最大边不到 2 m 的凸包写成一块包围框。
