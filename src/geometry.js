@@ -22,6 +22,15 @@ function geomOf(s) {
       const sh = new THREE.Shape([new THREE.Vector2(-s.w / 2, 0), new THREE.Vector2(s.w / 2, 0), new THREE.Vector2(s.w / 2, s.h)]);
       return new THREE.ExtrudeGeometry(sh, { depth: s.d, bevelEnabled: false }).translate(0, 0, -s.d / 2);
     }
+    case 'hull': {
+      // 凸包：面已经由编译器算好（从外面看逆时针），每个面一个三角形
+      const pos = new Float32Array(s.faces.length * 9);
+      s.faces.forEach((f, i) => f.forEach((k, j) => pos.set(s.pts[k], i * 9 + j * 3)));
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.computeVertexNormals();
+      return g;
+    }
     case 'plate': {
       // 轮廓在 xz 平面：Shape 的 (x, −z) 拉伸 h 后绕 x 转 −90°，就是 (x, 0..h, z)
       const sh = new THREE.Shape(s.pts.map(([x, z]) => new THREE.Vector2(x, -z)));

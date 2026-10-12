@@ -24,7 +24,7 @@ const AXES = { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] };
 const PLACEMENT = new Set(['at', 'pin', 'on', 'under', 'against', 'inside', 'gap', 'offset', 'align', 'alignto',
   'turn', 'tilt', 'roll', 'rot', 'aim', 'aimwith', 'mat', 'color']);
 const KIND_PROPS = {
-  box: ['size'], wedge: ['size'], plate: ['points', 'h'], mesh: ['src', 'size', 'pivot'], cyl: ['r', 'h', 'axis'], cone: ['r', 'r2', 'h', 'axis'], sphere: ['r'],
+  box: ['size'], wedge: ['size'], plate: ['points', 'h'], hull: ['points'], mesh: ['src', 'size', 'pivot'], cyl: ['r', 'h', 'axis'], cone: ['r', 'r2', 'h', 'axis'], sphere: ['r'],
   revolve: ['profile', 'angle', 'smooth'],
   span: ['from', 'to', 'drop', 'dir', 'section', 'r', 'steps'],
   sweep: ['path', 'profile', 'r', 'section', 'smooth'], pipe: ['path', 'r', 'smooth'],
@@ -34,7 +34,7 @@ const KIND_PROPS = {
   repeat: ['n', 'step', 'turn', 'center', 'along', 'orient'],
   mirror: ['of', 'across', 'axis'], rotate: ['of', 'about', 'axis', 'angle', 'n'], copy: ['of'],
 };
-const LEAVES = new Set(['box', 'wedge', 'plate', 'cyl', 'cone', 'sphere', 'revolve', 'span', 'sweep', 'pipe', 'mesh']);
+const LEAVES = new Set(['box', 'wedge', 'plate', 'hull', 'cyl', 'cone', 'sphere', 'revolve', 'span', 'sweep', 'pipe', 'mesh']);
 const CURVES = new Set(['line', 'bezier', 'spline', 'arc', 'helix']);
 const PATH_CURVES = new Set(['line', 'bezier', 'spline']); // 由父框架中的点定义，自身不再定位
 const LINKS = new Set(['span', 'sweep', 'pipe']);
@@ -1917,7 +1917,7 @@ class Solver {
         }
         case 'plate': {
           // 多边形平板（SVG 的 polygon 加厚度）：points 是局部 xz 平面里的轮廓 [(x,z); …]，从 y=0 拉到 y=h。
-          // 原点就是轮廓坐标的 (0,0)（底面上）；倾斜的板用 rot / tilt / roll 转
+          // 同其他基本体，at= 放包围盒的底面中心（pin=origin 时放轮廓坐标的原点）；倾斜的板用 rot / tilt / roll 转
           const v = this.eval(n, 'points');
           if (!v || !v.list || v.list.length < 3 || v.list.some((p) => !Array.isArray(p) || p.length !== 2 || !p.every(Number.isFinite)))
             throw new S3DError(`${n.path}：plate 的 points 写成 [(x,z); (x,z); …]，至少 3 个点`, n.line, n);
@@ -1927,6 +1927,16 @@ class Solver {
           n.geom = { type: 'plate', pts, h };
           const xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1]);
           return { min: [Math.min(...xs), 0, Math.min(...zs)], max: [Math.max(...xs), h, Math.max(...zs)] };
+        }
+        case 'hull': {
+          // 凸包：一组局部坐标里的点 [(x,y,z); …]，形状是包住它们的最小凸体（岩石、土丘、不规则的块）。at= 放包围盒的底面中心（pin=origin 时放点坐标的原点）
+          const v = this.eval(n, 'points');
+          if (!v || !v.list || v.list.length < 4 || v.list.some((p) => !Array.isArray(p) || p.length !== 3 || !p.every(Number.isFinite)))
+            throw new S3DError(`${n.path}：hull 的 points 写成 [(x,y,z); (x,y,z); …]，至少 4 个点`, n.line, n);
+          const pts = v.list.map((p) => [...p]), faces = convexHull3(pts);
+          if (!faces) throw new S3DError(`${n.path}：hull 的点都在一个平面上（没有体积）`, n.line, n);
+          n.geom = { type: 'hull', pts, faces };
+          return boundsOf(pts);
         }
         case 'cyl': case 'cone': {
           const r = this.num(n, 'r', 0.5), h = this.num(n, 'h', 1);
@@ -2183,6 +2193,53 @@ function frustumPoly(r1, r2, y0, y1, map = (p) => p, sides = 12) {
   for (let i = 0; i < sides; i++) faces.push([i, (i + 1) % sides, sides + ((i + 1) % sides), sides + i]);
   return polyFrom(verts, faces);
 }
+// 三维凸包（增量法）：点 [[x,y,z], …] → 面（顶点序号的三元组，从外面看逆时针）；点共面、太少时返回 null。
+// 用不到的点（在凸包里面）不出现在面里。点不多（几十到几千个），O(n·面数) 足够
+export function convexHull3(P) {
+  const n = P.length;
+  if (n < 4) return null;
+  const sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  let lo = 0, hi = 0;
+  for (let i = 1; i < n; i++) { if (P[i][0] < P[lo][0]) lo = i; if (P[i][0] > P[hi][0]) hi = i; }
+  let ext = 0;
+  for (let k = 0; k < 3; k++) { let a = Infinity, b = -Infinity; for (const p of P) { a = Math.min(a, p[k]); b = Math.max(b, p[k]); } ext = Math.max(ext, b - a); }
+  const eps = 1e-9 * Math.max(ext, 1e-9);
+  if (lo === hi) return null;
+  const d01 = sub3(P[hi], P[lo]);
+  let i2 = -1, best = eps;
+  for (let i = 0; i < n; i++) { const c = Math.hypot(...cross3(d01, sub3(P[i], P[lo]))) / Math.hypot(...d01); if (c > best) { best = c; i2 = i; } }
+  if (i2 < 0) return null;
+  const nrm0 = cross3(d01, sub3(P[i2], P[lo]));
+  let i3 = -1; best = eps;
+  for (let i = 0; i < n; i++) { const c = Math.abs(dot3(nrm0, sub3(P[i], P[lo]))) / Math.hypot(...nrm0); if (c > best) { best = c; i3 = i; } }
+  if (i3 < 0) return null;
+  const inner = [0, 1, 2].map((k) => (P[lo][k] + P[hi][k] + P[i2][k] + P[i3][k]) / 4);
+  const mk = (a, b, c) => {
+    let f = [a, b, c], nn = cross3(sub3(P[b], P[a]), sub3(P[c], P[a]));
+    if (dot3(nn, sub3(inner, P[a])) > 0) { f = [a, c, b]; nn = [-nn[0], -nn[1], -nn[2]]; }
+    const l = Math.hypot(...nn) || 1;
+    return { v: f, n: [nn[0] / l, nn[1] / l, nn[2] / l], d: dot3(nn, P[f[0]]) / l };
+  };
+  let faces = [mk(lo, hi, i2), mk(lo, hi, i3), mk(lo, i2, i3), mk(hi, i2, i3)];
+  const used = new Set([lo, hi, i2, i3]);
+  for (let i = 0; i < n; i++) {
+    if (used.has(i)) continue;
+    const p = P[i], vis = faces.filter((F) => dot3(F.n, p) - F.d > eps);
+    if (!vis.length) continue;
+    const edges = new Set();
+    for (const F of vis) for (let e = 0; e < 3; e++) edges.add(`${F.v[e]},${F.v[(e + 1) % 3]}`);
+    const keep = faces.filter((F) => !vis.includes(F));
+    for (const F of vis) for (let e = 0; e < 3; e++) {
+      const a = F.v[e], b = F.v[(e + 1) % 3];
+      if (edges.has(`${b},${a}`)) continue; // 两边都可见：不是地平线
+      const nn = cross3(sub3(P[b], P[a]), sub3(p, P[a])), l = Math.hypot(...nn) || 1;
+      keep.push({ v: [a, b, i], n: [nn[0] / l, nn[1] / l, nn[2] / l], d: dot3(nn, P[a]) / l });
+    }
+    faces = keep;
+  }
+  return faces.map((F) => F.v);
+}
 // 平面多边形（[[x,z], …]）：带符号面积的两倍；是不是凸的；耳切三角化（返回顶点序号的三元组，两种绕向都行）
 export function polyArea2(P) { let a = 0; for (let i = 0; i < P.length; i++) { const p = P[i], q = P[(i + 1) % P.length]; a += p[0] * q[1] - q[0] * p[1]; } return a; }
 function polyConvex(P) {
@@ -2241,6 +2298,7 @@ function localParts(n) {
     case 'rod': return { parts: [frustumPoly(g.r, g.r, -g.L / 2, g.L / 2, (p) => [p[1], p[0], p[2]])], approx: false };
     case 'sphere': return { parts: [{ sphere: true, c: [0, g.r, 0], r: g.r }], approx: false };
     case 'revolve': return { parts: [frustumPoly(b.max[0], b.max[0], b.min[1], b.max[1])], approx: true };
+    case 'hull': return { parts: [polyFrom(g.pts, g.faces)], approx: false };
     case 'plate': {
       // 凸的轮廓是一个棱柱；凹的切成三角形，每个三角形一个棱柱（并起来正好是这块板）
       const P = g.pts, prism = (ids) => {

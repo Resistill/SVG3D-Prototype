@@ -8,7 +8,7 @@
 // 长度阈值按米写成 3 * metre：metre 是编译器给的“一米是多少个场景单位”（工程按 project.json 的 unit 设置，默认 1）
 
 // 形状种类不作为判断依据：同一个物体可能写成 box、span，也可能逆向成 mesh，所以大多数概念对所有实体都成立
-let solid_kinds = kind(box, cyl, cone, sphere, wedge, plate, revolve, span, sweep, pipe, mesh, union, subtract, intersect)
+let solid_kinds = kind(box, cyl, cone, sphere, wedge, plate, hull, revolve, span, sweep, pipe, mesh, union, subtract, intersect)
 
 // 承载面：很大、很薄、平放
 concept terrain = solid_kinds where min(w,h,d) < 3 * metre and w+h+d-max(w,h,d)-min(w,h,d) > 40 * metre and top - bottom < 3 * metre

@@ -14,6 +14,7 @@ import { compile, _curves, FACT_EPS } from '../src/s3d.js';
 import { parseDecisions, applyDecisions, applyLocks, PRIMS } from './decisions.mjs';
 import { planesOf, panelLines, shellLines } from './panels.mjs';
 import { facetPlates } from './facets.mjs';
+import { hullVariants, hullsOf } from './hulls.mjs';
 import { patchesOf } from './patches.mjs';
 import { fitSweep, centerline } from './sweepfit.mjs';
 import { heightField } from './heights.mjs';
@@ -627,7 +628,7 @@ function nameCleaner(names) {
 }
 let cleanName = (n) => (n == null ? null : String(n).split('/').pop().replace(/^SM_/, ''));
 // 类型名不能和语言里的形状、容器同名
-const KINDS_RESERVED = new Set(['box', 'cyl', 'cone', 'sphere', 'wedge', 'plate', 'mesh', 'revolve', 'span', 'sweep', 'pipe', 'group', 'union', 'subtract', 'intersect', 'repeat', 'mirror', 'rotate', 'copy', 'line', 'bezier', 'spline', 'arc', 'helix', 'def', 'over', 'drop', 'let', 'material', 'concept', 'pattern', 'check', 'style', 'variant', 'import']);
+const KINDS_RESERVED = new Set(['box', 'cyl', 'cone', 'sphere', 'wedge', 'plate', 'hull', 'mesh', 'revolve', 'span', 'sweep', 'pipe', 'group', 'union', 'subtract', 'intersect', 'repeat', 'mirror', 'rotate', 'copy', 'line', 'bezier', 'spline', 'arc', 'helix', 'def', 'over', 'drop', 'let', 'material', 'concept', 'pattern', 'check', 'style', 'variant', 'import']);
 
 // 顶点去重的键：四舍五入到 1e-5，并把 −0 归零（toFixed 会把 ±0.000001 写成 "-0.00000" / "0.00000" 两个键，
 // 同一个顶点被算两次，圆柱的横向中心就偏了）
@@ -1059,6 +1060,48 @@ function tryPlates(tris, part, cur, n = 1) {
   const meanErr = best.ls.meanErr * M;
   return { body, c0: add(c0, shift), box, fit: Math.max(0, Math.min(1, 1 - meanErr / (4 * tau))), meanErr: best.ls.meanErr, S: +best.S.toFixed(2), curS: +curS.toFixed(2), plates: best.plates };
 }
+// 凸包（tools/hulls.mjs）：岩石、土丘、不规则的块写成一个或几个 hull。空心的（必须拆开的）不用：凸包是实心的
+let HULLS = true;
+const hullWorth = (fit, part, hollow = false) => HULLS && !hollow && !coarseRole(part) && FID.name !== 'semantic' && !part.force && part.tris.length >= 8
+  && !['steps', 'tube', 'sweep', 'revolve'].includes(fit.shape) && (fit.e > TOL || fit.cover < COVER_MIN);
+const HULL_MAX_PTS = 24;
+function tryHulls(tris, part, cur, n = 1) {
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (const tri of tris) for (const v of tri) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], v[k]); hi[k] = Math.max(hi[k], v[k]); }
+  const c0 = [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2];
+  const local = tris.map((tri) => tri.map((v) => sub(v, c0)));
+  const { evalLines } = judgeOf(part);
+  const total = (ls) => ls.L + n * (ls.R_src + ls.R_recon + ls.R_vol);
+  let curS = Infinity;
+  if (cur.S != null) curS = cur.S;
+  else if (cur.mesh != null) curS = cur.mesh;
+  else { const ls = evalLines([cur.line]); if (ls) curS = total(ls); if (ls && n * (ls.R_src + ls.R_recon + ls.R_vol) < 20) return null; }
+  const sc = scatterOf({ tris: local }), comps = sc.comps && sc.comps.length <= 8 ? sc.comps.map((ids) => ids.map((i) => local[i])) : [local];
+  const tau = FID.tau * M, d = DIGITS;
+  const lineOf = (h, nm) => { const b = [(h.lo[0] + h.hi[0]) / 2, h.lo[1], (h.lo[2] + h.hi[2]) / 2]; return `hull ${nm} points=[${h.pts.map((p) => `(${sub(p, b).map((x) => fmt(x)).join(',')})`).join('; ')}] at=${vec(b)}`; };
+  let best = null;
+  for (const pieces of hullVariants(comps)) for (const k of [2, 6]) {
+    if (overBudget()) break;
+    const hs = hullsOf(pieces, { tol: k * tau, maxPts: HULL_MAX_PTS });
+    if (!hs.length) continue;
+    const body = hs.map((h, i) => lineOf(h, i ? `hull_${i + 1}` : 'hull'));
+    const lines = [`group g at=${vec(c0)} pin=origin {`, ...body.map((l) => '  ' + l), '}'];
+    const L = lines.reduce((s2, l) => s2 + lineCost(l), 0);
+    if (L >= Math.min(curS, best?.S ?? Infinity)) continue;
+    const ls = evalLines(lines);
+    if (ls && (!best || total(ls) < best.S)) best = { S: total(ls), ls, lines: body, hs };
+  }
+  if (!best || best.S >= curS) return null;
+  const meanErr = best.ls.meanErr * M, fit = Math.max(0, Math.min(1, 1 - meanErr / (4 * tau)));
+  const info = { S: +best.S.toFixed(2), curS: +curS.toFixed(2), meanErr: best.ls.meanErr, fit, hulls: best.hs.length };
+  // 一个凸包：直接写成 hull（不包一层组）；点相对它的包围盒底面中心，位置是世界坐标
+  if (best.hs.length === 1) {
+    const h = best.hs[0], b = [(h.lo[0] + h.hi[0]) / 2, h.lo[1], (h.lo[2] + h.hi[2]) / 2];
+    return { ...info, single: { points: `[${h.pts.map((p) => `(${sub(p, b).map((x) => fmt(x)).join(',')})`).join('; ')}]`, at: add(c0, b), box: { min: sub(h.lo, b), max: sub(h.hi, b) } } };
+  }
+  const { body, shift, box } = centerBody(best.lines);
+  return { ...info, body, c0: add(c0, shift), box };
+}
 let SHELLS = true;
 const shellWorth = (fit, part, hollow = false) => {
   if (!SHELLS || coarseRole(part) || FID.name === 'semantic' || part.force || part.tris.length < PANEL_MIN_TRIS) return false;
@@ -1171,19 +1214,19 @@ function subSceneLines(pieces, part, ctx) {
   const subParts = fitted.map((tris) => { if (!ctx.parts.has(tris)) ctx.parts.set(tris, mk(tris)); return ctx.parts.get(tris); });
   let lines = [];
   if (subParts.length) {
-    const saved = [SUB_WHOLE, FID, S, M, DIGITS, SUBS, PLATES, PARTS_FILE, PANELS, UNIONS, PREFIT, SHELLS, COMPOSITE_MS, UNION_SEEN, SWEEP_SEEN, SWEEP_FAILED, MESH_USE, JUDGES, SCATTERED, PART_ROLE, HEIGHT, cleanName, MESH_K];
+    const saved = [SUB_WHOLE, FID, S, M, DIGITS, SUBS, PLATES, HULLS, PARTS_FILE, PANELS, UNIONS, PREFIT, SHELLS, COMPOSITE_MS, UNION_SEEN, SWEEP_SEEN, SWEEP_FAILED, MESH_USE, JUDGES, SCATTERED, PART_ROLE, HEIGHT, cleanName, MESH_K];
     SUB_DEPTH++;
     SUB_WHOLE = { area: ctx.area };
     let out;
     const t0 = performance.now();
     try {
       if (overBudget()) return null;
-      out = reverse(subParts, { srcFile: 'x', level: 'L1', fidelity: FID.name, unit: 1 / M, types: false, defaultMaterial: true, names: false, meshPrice: MESH_K.meshPrice, panels: PANELS, shells: SHELLS, unions: UNIONS, plates: PLATES });
+      out = reverse(subParts, { srcFile: 'x', level: 'L1', fidelity: FID.name, unit: 1 / M, types: false, defaultMaterial: true, names: false, meshPrice: MESH_K.meshPrice, panels: PANELS, shells: SHELLS, unions: UNIONS, plates: PLATES, hulls: HULLS });
     } catch (e) {
       if (e instanceof BudgetOut) return null;
       throw e;
     } finally {
-      [SUB_WHOLE, FID, S, M, DIGITS, SUBS, PLATES, PARTS_FILE, PANELS, UNIONS, PREFIT, SHELLS, COMPOSITE_MS, UNION_SEEN, SWEEP_SEEN, SWEEP_FAILED, MESH_USE, JUDGES, SCATTERED, PART_ROLE, HEIGHT, cleanName, MESH_K] = saved;
+      [SUB_WHOLE, FID, S, M, DIGITS, SUBS, PLATES, HULLS, PARTS_FILE, PANELS, UNIONS, PREFIT, SHELLS, COMPOSITE_MS, UNION_SEEN, SWEEP_SEEN, SWEEP_FAILED, MESH_USE, JUDGES, SCATTERED, PART_ROLE, HEIGHT, cleanName, MESH_K] = saved;
       SUB_DEPTH--;
     }
     COMPOSITE_MS.subRev = (COMPOSITE_MS.subRev ?? 0) + performance.now() - t0;
@@ -1327,7 +1370,7 @@ function panelPrim0(fit, part, prim, partIndex = -1) {
   if (!subOK) { const sc = tryScatter(); if (sc) return sc; }
   const cur = hollow ? { S: Infinity } : prim.kind === 'mesh' ? { mesh: meshCostOf(prim, part) } : { line: primLineOf(prim) };
   let out = null;
-  const better = (S) => !out || S < (out.panels ?? out.union ?? out.shell ?? out.plates ?? out.sub).S;
+  const better = (S) => !out || S < (out.panels ?? out.union ?? out.shell ?? out.plates ?? out.hulls ?? out.sub).S;
   const up = fit.frame.cols[1];
   const fcols = up[1] > 0.999 ? fit.frame.cols : [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
   const ftris = panelsWorth(fit, part, hollow) || shellWorth(fit, part, hollow) || subOK ? part.tris.map((tri) => tri.map((v) => mvT(fcols, v))) : null;
@@ -1346,6 +1389,13 @@ function panelPrim0(fit, part, prim, partIndex = -1) {
     COMPOSITE_MS.plates = (COMPOSITE_MS.plates ?? 0) + performance.now() - t0;
     if (qb && better(qb.S)) out = { kind: 'group', props: {}, body: qb.body, cols: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], at: qb.c0, box: qb.box, fit: qb.fit, err: fit.e, plates: { S: qb.S, was: qb.curS, kind: prim.kind, plates: qb.plates } };
   }
+  if (hullWorth(fit, part, hollow) && !overBudget()) {
+    const t0 = performance.now(), hb = tryHulls(part.tris, part, out ? { S: (out.panels ?? out.shell ?? out.plates).S } : cur);
+    COMPOSITE_MS.hulls = (COMPOSITE_MS.hulls ?? 0) + performance.now() - t0;
+    const I = [[1, 0, 0], [0, 1, 0], [0, 0, 1]], tag = hb && { S: hb.S, was: hb.curS, kind: prim.kind, hulls: hb.hulls };
+    if (hb && better(hb.S)) out = hb.single ? { kind: 'hull', props: { points: hb.single.points }, cols: I, at: hb.single.at, box: hb.single.box, fit: hb.fit, err: fit.e, hulls: tag }
+      : { kind: 'group', props: {}, body: hb.body, cols: I, at: hb.c0, box: hb.box, fit: hb.fit, err: fit.e, hulls: tag };
+  }
   if (unionWorth(fit, part) && !overBudget()) {
     const I = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
     // 几何部分：worker 预先算好的；或者同一个网格、同样的旋转与缩放（没成类型的享元：拟合差，各实例分开写）
@@ -1363,7 +1413,7 @@ function panelPrim0(fit, part, prim, partIndex = -1) {
     if (ub && better(ub.S)) out = { kind: 'group', props: {}, body: ub.body, cols: I, at: ub.c0, box: ub.box, fit: ub.fit, err: fit.e, union: { S: ub.S, was: ub.curS, kind: prim.kind, prims: ub.prims } };
   }
   if (subOK && !overBudget()) {
-    const t0 = performance.now(), gb = trySubScene(ftris, part, out ? { line: null, S: (out.panels ?? out.union ?? out.shell ?? out.plates).S } : cur);
+    const t0 = performance.now(), gb = trySubScene(ftris, part, out ? { line: null, S: (out.panels ?? out.union ?? out.shell ?? out.plates ?? out.hulls).S } : cur);
     COMPOSITE_MS.subs = (COMPOSITE_MS.subs ?? 0) + performance.now() - t0;
     COMPOSITE_MS.subTried = (COMPOSITE_MS.subTried ?? 0) + 1;
     if (gb && better(gb.S)) out = { kind: 'group', props: {}, body: gb.body, cols: fcols, at: mvC(fcols, gb.at), box: gb.box, fit: Math.max(0, Math.min(1, 1 - (gb.meanErr * M) / (4 * FID.tau * M))), err: fit.e, sub: { S: gb.S, was: gb.curS, kind: prim.kind, pieces: gb.pieces } };
@@ -1452,7 +1502,7 @@ function unifyBoxLabels(objs) {
 }
 
 // ───────── 3 & 4. 关系与校验 ─────────
-export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null, prefit = null, partsFile = null, defaultMaterial = true, panels = true, unions = true, shells = true, subs = true, plates = true, nameStats = null, typeSeed = null, roles: roleRules = null, meshPrice: meshPriceCfg = null } = {}) {
+export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress = true, names = true, previous = null, fidelity = 'detail', unit: sceneUnit = 1, types: useTypes = true, decisions = null, prefit = null, partsFile = null, defaultMaterial = true, panels = true, unions = true, shells = true, subs = true, plates = true, hulls = true, nameStats = null, typeSeed = null, roles: roleRules = null, meshPrice: meshPriceCfg = null } = {}) {
   setFidelity(fidelity, sceneUnit);
   MESH_K = { ...SCORE_DEFAULTS, meshPrice: meshPriceCfg ?? {} };
   PARTS_FILE = partsFile;
@@ -1462,6 +1512,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   SHELLS = shells;
   SUBS = subs;
   PLATES = plates;
+  HULLS = hulls;
   COMPOSITE_MS = { panels: 0, unions: 0, shells: 0 };
   if (!SUB_DEPTH) BUDGET_HIT = [];
   UNION_SEEN = new Map();
@@ -1518,7 +1569,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
         return g;
       };
       const doneT = budgetStart(rep.uid ?? rep.name ?? rep.from, rep.tris.length);
-      let sg, pb, ub, sb, qb, best0, gs;
+      let sg, pb, ub, sb, qb, hb, best0, gs;
       try {
         sg = subOK ? null : scatterT();
         pb = !sg && panelsWorth(fit, typePart, hollowT) && !overBudget() ? tryPanels(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
@@ -1526,20 +1577,23 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
         ub = !sg && unionWorth(fit, typePart) && !overBudget() ? tryUnion(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
         sb = !sg && shellWorth(fit, typePart, hollowT) && !overBudget() ? tryShell(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
         qb = !sg && platesWorth(fit, typePart, hollowT) && !overBudget() ? tryPlates(local, typePart, curT, ms.length) : null;
-        // 大部件当小场景（同普通部件）：和板件、并、外壳、平板里最好的那个比
-        best0 = [pb, ub, sb, qb].filter(Boolean).sort((x, y) => x.S - y.S)[0];
+        // 凸包：一个的写成 hull 体，几个的写成组
+        hb = !sg && hullWorth(fit, typePart, hollowT) && !overBudget() ? tryHulls(local, typePart, curT, ms.length) : null;
+        if (hb?.single) hb = { ...hb, body: [`hull body points=${hb.single.points}`], c0: hb.single.at, box: hb.single.box };
+        // 大部件当小场景（同普通部件）：和板件、并、外壳、平板、凸包里最好的那个比
+        best0 = [pb, ub, sb, qb, hb].filter(Boolean).sort((x, y) => x.S - y.S)[0];
         gs = !sg && subOK && !overBudget() ? trySubScene(local, typePart, best0 ? { S: best0.S } : curT, ms.length) : null;
       } finally { doneT(); }
       const gb = gs && { kind: 'group', c0: gs.at, box: gs.box, body: gs.body, fit: Math.max(0, Math.min(1, 1 - (gs.meanErr * M) / (4 * FID.tau * M))), S: gs.S, curS: gs.curS, pieces: gs.pieces };
       if (subOK && !gb && !best0) sg = scatterT();
-      const cb = sg ? { ...sg, kind: 'group', fit: 1 - fit.e / TOL } : [pb, ub, sb, qb, gb].filter(Boolean).sort((x, y) => x.S - y.S)[0] ?? null;
+      const cb = sg ? { ...sg, kind: 'group', fit: 1 - fit.e / TOL } : [pb, ub, sb, qb, hb, gb].filter(Boolean).sort((x, y) => x.S - y.S)[0] ?? null;
       // 拟合不了、也没有组合写法的：不做类型，各实例按普通部件处理（引用价时退回各自的网格引用；按真实信息量计价时各自拟合、拆解——
       // 类型体只用基本体且不试扫掠，留下一个很差的基本体还不如各自拆：H1 的桁架塔成了一根“管”）
       if (bad && !cb) continue;
       let prim, c0, lo, hi;
       if (cb) {
         c0 = cb.c0; lo = add(c0, cb.box.min); hi = add(c0, cb.box.max);
-        prim = { kind: cb.kind ?? 'group', props: {}, body: cb.body, cols: I3, at: c0, box: cb.box, ...(cb.n ? { scatter: { blocks: cb.n } } : cb === ub ? { union: { S: ub.S, was: ub.curS, prims: ub.prims } } : cb === sb ? { shell: { S: sb.S, was: sb.curS, openings: sb.openings, arches: sb.arches, interior: sb.interior } } : cb === gb ? { sub: { S: gb.S, was: gb.curS, pieces: gb.pieces } } : cb === qb ? { plates: { S: qb.S, was: qb.curS, plates: qb.plates } } : { panels: { S: pb.S, was: pb.curS } }) };
+        prim = { kind: cb.kind ?? 'group', props: {}, body: cb.body, cols: I3, at: c0, box: cb.box, ...(cb.n ? { scatter: { blocks: cb.n } } : cb === ub ? { union: { S: ub.S, was: ub.curS, prims: ub.prims } } : cb === sb ? { shell: { S: sb.S, was: sb.curS, openings: sb.openings, arches: sb.arches, interior: sb.interior } } : cb === gb ? { sub: { S: gb.S, was: gb.curS, pieces: gb.pieces } } : cb === qb ? { plates: { S: qb.S, was: qb.curS, plates: qb.plates } } : cb === hb ? { hulls: { S: hb.S, was: hb.curS, hulls: hb.hulls } } : { panels: { S: pb.S, was: pb.curS } }) };
       } else {
         prim = primitiveOf(fit, { ...rep, name: null }, srcFile);
         // 类型体的原点放在包络的底面中心：实例的定位规则就和普通基本体一样
@@ -1581,7 +1635,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     if (SUB_DEPTH && overBudget()) throw new BudgetOut();
     const prim0 = primitiveOf(fits[i], p, srcFile);
     // worker 预先算好的组合写法（同样的源文件名、部件文件与开关才取用）
-    const pc = preUsed.has(i) ? prefit?.compOf?.(p, i, { srcFile, partsFile: PARTS_FILE, panels: PANELS, shells: SHELLS, unions: UNIONS, subs: SUBS, plates: PLATES }) : undefined;
+    const pc = preUsed.has(i) ? prefit?.compOf?.(p, i, { srcFile, partsFile: PARTS_FILE, panels: PANELS, shells: SHELLS, unions: UNIONS, subs: SUBS, plates: PLATES, hulls: HULLS }) : undefined;
     if (pc?.sc != null) SCATTERED.set(p, pc.sc);
     if (pc?.budget) BUDGET_HIT.push(pc.budget);
     const prim = (pc !== undefined ? pc.out : panelPrim(fits[i], p, prim0, i)) ?? prim0;
@@ -1595,7 +1649,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   }).filter(Boolean);
   const typeLines = types.flatMap((T) => {
     // 板件：类型体是一组墙板、楼板（已经相对包络的底面中心）
-    if (T.prim.body) return [`def ${T.name} {`, `  ${T.prim.kind} body {  // ${T.count} 个实例；${T.prim.union ? '基本体之并' : T.prim.shell ? '外壳 − 空腔 − 开口' : T.prim.scatter ? '分散的块' : T.prim.plates ? '多边形平板' : '板件'}`, ...T.prim.body.map((l) => '    ' + l), '  }', '}'];
+    if (T.prim.body) return [`def ${T.name} {`, `  ${T.prim.kind} body {  // ${T.count} 个实例；${T.prim.union ? '基本体之并' : T.prim.shell ? '外壳 − 空腔 − 开口' : T.prim.scatter ? '分散的块' : T.prim.plates ? '多边形平板' : T.prim.hulls ? '凸包' : '板件'}`, ...T.prim.body.map((l) => '    ' + l), '  }', '}'];
     // 台阶的位置由两个端点决定（at= 对它不起作用）：端点直接平移到类型的坐标系里（原点在包络的底面中心）
     if (T.prim.kind === 'span') {
       const mv = (v) => vec(sub(v.split(',').map(Number), T.c0));
@@ -1647,7 +1701,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
 
   // 空间事实（全坐标版本）
   const r0 = compile(absSrc, { factEps: FACT_EPS * M, heightAt: HEIGHT });
-  lap(`全坐标版本编译（其中板件 ${Math.round(COMPOSITE_MS.panels)}ms、基本体之并 ${Math.round(COMPOSITE_MS.unions)}ms、外壳 ${Math.round(COMPOSITE_MS.shells)}ms、平板 ${Math.round(COMPOSITE_MS.plates ?? 0)}ms、子场景 ${Math.round(COMPOSITE_MS.subs ?? 0)}ms / ${COMPOSITE_MS.subTried ?? 0} 个、子逆向 ${COMPOSITE_MS.subCalls ?? 0} 遍 ${Math.round(COMPOSITE_MS.subRev ?? 0)}ms、评分 ${Math.round(COMPOSITE_MS.subEval ?? 0)}ms）`);
+  lap(`全坐标版本编译（其中板件 ${Math.round(COMPOSITE_MS.panels)}ms、基本体之并 ${Math.round(COMPOSITE_MS.unions)}ms、外壳 ${Math.round(COMPOSITE_MS.shells)}ms、平板 ${Math.round(COMPOSITE_MS.plates ?? 0)}ms、凸包 ${Math.round(COMPOSITE_MS.hulls ?? 0)}ms、子场景 ${Math.round(COMPOSITE_MS.subs ?? 0)}ms / ${COMPOSITE_MS.subTried ?? 0} 个、子逆向 ${COMPOSITE_MS.subCalls ?? 0} 遍 ${Math.round(COMPOSITE_MS.subRev ?? 0)}ms、评分 ${Math.round(COMPOSITE_MS.subEval ?? 0)}ms）`);
   const byId = new Map(objs.map((o) => [o.id, o]));
   const onOf = new Map(), againstOf = new Map(), nearOf = new Map();
   const related = new Map();
@@ -2099,6 +2153,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     scattered: [...types.filter((T) => T.prim.scatter).map((T) => ({ type: T.name, instances: T.count, blocks: T.prim.scatter.blocks })), ...objs.filter((o) => o.scatter).map((o) => ({ id: nm(o.id), blocks: o.scatter.blocks }))],
     unions: [...types.filter((T) => T.prim.union).map((T) => ({ type: T.name, instances: T.count, prims: T.prim.union.prims, S: T.prim.union.S, was: T.prim.union.was })), ...objs.filter((o) => o.union).map((o) => ({ id: nm(o.id), prims: o.union.prims, S: o.union.S, was: o.union.was, instead: o.union.kind }))],
     plates: [...types.filter((T) => T.prim.plates).map((T) => ({ type: T.name, instances: T.count, ...T.prim.plates })), ...objs.filter((o) => o.plates).map((o) => ({ id: nm(o.id), ...o.plates, instead: o.plates.kind }))],
+    hulls: [...types.filter((T) => T.prim.hulls).map((T) => ({ type: T.name, instances: T.count, ...T.prim.hulls })), ...objs.filter((o) => o.hulls).map((o) => ({ id: nm(o.id), ...o.hulls, instead: o.hulls.kind }))],
     budget: SUB_DEPTH ? [] : [...BUDGET_HIT],
     subs: [...types.filter((T) => T.prim.sub).map((T) => ({ type: T.name, instances: T.count, pieces: T.prim.sub.pieces, S: T.prim.sub.S, was: T.prim.sub.was })), ...objs.filter((o) => o.sub).map((o) => ({ id: nm(o.id), pieces: o.sub.pieces, S: o.sub.S, was: o.sub.was, instead: o.sub.kind }))],
     roles: Object.fromEntries([...parts.reduce((m, p) => m.set(roleP(p), (m.get(roleP(p)) ?? 0) + 1), new Map())].sort()),
@@ -2790,9 +2845,9 @@ export function typeKey(p, role) {
 // 共用网格、但没成类型的部件（镜像或缩放不同的实例）也可以：同一个网格的部件在同一个 worker 里按序号依次算（扫掠、并的缓存按网格与矩阵，
 // 行为与主线程相同），网格的实例数（MESH_USE）由主线程给。先调一次 prefitCompositeInit，再逐个调 prefitComposite。
 // item：部件的可序列化部分（tris、name、uid、from、mesh、material、matrix、force）；返回 { fit, union, comp: { out, sc（分散的块数）} }
-export function prefitCompositeInit({ meshUse = [], meshPrice = null, partsFile = null, panels = true, shells = true, unions = true, subs = true, plates = true }) {
+export function prefitCompositeInit({ meshUse = [], meshPrice = null, partsFile = null, panels = true, shells = true, unions = true, subs = true, plates = true, hulls = true }) {
   MESH_K = { ...SCORE_DEFAULTS, meshPrice: meshPrice ?? {} };
-  PARTS_FILE = partsFile; PANELS = panels; SHELLS = shells; UNIONS = unions; SUBS = subs; PLATES = plates;
+  PARTS_FILE = partsFile; PANELS = panels; SHELLS = shells; UNIONS = unions; SUBS = subs; PLATES = plates; HULLS = hulls;
   MESH_USE = new Map(meshUse); JUDGES = new WeakMap(); SCATTERED = new WeakMap(); PART_ROLE = new WeakMap(); HEIGHT = null;
   COMPOSITE_MS = { panels: 0, unions: 0, shells: 0 }; UNION_SEEN = new Map(); SWEEP_SEEN = new Map(); SWEEP_FAILED = new Set();
 }

@@ -105,7 +105,7 @@ box slab size=19.4,0.3,11.4 at=0,4,0
   assert.deepEqual(out.report.fallback, [], '定位全部通过校验');
   // 楼与楼里的楼板是两个分量：当成小场景（分量各自拆成板件）比整体拆板件略好，记在 subs 里
   assert.equal(out.report.panels.length + out.report.subs.length, 1);
-  const solid = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure', panels: false, shells: false, unions: false, subs: false, plates: false });
+  const solid = reverse(parts, { srcFile: 'x.glb', fidelity: 'structure', panels: false, shells: false, unions: false, subs: false, plates: false, hulls: false });
   assert.match(solid.src, /^box hall /m);
   assert.ok(scoreOf(out) < scoreOf(solid) - 20, `板件 ${scoreOf(out)} < 实心盒子 ${scoreOf(solid)}`);
   assert.equal(reverse(parts, { srcFile: 'x.glb', fidelity: 'semantic' }).report.panels.length, 0, '语义档仍用基本体当代理');

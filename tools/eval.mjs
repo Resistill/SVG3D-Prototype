@@ -104,7 +104,7 @@ export function evaluate(origSrc, reconSrc, opts = {}) {
     const p = sfound ? stp / sfound : 1, r = struth ? stp / struth : 1;
     semantic.all = { truth: struth, found: sfound, precision: +p.toFixed(3), recall: +r.toFixed(3), f1: +(p + r ? (2 * p * r) / (p + r) : 0).toFixed(3) };
   }
-  const topLines = reconSrc.split('\n').filter((l) => /^(box|cyl|cone|sphere|wedge|plate|mesh|revolve|span|sweep|pipe|repeat|mirror|rotate|copy|group)\s/.test(l));
+  const topLines = reconSrc.split('\n').filter((l) => /^(box|cyl|cone|sphere|wedge|plate|hull|mesh|revolve|span|sweep|pipe|repeat|mirror|rotate|copy|group)\s/.test(l));
   // 语句数：把 import 的文件也算进去（修改层本身很短，但它描述的是整个场景）
   const expand = (src, o, seen = new Set()) => src.replace(/^\s*import\s+"([^"]+)".*$/gm, (m, rel) => {
     if (!o?.resolve) return '';
