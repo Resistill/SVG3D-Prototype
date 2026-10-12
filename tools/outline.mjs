@@ -12,7 +12,7 @@ export function outline(result, { depth = 2 } = {}) {
     if (!children.has(parent)) children.set(parent, []);
     children.get(parent).push(n);
   }
-  const leafKinds = new Set(['box', 'cyl', 'cone', 'sphere', 'wedge', 'revolve', 'span', 'sweep', 'pipe', 'mesh', 'union', 'subtract', 'intersect']);
+  const leafKinds = new Set(['box', 'cyl', 'cone', 'sphere', 'wedge', 'plate', 'revolve', 'span', 'sweep', 'pipe', 'mesh', 'union', 'subtract', 'intersect']);
   const items = new Set(result.items.map((i) => i.path));
   const under = (p) => result.items.filter((i) => i.path === p || i.path.startsWith(p + '.')).length;
   // 主要关系：这个节点（或它里面的物体）与外部物体之间最强的一条

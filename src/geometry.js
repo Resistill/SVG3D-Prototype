@@ -22,6 +22,11 @@ function geomOf(s) {
       const sh = new THREE.Shape([new THREE.Vector2(-s.w / 2, 0), new THREE.Vector2(s.w / 2, 0), new THREE.Vector2(s.w / 2, s.h)]);
       return new THREE.ExtrudeGeometry(sh, { depth: s.d, bevelEnabled: false }).translate(0, 0, -s.d / 2);
     }
+    case 'plate': {
+      // 轮廓在 xz 平面：Shape 的 (x, −z) 拉伸 h 后绕 x 转 −90°，就是 (x, 0..h, z)
+      const sh = new THREE.Shape(s.pts.map(([x, z]) => new THREE.Vector2(x, -z)));
+      return new THREE.ExtrudeGeometry(sh, { depth: s.h, bevelEnabled: false }).rotateX(-Math.PI / 2);
+    }
     case 'cyl': {
       const R = Math.max(s.r1, s.r2);
       const g = new THREE.CylinderGeometry(s.r2, s.r1, s.h, 40).translate(0, s.h / 2, 0);

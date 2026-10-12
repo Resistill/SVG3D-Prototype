@@ -91,6 +91,7 @@ concept deck = kind(box) & on(pier, 2)
 | `box size=w,h,d` | 长方体 |
 | `cyl r= h= axis=y` · `cone r= r2= h=` | 圆柱 / 圆台，可沿 x / y / z |
 | `sphere r=` · `wedge size=w,h,d` | 球 / 楔形（+x 一侧高） |
+| `plate points=[(x,z); …] h=` | 多边形平板：局部 xz 平面里的轮廓（凸凹都行），从底面拉起厚度 h；原点是轮廓坐标的 (0,0)。倾斜的板（坡面、屋面）用 `rot=` / `tilt=` 转 |
 | `revolve profile=[(r,y); …] smooth=true angle=360` | 轮廓绕竖直轴旋转，自动在轴上封口 |
 | `span from=A to=B section=w,t` | 连接两点的实体；`r=` 圆杆，`steps=n` 台阶，`pin=bottom` 让底面贴着连线 |
 | `span from=A drop=B dir=down` | 从 A 沿方向延伸，直到碰到 B 的面（立柱、桩） |

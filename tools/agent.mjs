@@ -163,7 +163,7 @@ async function inspectSource(P, names) {
     try {
       // 第一条物体语句；板件、基本体之并、外壳是带内容的多行块，整块给出
       const ls = reverseParts([p], { srcFile: P.cfg.source, compress: false, names: false, fidelity: P.cfg.fidelity ?? 'detail', unit: P.unit }).src.split('\n');
-      const k = ls.findIndex((l) => /^(box|cyl|cone|sphere|wedge|mesh|revolve|pipe|span|group|subtract) /.test(l));
+      const k = ls.findIndex((l) => /^(box|cyl|cone|sphere|wedge|plate|mesh|revolve|pipe|span|group|subtract) /.test(l));
       if (k >= 0) {
         const head = ls[k].replace(/ ~src="[^"]*"/, '').replace(/ ~fit=\S+/, '');
         const end = head.endsWith(' {') ? ls.findIndex((l, j) => j > k && l === '}') : k;

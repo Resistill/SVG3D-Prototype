@@ -35,7 +35,7 @@ export async function prefit(parts, { fidelity = 'detail', unit = 1, threads = M
   for (const i of todo) { const g = groupOf(i); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(i); }
   const triCount = (g) => g.reduce((a, i) => a + parts[i].tris.length, 0);
   const queue = [...groups.values()].sort((a, b) => triCount(b) - triCount(a));
-  const C = composite && { panels: true, shells: true, unions: true, subs: true, partsFile: null, ...composite };
+  const C = composite && { panels: true, shells: true, unions: true, subs: true, plates: true, partsFile: null, ...composite };
   const item = (i) => { const p = parts[i]; return C ? { i, role: rs[i], tris: p.tris, name: p.name ?? null, uid: p.uid, from: p.from, mesh: p.mesh, material: p.material, matrix: p.matrix, force: p.force } : { i, tris: p.tris, role: rs[i] }; };
   const results = await Promise.all(Array.from({ length: Math.min(threads, queue.length) }, () => new Promise((resolve, reject) => {
     const out = [];
@@ -47,7 +47,7 @@ export async function prefit(parts, { fidelity = 'detail', unit = 1, threads = M
   })));
   const fits = new Map(), unions = new Map(), comps = new Map();
   for (const r of results) for (const { i, fit, union, comp } of r) { fits.set(i, fit); if (union !== undefined) unions.set(i, union); if (comp) comps.set(i, comp); }
-  const same = (o) => C && ['srcFile', 'partsFile', 'panels', 'shells', 'unions', 'subs'].every((k) => (o[k] ?? null) === (C[k] ?? null));
+  const same = (o) => C && ['srcFile', 'partsFile', 'panels', 'shells', 'unions', 'subs', 'plates'].every((k) => (o[k] ?? null) === (C[k] ?? null));
   // 只有同一个部件对象在同一个序号上才能取用（决定层可能换掉、删掉部件，序号会变）
   // unionOf：拟合差的部件预先算好的“基本体之并”的几何（null 表示拼不成；undefined 表示没算）
   // compOf：预先算好的组合写法 { out, sc }（out 为 null：没有更好的组合写法）；opts 与预先算时不同、或没算过时返回 undefined

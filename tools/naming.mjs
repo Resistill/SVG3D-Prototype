@@ -8,7 +8,7 @@ import { SEMANTICS } from './eval.mjs';
 
 // 越靠前越具体：一个物体同时属于多个概念时取最前面的
 const PRIORITY = ['terrain', 'step', 'roof', 'platform', 'slab', 'wall', 'tank', 'column', 'beam', 'member', 'volume', 'prop'];
-const SHAPES = 'box|cyl|cone|sphere|wedge|mesh|revolve|sweep|span|pipe';
+const SHAPES = 'box|cyl|cone|sphere|wedge|plate|mesh|revolve|sweep|span|pipe';
 const AUTO_TOP = new RegExp(`^(${SHAPES})\\d+(_\\d+)?$`);
 const AUTO_UNIT = new RegExp(`^(${SHAPES})s(_\\d+)?$`);
 const AUTO_CHILD = new RegExp(`^(${SHAPES})_*$`);
