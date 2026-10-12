@@ -120,3 +120,12 @@ test('分块合并：类型与物体同名（各是一套名字）时，物体�
   assert.deepEqual(compile(src).errors, [], src);
   assert.equal((src.match(/^def F_27 /gm) ?? []).length, 1, '同名同文的类型只声明一次');
 });
+
+test('分块合并：阵列改名时 drop 名字.k 跟着改', async () => {
+  const { mergeTiles } = await import('../tools/tiles.mjs');
+  const a = '// x\nbox L size=1,1,1 at=0,0,0\n';
+  const b = '// x\nrepeat L n=4 step=2,0,0 {\n  box m size=1,1,1\n}\ndrop L.2\n';
+  const src = mergeTiles([a, b]);
+  assert.deepEqual(compile(src).errors, [], src);
+  assert.match(src, /^drop L_2\.2$/m, src);
+});

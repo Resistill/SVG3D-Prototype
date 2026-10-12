@@ -68,10 +68,13 @@ function renameObjects(text, map) {
   if (!map.size) return text;
   const alt = [...map.keys()].map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   const decl = new RegExp(`^(\\S+ )(${alt})(?=[\\s{]|$)`, 'u');
+  const dropRe = new RegExp(`^drop (${alt})(?=[.\\s]|$)`, 'u');
   const ref = new RegExp(`(?<=[=,(\\[;]\\s*)(${alt})(?![\\p{L}\\p{N}_=])`, 'gu');
   return text.split('\n').map((l) => {
     const segs = l.split('"');
     if (!/^(\s|def |material )/.test(l)) segs[0] = segs[0].replace(decl, (m, k, n) => k + map.get(n));
+    // drop 名字.k（阵列挖掉的成员）：名字是引用
+    if (l.startsWith('drop ')) segs[0] = segs[0].replace(dropRe, (m, n) => 'drop ' + map.get(n));
     return segs.map((seg, i) => (i % 2 ? seg : seg.replace(ref, (m) => map.get(m)))).join('"');
   }).join('\n');
 }
