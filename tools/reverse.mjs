@@ -1060,9 +1060,10 @@ function tryPlates(tris, part, cur, n = 1) {
   const meanErr = best.ls.meanErr * M;
   return { body, c0: add(c0, shift), box, fit: Math.max(0, Math.min(1, 1 - meanErr / (4 * tau))), meanErr: best.ls.meanErr, S: +best.S.toFixed(2), curS: +curS.toFixed(2), plates: best.plates };
 }
-// 凸包（tools/hulls.mjs）：岩石、土丘、不规则的块写成一个或几个 hull。空心的（必须拆开的）不用：凸包是实心的
+// 凸包（tools/hulls.mjs）：岩石、土丘、不规则的块写成一个或几个 hull。结构不用（外墙的门窗洞、楼梯的踏步会被填平——人走不过去、
+// 楼梯成了坡），空心的（必须拆开的）也不用：凸包是实心的
 let HULLS = true;
-const hullWorth = (fit, part, hollow = false) => HULLS && !hollow && !coarseRole(part) && FID.name !== 'semantic' && !part.force && part.tris.length >= 8
+const hullWorth = (fit, part, hollow = false) => HULLS && !hollow && (roleP(part) ?? 'structure') !== 'structure' && !coarseRole(part) && FID.name !== 'semantic' && !part.force && part.tris.length >= 8
   && !['steps', 'tube', 'sweep', 'revolve'].includes(fit.shape) && (fit.e > TOL || fit.cover < COVER_MIN);
 const HULL_MAX_PTS = 24;
 function tryHulls(tris, part, cur, n = 1) {

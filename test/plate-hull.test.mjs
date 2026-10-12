@@ -58,3 +58,16 @@ test('逆向：斜着的三角形坡面（单面的地块）写成一块平板�
   const n = m[1].split(';').length;
   assert.ok(n >= 8 && n < ring.length + 2, `${n} 个点`);
 });
+
+test('结构不写成凸包：同一个凸的块，叫 Wall 时不用 hull（门窗洞、踏步会被填平），叫 Rock 时用', () => {
+  const ring = [], N = 12;
+  for (let i = 0; i < N; i++) for (const [y, r] of [[0, 3], [3, 2]]) ring.push([r * Math.cos((2 * Math.PI * i) / N) * 1.5, y, r * Math.sin((2 * Math.PI * i) / N)]);
+  const tris = [];
+  for (let i = 0; i < N; i++) {
+    const j = (i + 1) % N, q = (k, l) => ring[k * 2 + l];
+    tris.push([[0, 0, 0], q(i, 0), q(j, 0)], [q(i, 0), q(j, 1), q(j, 0)], [q(i, 0), q(i, 1), q(j, 1)], [q(i, 1), [0, 4, 0], q(j, 1)]);
+  }
+  const mk = (name) => reverse([{ name, tris, material: { name: 'm', color: '#888888' } }], { srcFile: 'x.glb', fidelity: 'structure' }).src;
+  assert.doesNotMatch(mk('Building_ExterWall_01'), /^\s*hull /m);
+  assert.match(mk('Nature_Rock_02'), /^hull /m);
+});
