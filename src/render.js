@@ -540,11 +540,31 @@ export class Viewer {
     return { position: r(this.camera.position), target: r(this.controls.target) };
   }
 
+  // 导出 GLB：分成 visual（看得见的）与 collision（碰撞块：隐形挡墙）两组，引擎里可以把后者导成不可见的碰撞体；
+  // 每个节点的 extras 带 role（角色）、collidable（旁路表的 ~collidable，0 表示只看得见、撞不到）与 src（源部件）
   exportGLB(name = 'scene') {
-    let root = this.content;
-    if (this.batch && this.lastResult) {
-      root = new THREE.Group();
-      for (const item of this.lastResult.items) { try { if (!(item.kind === 'solid' && item.geom.type === 'mesh')) { const m = new THREE.Mesh(itemGeometry(item, this.evaluator), this.material(item.material)); m.name = item.path; root.add(m); } } catch { /* 跳过 */ } }
+    const r = this.lastResult, root = new THREE.Group(), visual = new THREE.Group(), collision = new THREE.Group();
+    root.name = name; visual.name = 'visual'; collision.name = 'collision';
+    root.add(visual, collision);
+    const roleOf = r ? nodeRoles(r) : () => 'structure';
+    const metaOf = (path, k) => { for (let p = path; p; p = p.includes('.') ? p.slice(0, p.lastIndexOf('.')) : '') { const v = this.nodeMap?.get(p)?.meta?.[k]; if (v != null) return v; } return null; };
+    const add = (mesh, path) => {
+      const role = roleOf(path), extras = { role };
+      const col = metaOf(path, 'collidable'), src = metaOf(path, 'src');
+      if (col != null) extras.collidable = +col;
+      if (src != null) extras.src = src;
+      mesh.name = path;
+      mesh.userData = extras;
+      (role === 'collision' ? collision : visual).add(mesh);
+    };
+    if (this.batch && r) {
+      for (const item of r.items) { try { if (!(item.kind === 'solid' && item.geom.type === 'mesh')) add(new THREE.Mesh(itemGeometry(item, this.evaluator), this.material(roleOf(item.path) === 'collision' ? COLLISION_MAT : item.material)), item.path); } catch { /* 跳过 */ } }
+    } else {
+      // 小场景：直接用画出来的网格（网格引用已经换成了源模型里的几何）
+      for (const c of this.content.children) {
+        if (c.isMesh && c.userData.path) add(new THREE.Mesh(c.geometry, c.userData.origMat ?? c.material), c.userData.path);
+        else if (c.userData.meshRef) { const g = c.clone(); g.traverse((o) => { o.userData = {}; }); add(g, c.name); }
+      }
     }
     new GLTFExporter().parse(root, (buf) => {
       const a = document.createElement('a');
