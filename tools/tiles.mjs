@@ -64,11 +64,15 @@ function renameIn(text, map, paths = false) {
 // 各块的逆向结果 → 一份文本：材质与类型在前（去重），然后各块的物体
 export function mergeTiles(texts) {
   const declText = new Map(), used = new Set(), shared = [], body = [];
-  const unique = (n) => { let k = 2, x = `${n}_${k}`; while (used.has(x)) x = `${n}_${++k}`; return x; };
+  // 新名字既不能和别的块已有的重名，也不能和这一块里出现过的任何名字重名（类型改成 Cab_2_2，而这一块正好有个物体叫 Cab_2_2：
+  // 物体那一轮会再改一次，路径里的段就对不上了）；taken 是这一块里所有的标识符，外加这一轮已经起过的新名字
+  let taken = new Set();
+  const unique = (n) => { let k = 2, x = `${n}_${k}`; while (used.has(x) || taken.has(x)) x = `${n}_${++k}`; taken.add(x); return x; };
   let header = null;
   texts.forEach((text0) => {
     if (header === null) header = text0.split('\n').find((l) => l.startsWith('//')) ?? '';
     let text = text0;
+    taken = new Set(text0.match(/[\p{L}_][\p{L}\p{N}_]*/gu) ?? []);
     // 依次处理材质、类型、物体：前一步的改名会改变后一步的原文（类型体里的 mat=）
     for (const kind of ['material', 'def', 'object']) {
       const map = new Map();

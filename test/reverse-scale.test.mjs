@@ -103,3 +103,11 @@ test('分块合并：同名不同体的类型改名时，路径里指向类型�
   assert.deepEqual(compile(src).errors, [], src);
   assert.match(src, /on=row\.0\.Post_2/, src);
 });
+
+test('分块合并：类型的新名字不和这一块里已有的物体重名（否则物体再改一次名，路径对不上）', async () => {
+  const { mergeTiles } = await import('../tools/tiles.mjs');
+  const a = '// x\ndef Cab_2 {\n  box body size=1,2,1\n}\nCab_2 c1 at=0,0,0\n';
+  const b = '// x\ndef Cab_2 {\n  box body size=1,3,1\n}\nrepeat Cab_7 n=3 step=2,0,0 {\n  Cab_2 Cab_2 turn=180\n}\nCab_2 Cab_2_2 against=Cab_7.0.Cab_2[-1,0,0.01] turn=180\n';
+  const src = mergeTiles([a, b]);
+  assert.deepEqual(compile(src).errors, [], src);
+});
