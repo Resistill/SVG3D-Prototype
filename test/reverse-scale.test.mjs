@@ -111,3 +111,12 @@ test('分块合并：类型的新名字不和这一块里已有的物体重名�
   const src = mergeTiles([a, b]);
   assert.deepEqual(compile(src).errors, [], src);
 });
+
+test('分块合并：类型与物体同名（各是一套名字）时，物体改名不碰类型的用法与指向成员的路径', async () => {
+  const { mergeTiles } = await import('../tools/tiles.mjs');
+  const a = '// x\ndef F_27 {\n  box body size=1,2,1\n}\nbox F_27 size=1,1,1 at=0,0,0\nbox F_27_2 size=1,1,1 at=3,0,0\n';
+  const b = '// x\ndef F_27 {\n  box body size=1,2,1\n}\nrepeat R n=3 step=2,0,0 {\n  F_27 F_27 turn=180\n}\nbox F_27 size=2,1,1 against=R.0.F_27[1,0,0]\nbox c size=1,1,1 on=F_27\n';
+  const src = mergeTiles([a, b]);
+  assert.deepEqual(compile(src).errors, [], src);
+  assert.equal((src.match(/^def F_27 /gm) ?? []).length, 1, '同名同文的类型只声明一次');
+});

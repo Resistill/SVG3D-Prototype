@@ -61,13 +61,29 @@ function renameIn(text, map, paths = false) {
   return text.split('\n').map((l) => l.split('"').map((seg, i) => (i % 2 ? seg : seg.replace(re, (m, _g, off, str) => (SYMBOLIC.test(str.slice(0, off)) ? m : map.get(m))))).join('"')).join('\n');
 }
 
+// 物体改名：只改顶层那一行的名字（第二个词）和作为引用出现的地方（属性取值里路径的第一段：on=X、against=X.0.y、of=X、[X, Y]）。
+// 不能按词全改：同一块里常有物体与类型同名（类型按网格起名，物体也是），按词全改会把类型的用法（阵列里的成员 Fence 01B_27 Fence 01B_27）
+// 也改掉，而指向成员的路径（A.0.Fence_01B_27）没改，就悬空了
+function renameObjects(text, map) {
+  if (!map.size) return text;
+  const alt = [...map.keys()].map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const decl = new RegExp(`^(\\S+ )(${alt})(?=[\\s{]|$)`, 'u');
+  const ref = new RegExp(`(?<=[=,(\\[;]\\s*)(${alt})(?![\\p{L}\\p{N}_=])`, 'gu');
+  return text.split('\n').map((l) => {
+    const segs = l.split('"');
+    if (!/^(\s|def |material )/.test(l)) segs[0] = segs[0].replace(decl, (m, k, n) => k + map.get(n));
+    return segs.map((seg, i) => (i % 2 ? seg : seg.replace(ref, (m) => map.get(m)))).join('"');
+  }).join('\n');
+}
+
 // 各块的逆向结果 → 一份文本：材质与类型在前（去重），然后各块的物体
 export function mergeTiles(texts) {
-  const declText = new Map(), used = new Set(), shared = [], body = [];
+  // used：各种名字（材质、类型、物体是三套名字，可以同名——类型按网格起名，物体也是）在前面的块里已经用过的
+  const declText = new Map(), used = { material: new Set(), def: new Set(), object: new Set() }, shared = [], body = [];
   // 新名字既不能和别的块已有的重名，也不能和这一块里出现过的任何名字重名（类型改成 Cab_2_2，而这一块正好有个物体叫 Cab_2_2：
   // 物体那一轮会再改一次，路径里的段就对不上了）；taken 是这一块里所有的标识符，外加这一轮已经起过的新名字
   let taken = new Set();
-  const unique = (n) => { let k = 2, x = `${n}_${k}`; while (used.has(x) || taken.has(x)) x = `${n}_${++k}`; taken.add(x); return x; };
+  const unique = (n, kind) => { let k = 2, x = `${n}_${k}`; while (used[kind].has(x) || taken.has(x)) x = `${n}_${++k}`; taken.add(x); return x; };
   let header = null;
   texts.forEach((text0) => {
     if (header === null) header = text0.split('\n').find((l) => l.startsWith('//')) ?? '';
@@ -79,12 +95,12 @@ export function mergeTiles(texts) {
       for (const b of blocksOf(text)) {
         const d = declOf(b);
         if (!d || d.kind !== kind) continue;
-        if (!used.has(d.name)) continue;
+        if (!used[kind].has(d.name)) continue;
         if (kind !== 'object' && declText.get(d.name) === b) continue; // 同名同文：共用
-        map.set(d.name, unique(d.name));
+        map.set(d.name, unique(d.name, kind));
       }
-      text = renameIn(text, map, kind === 'def');
-      for (const b of blocksOf(text)) { const d = declOf(b); if (d && d.kind === kind) used.add(d.name); }
+      text = kind === 'object' ? renameObjects(text, map) : renameIn(text, map, kind === 'def');
+      for (const b of blocksOf(text)) { const d = declOf(b); if (d && d.kind === kind) used[kind].add(d.name); }
     }
     for (const b of blocksOf(text)) {
       const d = declOf(b);
