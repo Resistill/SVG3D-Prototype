@@ -50,10 +50,12 @@ const declOf = (b) => {
   if (!m || m[1] === 'drop' || m[1] === 'over') return null;
   return { kind: m[1] === 'material' ? 'material' : m[1] === 'def' ? 'def' : 'object', name: m[2] };
 };
-// 改名：只改引号外面的、完整的标识符（前面不是“.”：路径里的子物体名不动；后面不是“=”：那是属性名，如 steps=8）
-function renameIn(text, map) {
+// 改名：只改引号外面的、完整的标识符（前面不是“.”：路径里的子物体名不动；后面不是“=”：那是属性名，如 steps=8）。
+// paths：路径里的段也改——类型改名时用：类型的实例里，类型体那个子物体按类型名叫（A.0.Fence_Metal_01B），引用它的路径要跟着改，
+// 否则合并后成了悬空的引用（整张 SpaceCenter 有 50 处）
+function renameIn(text, map, paths = false) {
   if (!map.size) return text;
-  const re = new RegExp(`(?<![\\p{L}\\p{N}_.])(${[...map.keys()].map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?![\\p{L}\\p{N}_=])`, 'gu');
+  const re = new RegExp(`(?<![\\p{L}\\p{N}_${paths ? '' : '.'}])(${[...map.keys()].map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?![\\p{L}\\p{N}_=])`, 'gu');
   // 取值是符号的属性（pin=bottom、axis=x、profile=rect …）后面的词不是名字
   const SYMBOLIC = /(?:^|[\s,])(?:pin|axis|profile|plane|align|aimwith|orient|smooth|closed|default)=$/;
   return text.split('\n').map((l) => l.split('"').map((seg, i) => (i % 2 ? seg : seg.replace(re, (m, _g, off, str) => (SYMBOLIC.test(str.slice(0, off)) ? m : map.get(m))))).join('"')).join('\n');
@@ -77,7 +79,7 @@ export function mergeTiles(texts) {
         if (kind !== 'object' && declText.get(d.name) === b) continue; // 同名同文：共用
         map.set(d.name, unique(d.name));
       }
-      text = renameIn(text, map);
+      text = renameIn(text, map, kind === 'def');
       for (const b of blocksOf(text)) { const d = declOf(b); if (d && d.kind === kind) used.add(d.name); }
     }
     for (const b of blocksOf(text)) {

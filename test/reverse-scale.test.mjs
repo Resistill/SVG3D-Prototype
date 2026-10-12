@@ -94,3 +94,12 @@ test('分块逆向：k-d 划分成几块并行逆向后合并，零编译错误�
   assert.match(m, /^T_2 a_2 at=5,0,0$/m);
   assert.match(m, /^box c size=1,1,1 on=a_2 mat=n ~src="a"$/m);
 });
+
+test('分块合并：同名不同体的类型改名时，路径里指向类型体子物体的段跟着改（不留悬空引用）', async () => {
+  const { mergeTiles } = await import('../tools/tiles.mjs');
+  const a = '// x\ndef Post {\n  box body size=1,2,1\n}\nPost p1 at=0,0,0\n';
+  const b = '// x\ndef Post {\n  box body size=1,3,1\n}\nrepeat row n=2 step=2,0,0 {\n  Post Post at=5,0,0\n}\nbox sign size=1,1,1 on=row.0.Post\n';
+  const src = mergeTiles([a, b]);
+  assert.deepEqual(compile(src).errors, [], src);
+  assert.match(src, /on=row\.0\.Post_2/, src);
+});

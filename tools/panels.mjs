@@ -13,6 +13,7 @@ const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a
 const len = (a) => Math.hypot(a[0], a[1], a[2]);
 const unit = (a) => scl(a, 1 / (len(a) || 1));
 const fmt = (x, d) => { const v = Math.round(x * 10 ** d) / 10 ** d; return Object.is(v, -0) ? '0' : String(v); };
+const HOLES_MAX = 12;
 const AXES = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
 
 // 三角形 → 平面 [{ n, d, tris, area }]：先按法线方向聚类（8° 以内），再按偏移聚类（tol 以内）；接近坐标轴（3° 以内）的方向吸附到轴上
@@ -260,7 +261,8 @@ export function panelLines(tris, { cell, thick, maxThick, maxBoxes = 60, digits 
       const vec = (v) => v.map((x) => fmt(x, digits)).join(',');
       // 名字：墙、坡道；水平的板不分楼板与屋顶（朝上的外表面既可能是楼面也可能是屋面），一律叫 slab
       const kind = s.kind === 'wall' || s.kind === 'ramp' ? s.kind : 'slab';
-      if (holes.length && fill >= 0.6 && 2 + holes.length < full.length) {
+      // 洞最多 HOLES_MAX 个：洞再多就是一条斜边被拆成了一串阶梯状的洞（布尔运算一个个挖，预览器里一块板要几分钟），按格子合并成矩形、楔形更好
+      if (holes.length && holes.length <= HOLES_MAX && fill >= 0.6 && 2 + holes.length < full.length) {
         // 一个大矩形挖掉几个洞：subtract 的原点是外包矩形的底面中心，洞在它的坐标系里
         const body = { i0: bi0, i1: bi1, j0: bj0, j1: bj1 }, B = place(body), Bab = toAB(body);
         const lines = holes.map((H) => {
