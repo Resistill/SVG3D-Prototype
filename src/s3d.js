@@ -681,7 +681,13 @@ class Node {
     } else this.path = '';
   }
   childById(id) {
-    for (const c of this.children) if (c.id === id) return c;
+    // 名字 → 子节点的表（子节点数变了就重建）：根节点下常有几万个物体，逐个比较让整张大地图的编译接近平方复杂度
+    // 记下标：子节点会被替换（drop、重建实例）而数量不变，命中时核对那个位置上还是它、名字也没变，不对就重建
+    const build = () => { this._byId = new Map(); this.children.forEach((c, k) => { if (c.id != null && !this._byId.has(c.id)) this._byId.set(c.id, k); }); this._byIdN = this.children.length; };
+    if (this._byIdN !== this.children.length) build();
+    let k = this._byId.get(id);
+    if (k != null && (this.children[k]?.id !== id)) { build(); k = this._byId.get(id); }
+    if (k != null) return this.children[k];
     for (const c of this.children) if (!c.id && c.children.length) { const r = c.childById(id); if (r) return r; }
     return null;
   }
@@ -2482,6 +2488,9 @@ function deriveFacts(root, S, eps = FACT_EPS, providers = resolveProviders(), { 
 // ───────────────────────── 入口 ─────────────────────────
 
 // 有 variant 时编译两遍：第一遍求解并识别语义，决定替换哪些对象；第二遍在这些对象的外包络里换上变体
+// 'auto' 时超过这么多个带几何的节点不推导空间事实
+export const FACTS_AUTO_MAX = 20000;
+function countGeom(root) { let n = 0; const walk = (x) => { if (x.geom) n++; for (const c of x.children) walk(c); }; walk(root); return n; }
 export function compile(src, opts = {}) {
   const first = compileOnce(src, null, opts);
   return first.plan ? compileOnce(src, first.plan, opts).result : first.result;
@@ -2554,10 +2563,14 @@ function compileOnce(src, plan, opts) {
     }
   }
   let items = [], curves = [], facts = [];
-  // 空间事实：按 opts.factProviders 列出的提供者推导（默认只有 contact）；某个提供者出错只记错误，不影响别的
+  // 空间事实：按 opts.factProviders 列出的提供者推导（默认只有 contact）；某个提供者出错只记错误，不影响别的。
+  // opts.facts：true（默认）推导；false 不推导；'auto' 物体（带几何的节点）超过 FACTS_AUTO_MAX 时不推导——整张大地图十几万个物体，
+  // 事实推导要十几秒，看图用不着；结果里 factsSkipped 为 true，界面打开“空间事实”页时再带上事实重新编译。不推导时依赖关系的模式匹配不到
   let providers;
   try { providers = resolveProviders(opts.factProviders); } catch (e) { errors.push(fail(e, root)); providers = resolveProviders(); }
-  try { facts = deriveFacts(root, S, opts.factEps ?? FACT_EPS, providers, { options: opts.factOptions, onError: (e) => errors.push(fail(e, root)) }); } catch (e) { errors.push(fail(e, root)); }
+  const nGeom = opts.facts === 'auto' ? countGeom(root) : 0;
+  const factsSkipped = opts.facts === false || (opts.facts === 'auto' && nGeom > FACTS_AUTO_MAX);
+  if (!factsSkipped) try { facts = deriveFacts(root, S, opts.factEps ?? FACT_EPS, providers, { options: opts.factOptions, onError: (e) => errors.push(fail(e, root)) }); } catch (e) { errors.push(fail(e, root)); }
   S.buildRelations(facts);
 
   // —— 语义层：概念 → 样式 → 检查（都在求解之后，可以使用空间事实）——
@@ -2641,7 +2654,7 @@ function compileOnce(src, plan, opts) {
   return {
     plan: nextPlan,
     result: {
-      items, curves, facts, factProviders: providers.map((p) => p.name), nodes, concepts, patterns, variants: variantSummary, checks, defs: [...defs.keys()], materials: Object.fromEntries(materials),
+      items, curves, facts, factsSkipped, factProviders: providers.map((p) => p.name), nodes, concepts, patterns, variants: variantSummary, checks, defs: [...defs.keys()], materials: Object.fromEntries(materials),
       errors: errors.map((e) => ({ line: e.line ?? null, file: e.file ?? e.node?.file ?? null, message: e.message })),
       warnings: S.warnings,
     },

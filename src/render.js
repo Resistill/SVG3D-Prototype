@@ -7,6 +7,15 @@ import { worldGeom, itemGeometry, makeEvaluator } from './geometry.js';
 import { VIEWS, camera as presetCam } from './views.js';
 import { nodeRoles } from './roles-view.js';
 
+// 几何条目超过这么多时合批（见 setScene）
+const BATCH_MIN = 2000;
+// 误差热力的颜色：与离屏渲染（tools/raster.mjs 的 heatColor）同一条色带：0 绿 → 0.5 黄 → 1 红；没有分数的浅灰
+function heatColor(t) {
+  const k = t == null ? -1 : Math.round(Math.max(0, Math.min(1, t)) * 20), x = k / 20;
+  const rgb = k < 0 ? [205, 205, 205] : x < 0.5 ? [60 + 390 * x, 190, 70] : [235, 190 - 300 * (x - 0.5), 60];
+  return new THREE.Color().setRGB(...rgb.map((v) => Math.round(v) / 255), THREE.SRGBColorSpace);
+}
+
 export class Viewer {
   constructor(el) {
     this.el = el;
@@ -45,6 +54,8 @@ export class Viewer {
     // 源模型叠加层的角色：节点名 → 角色（工程逆向时写的 state/source-roles.json），没有的按结构
     this.sourceRoles = null;
     this.meshCount = 0;
+    // 合批模式（大场景，见 setScene）：{ meshes: [BatchedMesh], items: [{ path, tags, role, color, mesh, id }], box }；小场景为 null
+    this.batch = null;
     // 误差热力：路径 → 0..1（满刻度由调用方定），null 时按材质显示
     this.heat = null;
     this.heatMats = new Map();
@@ -169,11 +180,20 @@ export class Viewer {
   }
 
   setScene(result) {
-    this.content.traverse((o) => { if (o.isMesh && o.geometry) o.geometry.dispose(); });
+    this.content.traverse((o) => { if ((o.isMesh || o.isBatchedMesh) && o.geometry) o.geometry.dispose(); });
     this.content.clear();
+    this.batch = null;
+    this.lastResult = result;
     const warnings = [];
     this.meshCount = 0;
-    for (const item of result.items) {
+    const solids = result.items.filter((i) => !(i.kind === 'solid' && i.geom.type === 'mesh')).length;
+    // 大场景（几何条目超过 BATCH_MIN）合批：每个物体一个 Mesh 时，十几万个物体就是每帧十几万次绘制调用（阴影再一遍），
+    // 整张 SpaceCenter 只有 1 帧/秒。按材质（金属度、粗糙度、透明度）合成 BatchedMesh，颜色、高亮、热力用实例颜色，
+    // 隔离、角色开关用实例显隐，点选用射线命中的实例号；大场景不画阴影。小场景照旧（每个物体一个 Mesh）
+    const big = solids > BATCH_MIN;
+    this.sun.castShadow = !big;
+    if (big) this.buildBatches(result, warnings);
+    for (const item of big ? result.items.filter((i) => i.kind === 'solid' && i.geom.type === 'mesh') : result.items) {
       try {
         if (item.kind === 'solid' && item.geom.type === 'mesh') { this.addMeshRef(item); continue; }
         const geom = itemGeometry(item, this.evaluator);
@@ -201,12 +221,68 @@ export class Viewer {
     this.nodeMap = new Map(result.nodes.map((n) => [n.path, n]));
     const roleOf = nodeRoles(result);
     this.roleCounts = {};
-    for (const c of this.content.children) { c.userData.role = roleOf(c.name); this.roleCounts[c.userData.role] = (this.roleCounts[c.userData.role] ?? 0) + 1; }
+    for (const c of this.content.children) { if (c.isBatchedMesh) continue; c.userData.role = roleOf(c.name); this.roleCounts[c.userData.role] = (this.roleCounts[c.userData.role] ?? 0) + 1; }
+    if (this.batch) for (const it of this.batch.items) { it.role = roleOf(it.path); this.roleCounts[it.role] = (this.roleCounts[it.role] ?? 0) + 1; }
     this.fitShadow();
     if (this.firstFrame && this.content.children.length) { this.frame(); this.firstFrame = false; }
     this.applyVisibility();
     if (this.selected) this.highlight(this.selected);
     return warnings;
+  }
+
+  // 合批：每个几何条目的世界坐标几何统一成“无索引、只有 position 与 normal”，按材质分组，每组一个 BatchedMesh
+  buildBatches(result, warnings) {
+    const groups = new Map(), box = new THREE.Box3();
+    for (const item of result.items) {
+      if (item.kind === 'solid' && item.geom.type === 'mesh') continue;
+      let g;
+      try { g = itemGeometry(item, this.evaluator); } catch (e) { warnings.push(`${item.path}：几何生成失败（${e.message}）`); continue; }
+      const src = g.index ? g.toNonIndexed() : g;
+      if (!src.getAttribute('normal')) src.computeVertexNormals();
+      const geom = new THREE.BufferGeometry();
+      geom.setAttribute('position', src.getAttribute('position'));
+      geom.setAttribute('normal', src.getAttribute('normal'));
+      if (src !== g) src.dispose();
+      geom.computeBoundingBox();
+      box.union(geom.boundingBox);
+      const m = item.material ?? {}, key = JSON.stringify([m.metal ?? 0.05, m.rough ?? 0.78, m.opacity ?? 1]);
+      if (!groups.has(key)) groups.set(key, { m, list: [] });
+      groups.get(key).list.push({ item, geom });
+    }
+    const items = [], meshes = [];
+    for (const { m, list } of groups.values()) {
+      const opacity = m.opacity ?? 1, verts = list.reduce((a, x) => a + x.geom.getAttribute('position').count, 0);
+      const mat = new THREE.MeshStandardMaterial({ color: '#ffffff', metalness: m.metal ?? 0.05, roughness: m.rough ?? 0.78, transparent: opacity < 1, opacity, side: THREE.DoubleSide });
+      const bm = new THREE.BatchedMesh(list.length, verts, 0, mat);
+      bm.sortObjects = opacity < 1; // 不透明的不用每帧按距离排序（十几万个实例，排序本身就要十几毫秒）
+      // 也不逐个实例做视锥裁剪：裁剪的结果每帧变，绘制列表每帧重建一遍（整张 SpaceCenter：一帧 70–140 ms；不裁剪 40 ms）。俯瞰全场时本来都在视野里
+      bm.perObjectFrustumCulled = false;
+      bm.userData.batchItems = [];
+      for (const { item, geom } of list) {
+        const id = bm.addInstance(bm.addGeometry(geom));
+        geom.dispose();
+        const it = { path: item.path, tags: item.tags, color: new THREE.Color(item.material?.color ?? '#c9c9c9'), mesh: bm, id };
+        bm.setColorAt(id, it.color);
+        bm.userData.batchItems[id] = it;
+        items.push(it);
+      }
+      bm.castShadow = bm.receiveShadow = false;
+      this.content.add(bm);
+      meshes.push(bm);
+    }
+    this.batch = { meshes, items, box };
+  }
+  // 合批模式的颜色：底色（材质颜色，或误差热力的颜色）；选中的物体混一些橙色
+  recolorBatches() {
+    if (!this.batch) return;
+    const set = this.selected && new Set(this.selected);
+    const under = (p) => { if (!set) return false; for (let i = p.length; i > 0; i = p.lastIndexOf('.', i - 1)) if (set.has(p.slice(0, i))) return true; return false; };
+    const hi = new THREE.Color('#ff7a1a'), c = new THREE.Color();
+    for (const it of this.batch.items) {
+      c.copy(this.heat ? heatColor(this.heat.get(it.path)) : it.color);
+      if (under(it.path)) c.lerp(hi, 0.6);
+      it.mesh.setColorAt(it.id, c);
+    }
   }
 
   // mesh 引用：先放半透明占位盒，加载完成后换成源文件里的节点（放到外包络里：先减去 pivot，再套用世界变换）
@@ -272,7 +348,7 @@ export class Viewer {
     return parts.get(node)?.[0] ?? null;
   }
 
-  bounds() { return new THREE.Box3().setFromObject(this.content); }
+  bounds() { const b = new THREE.Box3().setFromObject(this.content); if (this.batch) b.union(this.batch.box); return b; }
 
   fitShadow() {
     const b = this.bounds();
@@ -304,6 +380,7 @@ export class Viewer {
     // 隔离视图里隐藏的物体不参与拾取
     const shown = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
     const hit = this.raycaster.intersectObjects(this.content.children, true).find((h) => shown(h.object));
+    if (hit?.object.isBatchedMesh) return hit.object.userData.batchItems[hit.batchId] ?? null;
     return hit ? hit.object.userData : null;
   }
 
@@ -318,6 +395,7 @@ export class Viewer {
     const meshes = [];
     this.content.traverse((o) => { if (o.isMesh && o.userData.baseMat) meshes.push(o); });
     for (const m of meshes) m.material = paths.length && under(m.userData.path) ? this.hiMat(m.userData.baseMat) : m.userData.baseMat;
+    this.recolorBatches();
     if (!paths.length || !this.nodes) return null;
     const box = new THREE.Box3();
     for (const p of paths) {
@@ -343,11 +421,7 @@ export class Viewer {
   }
   heatMat(t) {
     const k = t == null ? -1 : Math.round(Math.max(0, Math.min(1, t)) * 20);
-    if (!this.heatMats.has(k)) {
-      // 与离屏渲染（tools/raster.mjs 的 heatColor）同一条色带：0 绿 → 0.5 黄 → 1 红
-      const x = k / 20, rgb = k < 0 ? [205, 205, 205] : x < 0.5 ? [60 + 390 * x, 190, 70] : [235, 190 - 300 * (x - 0.5), 60];
-      this.heatMats.set(k, new THREE.MeshStandardMaterial({ color: new THREE.Color().setRGB(...rgb.map((v) => Math.round(v) / 255), THREE.SRGBColorSpace), roughness: 0.85, metalness: 0, side: THREE.DoubleSide }));
-    }
+    if (!this.heatMats.has(k)) this.heatMats.set(k, new THREE.MeshStandardMaterial({ color: heatColor(t), roughness: 0.85, metalness: 0, side: THREE.DoubleSide }));
     return this.heatMats.get(k);
   }
   // heat：Map 路径 → 0..1；null 回到实体
@@ -405,7 +479,8 @@ export class Viewer {
   applyVisibility() {
     const set = this.isolated && new Set(this.isolated);
     const under = (p) => { for (let i = p.length; i > 0; i = p.lastIndexOf('.', i - 1)) if (set.has(p.slice(0, i))) return true; return false; };
-    for (const c of this.content.children) c.visible = (!set || under(c.name)) && (this.showMeshes || !c.userData.meshRef) && !this.hiddenRoles.has(c.userData.role);
+    for (const c of this.content.children) if (!c.isBatchedMesh) c.visible = (!set || under(c.name)) && (this.showMeshes || !c.userData.meshRef) && !this.hiddenRoles.has(c.userData.role);
+    if (this.batch) for (const it of this.batch.items) it.mesh.setVisibleAt(it.id, (!set || under(it.path)) && !this.hiddenRoles.has(it.role));
     this.overlay.traverse((o) => { if (o.userData.sourceRole) o.visible = !this.hiddenRoles.has(o.userData.sourceRole); });
     for (const l of this.curveLayer.children) l.visible = !set || under(l.userData.path ?? '');
   }
@@ -418,7 +493,9 @@ export class Viewer {
   // ── 相机预设（与 tools/raster.mjs 同一份：src/views.js）──
   // 取景范围：整个场景的精确包围盒（逐顶点，与 raster 按三角形求的一致）；返回 { min, max } 数组形式，可以原样传给 render --box
   sceneBox() {
-    const b = new THREE.Box3().setFromObject(this.content, true);
+    const b = new THREE.Box3();
+    for (const c of this.content.children) if (!c.isBatchedMesh) b.expandByObject(c, true);
+    if (this.batch) b.union(this.batch.box);
     return b.isEmpty() ? null : { min: b.min.toArray(), max: b.max.toArray() };
   }
   // 预设相机：view ∈ VIEWS；box 不给时取整个场景；focus 为 true 时按聚焦取景（2.4 倍半径，同 render --focus）
@@ -463,7 +540,12 @@ export class Viewer {
   }
 
   exportGLB(name = 'scene') {
-    new GLTFExporter().parse(this.content, (buf) => {
+    let root = this.content;
+    if (this.batch && this.lastResult) {
+      root = new THREE.Group();
+      for (const item of this.lastResult.items) { try { if (!(item.kind === 'solid' && item.geom.type === 'mesh')) { const m = new THREE.Mesh(itemGeometry(item, this.evaluator), this.material(item.material)); m.name = item.path; root.add(m); } } catch { /* 跳过 */ } }
+    }
+    new GLTFExporter().parse(root, (buf) => {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([buf], { type: 'model/gltf-binary' }));
       a.download = `${name}.glb`;

@@ -11,7 +11,11 @@ const $ = (s) => document.querySelector(s);
 const src = $('#src'), gutter = $('#gutter'), errorsEl = $('#errors'), statusEl = $('#status');
 const objList = $('#objects'), factList = $('#facts'), semEl = $('#sem'), tip = $('#tip');
 const viewer = new Viewer($('#view'));
+// 调试：地址带 ?debug 时把 viewer 挂到 window 上（量渲染耗时、在控制台里查场景）
+if (new URLSearchParams(location.search).has('debug')) window.__viewer = viewer;
 const compileAsync = createCompiler();
+// 空间事实：大场景默认不推导，打开“空间事实”页时置真、带上事实重新编译（见 run 与 showPane）
+let wantFacts = false;
 const EXAMPLES = {
   semantics: '变量 · 集合 · 语义', spaceport: '航天基地', spaceport_edit: '航天基地 · 修改层', spaceport_blueprint: '航天基地 · 蓝图风格',
   curves: '曲线 · 镜像 · 旋转', rotation: '三维旋转', basics: '基础关系',
@@ -241,7 +245,8 @@ async function run() {
   // 工程的场景单位不是米时，空间事实的容差（FACT_EPS，按米）换算成场景单位——与工具（tools/project.mjs）一致
   const root = rootFile();
   let out;
-  try { out = await compileAsync(files.get(root), { file: root, files: Object.fromEntries(files), factProviders, ...(project ? { factEps: FACT_EPS / project.unit, metre: 1 / project.unit } : {}) }); } catch (e) {
+  // 空间事实：大场景（几万个物体）默认不推导（facts: 'auto'），打开“空间事实”页时再带上事实编译（wantFacts）
+  try { out = await compileAsync(files.get(root), { file: root, files: Object.fromEntries(files), factProviders, facts: wantFacts ? true : 'auto', ...(project ? { factEps: FACT_EPS / project.unit, metre: 1 / project.unit } : {}) }); } catch (e) {
     statusEl.textContent = `编译器出错：${e.message.split('\n')[0]}`;
     statusEl.classList.add('bad');
     return;
@@ -264,7 +269,7 @@ async function run() {
     ...warn.map((w) => `<div class="e w">${esc(w)}</div>`)].join('');
   errorsEl.hidden = !r.errors.length && !warn.length;
   const failed = r.checks.filter((c) => !c.ok).length;
-  statusEl.textContent = `${r.nodes.length} 个对象 · ${r.items.length} 个实体 · ${r.concepts.length} 个概念 · ${r.facts.length} 条空间事实${failed ? ` · ${failed} 项检查未通过` : ''} · 求解 ${out.ms.toFixed(0)}ms${out.worker ? '（Worker）' : ''} · 建模 ${(t2 - t1).toFixed(0)}ms`;
+  statusEl.textContent = `${r.nodes.length} 个对象 · ${r.items.length} 个实体 · ${r.concepts.length} 个概念 · ${r.factsSkipped ? '空间事实没算（大场景；打开“空间事实”页时算）' : `${r.facts.length} 条空间事实`}${failed ? ` · ${failed} 项检查未通过` : ''} · 求解 ${out.ms.toFixed(0)}ms${out.worker ? '（Worker）' : ''} · 建模 ${(t2 - t1).toFixed(0)}ms`;
   statusEl.classList.toggle('bad', r.errors.length > 0);
   $('#sem-badge').textContent = failed ? `✗${failed}` : '';
   renderObjects(r);
@@ -509,6 +514,7 @@ function showPane(id) {
   document.querySelectorAll('.pane').forEach((p) => { p.hidden = p.id !== id; });
   if (id === 'prop-pane') { collab?.loadProposals(); collab?.loadInbox(); }
   if (id === 'objects-pane') markSelected(selected);
+  if (id === 'facts-pane' && factsFor?.factsSkipped && !wantFacts) { wantFacts = true; run(); return; }
   if (id === 'facts-pane' && factsFor) renderFacts(factsFor);
 }
 for (const b of document.querySelectorAll('.tabs button')) b.addEventListener('click', () => showPane(b.dataset.pane));
