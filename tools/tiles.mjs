@@ -131,7 +131,7 @@ export async function reverseTiled(parts, opts = {}, { maxParts = 4000, threads 
   for (const r of results) for (const [k, v] of Object.entries(r.report.placement ?? {})) placement[k] = (placement[k] ?? 0) + v;
   const report = {
     source: opts.srcFile, level: opts.level, parts: parts.length, tiles: tiles.map((t) => t.length),
-    arrays: sum('arrays'), mirrors: sum('mirrors'), panels: sum('panels'), unions: sum('unions'), shells: sum('shells'),
+    arrays: sum('arrays'), mirrors: sum('mirrors'), budget: sum('budget'), panels: sum('panels'), unions: sum('unions'), shells: sum('shells'),
     fallback: sum('fallback'), dissolved: sum('dissolved'), placement, renamed: results.reduce((a, r) => a + (r.report.renamed ?? 0), 0),
   };
   return { src, report, objs: results.flatMap((r) => r.objs) };

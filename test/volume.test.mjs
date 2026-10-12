@@ -65,3 +65,18 @@ test('板件里的拱门：墙上“矩形 + 半圆”的洞写成矩形洞加�
   assert.ok(Math.abs(+m[1] - 1.5) < 0.15, `半径 ${m[1]}`);
   assert.ok((text.match(/box hole/g) ?? []).length <= 2, text);
 });
+
+test('时间上限：组合写法超时的部件不再拆（用基本体），记进报告的 budget；结果仍然能编译', () => {
+  const tris = Array.from({ length: 70 }, (_, k) => boxTris([2 * k, 0, 0], [2 * k + 0.3, 2.5, 0.3])).flat();
+  const old = process.env.S3D_PART_BUDGET;
+  process.env.S3D_PART_BUDGET = '0';
+  try {
+    const out = reverse([{ name: 'Fence_Posts_01', tris, material: { name: 'm', color: '#888888' } }], { srcFile: 'x.glb', fidelity: 'structure' });
+    assert.deepEqual(compile(out.src).errors, []);
+    assert.equal(out.report.subs.length, 0, out.src);
+    assert.equal(out.report.budget.length, 1);
+    assert.equal(out.report.budget[0].name, 'Fence_Posts_01');
+  } finally {
+    if (old == null) delete process.env.S3D_PART_BUDGET; else process.env.S3D_PART_BUDGET = old;
+  }
+});

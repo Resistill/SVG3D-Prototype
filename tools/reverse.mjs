@@ -1077,6 +1077,26 @@ let SCATTERED = new WeakMap();
 // 单块照常试扫掠、旋转体、台阶。递归一层：子场景里不再拆子场景。与现在的写法比局部分数（同板件），更低才用
 // 门槛：已经认出来的形状（台阶、管、扫掠、旋转体）不拆；现在的写法分数不到 SUB_MIN_S 的不拆（子场景至少好几行，每行 8–10，赢不了）
 const SUB_MAX_PIECES = 400, SUB_MIN_S = 120;
+// 时间上限：一个部件（或一种类型）的组合写法（板件、外壳、并、小场景）最多算这么久（毫秒，环境变量 S3D_PART_BUDGET 可改）。
+// 超时后不再开始新的尝试、正在做的子逆向中止，用已经得到的最好写法（没有就是基本体）；部件记进报告的 budget。
+// 整张 SpaceCenter 有几个巨大部件（几万个三角形的地块、整栋楼的外壳）在小场景里反复拆，单块逆向跑了 7 个小时没结束。
+// 只有超时的部件结果与机器快慢有关；正常的部件远到不了上限
+const partBudget = () => +(process.env.S3D_PART_BUDGET ?? 30000);
+let DEADLINE = Infinity, BUDGET_HIT = [];
+class BudgetOut extends Error {}
+const overBudget = () => performance.now() > DEADLINE;
+// 开始一个顶层部件的计时（子逆向里不重新计时）；返回结束函数：超时的记下名字
+const budgetStart = (name, tris) => {
+  if (SUB_DEPTH) return () => {};
+  const t0 = performance.now();
+  DEADLINE = t0 + partBudget();
+  return () => {
+    const ms = performance.now() - t0;
+    if (ms > partBudget()) BUDGET_HIT.push({ name: name ?? null, tris, ms: Math.round(ms) });
+    if (process.env.S3D_TIMING && ms > 5000) console.error(`[reverse] 慢部件 ${name} ${tris} 个三角形 ${Math.round(ms)}ms`);
+    DEADLINE = Infinity;
+  };
+};
 // SUB_WHOLE：正在拆的大部件的表面积（子场景里各块的局部评分按面积分到这个部件的那一份权重，见 neighborhoodScorer 的 whole）
 let SUB_DEPTH = 0, SUBS = true, SUB_WHOLE = null;
 const subSceneWorth = (fit, part, hollow = false) => SUBS && SUB_DEPTH === 0 && !['steps', 'tube', 'sweep', 'revolve'].includes(fit.shape) && !coarseRole(part) && !part.force && FID.name !== 'semantic' && meshPriceMode(roleP(part), MESH_K) === 'full'
@@ -1111,7 +1131,11 @@ function subSceneLines(pieces, part, ctx) {
     let out;
     const t0 = performance.now();
     try {
+      if (overBudget()) return null;
       out = reverse(subParts, { srcFile: 'x', level: 'L1', fidelity: FID.name, unit: 1 / M, types: false, defaultMaterial: true, names: false, meshPrice: MESH_K.meshPrice, panels: PANELS, shells: SHELLS, unions: UNIONS });
+    } catch (e) {
+      if (e instanceof BudgetOut) return null;
+      throw e;
     } finally {
       [SUB_WHOLE, FID, S, M, DIGITS, SUBS, PARTS_FILE, PANELS, UNIONS, PREFIT, SHELLS, COMPOSITE_MS, UNION_SEEN, SWEEP_SEEN, SWEEP_FAILED, MESH_USE, JUDGES, SCATTERED, PART_ROLE, HEIGHT, cleanName, MESH_K] = saved;
       SUB_DEPTH--;
@@ -1161,6 +1185,7 @@ function trySubScene(ftris, part, cur, n = 1) {
   else if (!sc.comps || sc.comps.length < 2) {
     const tau = FID.tau * M, opts = { thick: Math.max(2 * FID.tau, 0.1) * M, maxThick: 1 * M, digits: DIGITS };
     for (const cell of [8 * tau, 4 * tau, 2 * tau]) { // 粗的先试（便宜，先给出一个好的分数）
+      if (overBudget()) break;
       const p = panelLines(ftris, { ...opts, cell, maxBoxes: SUB_MAX_PIECES });
       if (!p) continue;
       // 按语句分块：单行的盒子、楔形各是一块（交给子场景找阵列、关系）；多行的（subtract：大矩形挖洞）原样保留
@@ -1209,6 +1234,7 @@ function trySubScene(ftris, part, cur, n = 1) {
     for (const tris of all) for (const tri of tris) for (const v of tri) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], v[k]); hi[k] = Math.max(hi[k], v[k]); }
     const ctx = { c0: [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2], area, parts: new WeakMap() };
     for (const pieces of vs) {
+      if (overBudget()) break;
       COMPOSITE_MS.subCalls = (COMPOSITE_MS.subCalls ?? 0) + 1;
       const sub0 = subSceneLines(pieces, part, ctx);
       if (!sub0) continue;
@@ -1235,6 +1261,10 @@ const fitScoreOf = (fit) => Math.max(0, Math.min(1, 1 - fit.e / TOL));
 const scatterWorth = (part) => !part.force && part.tris.length >= 6 && roleP(part) !== 'helper' && !(roleP(part) === 'decal' && meshPriceMode('decal', MESH_K) === 'ref');
 
 function panelPrim(fit, part, prim, partIndex = -1) {
+  const done = budgetStart(part.uid ?? part.name ?? part.from, part.tris.length);
+  try { return panelPrim0(fit, part, prim, partIndex); } finally { done(); }
+}
+function panelPrim0(fit, part, prim, partIndex = -1) {
   // 已经认出来的（台阶、管道、扫掠、拟合得好的基本体）不拆
   // 分散的模型拆成一组基本体（每个分量一块）；能当小场景拆的（结构的大部件）先试小场景——它按分量拆、每块完整地拟合、再比分数，
   // 包括了这种写法——没有结果时才退回这里（见函数末尾）
@@ -1256,17 +1286,17 @@ function panelPrim(fit, part, prim, partIndex = -1) {
   const up = fit.frame.cols[1];
   const fcols = up[1] > 0.999 ? fit.frame.cols : [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
   const ftris = panelsWorth(fit, part, hollow) || shellWorth(fit, part, hollow) || subOK ? part.tris.map((tri) => tri.map((v) => mvT(fcols, v))) : null;
-  if (panelsWorth(fit, part, hollow)) {
+  if (panelsWorth(fit, part, hollow) && !overBudget()) {
     const t0 = performance.now(), pb = tryPanels(ftris, fcols, [0, 0, 0], part, cur);
     COMPOSITE_MS.panels += performance.now() - t0;
     if (pb) out = { kind: 'group', props: {}, body: pb.body, cols: fcols, at: mvC(fcols, pb.c0), box: pb.box, fit: pb.fit, err: fit.e, panels: { S: pb.S, was: pb.curS, kind: prim.kind } };
   }
-  if (shellWorth(fit, part, hollow)) {
+  if (shellWorth(fit, part, hollow) && !overBudget()) {
     const t0 = performance.now(), sb = tryShell(ftris, fcols, [0, 0, 0], part, cur);
     COMPOSITE_MS.shells += performance.now() - t0;
     if (sb && better(sb.S)) out = { kind: sb.kind, props: {}, body: sb.body, cols: fcols, at: mvC(fcols, sb.c0), box: sb.box, fit: sb.fit, err: fit.e, shell: { S: sb.S, was: sb.curS, kind: prim.kind, openings: sb.openings, arches: sb.arches, interior: sb.interior } };
   }
-  if (unionWorth(fit, part)) {
+  if (unionWorth(fit, part) && !overBudget()) {
     const I = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
     // 几何部分：worker 预先算好的；或者同一个网格、同样的旋转与缩放（没成类型的享元：拟合差，各实例分开写）
     // 只差一个平移，几何平移过去就是（评分每个实例照做：各实例现在的写法不一样）
@@ -1282,7 +1312,7 @@ function panelPrim(fit, part, prim, partIndex = -1) {
     COMPOSITE_MS.unions += performance.now() - t0;
     if (ub && better(ub.S)) out = { kind: 'group', props: {}, body: ub.body, cols: I, at: ub.c0, box: ub.box, fit: ub.fit, err: fit.e, union: { S: ub.S, was: ub.curS, kind: prim.kind, prims: ub.prims } };
   }
-  if (subOK) {
+  if (subOK && !overBudget()) {
     const t0 = performance.now(), gb = trySubScene(ftris, part, out ? { line: null, S: (out.panels ?? out.union ?? out.shell).S } : cur);
     COMPOSITE_MS.subs = (COMPOSITE_MS.subs ?? 0) + performance.now() - t0;
     COMPOSITE_MS.subTried = (COMPOSITE_MS.subTried ?? 0) + 1;
@@ -1382,6 +1412,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   SHELLS = shells;
   SUBS = subs;
   COMPOSITE_MS = { panels: 0, unions: 0, shells: 0 };
+  if (!SUB_DEPTH) BUDGET_HIT = [];
   UNION_SEEN = new Map();
   SWEEP_SEEN = new Map();
   SWEEP_FAILED = new Set();
@@ -1435,14 +1466,18 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
         if (g && !scatterAccept(g, typePart, curT, ms.length)) { for (const m of ms) SCATTERED.set(parts[m.i], g.n); return null; }
         return g;
       };
-      let sg = subOK ? null : scatterT();
-      const pb = !sg && panelsWorth(fit, typePart, hollowT) ? tryPanels(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
-      // 基本体之并（类型体是几个基本体）：两种都成立时取分数低的
-      const ub = !sg && unionWorth(fit, typePart) ? tryUnion(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
-      const sb = !sg && shellWorth(fit, typePart, hollowT) ? tryShell(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
-      // 大部件当小场景（同普通部件）：和板件、并、外壳里最好的那个比
-      const best0 = [pb, ub, sb].filter(Boolean).sort((x, y) => x.S - y.S)[0];
-      const gs = !sg && subOK ? trySubScene(local, typePart, best0 ? { S: best0.S } : curT, ms.length) : null;
+      const doneT = budgetStart(rep.uid ?? rep.name ?? rep.from, rep.tris.length);
+      let sg, pb, ub, sb, best0, gs;
+      try {
+        sg = subOK ? null : scatterT();
+        pb = !sg && panelsWorth(fit, typePart, hollowT) && !overBudget() ? tryPanels(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
+        // 基本体之并（类型体是几个基本体）：两种都成立时取分数低的
+        ub = !sg && unionWorth(fit, typePart) && !overBudget() ? tryUnion(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
+        sb = !sg && shellWorth(fit, typePart, hollowT) && !overBudget() ? tryShell(local, I3, [0, 0, 0], typePart, curT, ms.length) : null;
+        // 大部件当小场景（同普通部件）：和板件、并、外壳里最好的那个比
+        best0 = [pb, ub, sb].filter(Boolean).sort((x, y) => x.S - y.S)[0];
+        gs = !sg && subOK && !overBudget() ? trySubScene(local, typePart, best0 ? { S: best0.S } : curT, ms.length) : null;
+      } finally { doneT(); }
       const gb = gs && { kind: 'group', c0: gs.at, box: gs.box, body: gs.body, fit: Math.max(0, Math.min(1, 1 - (gs.meanErr * M) / (4 * FID.tau * M))), S: gs.S, curS: gs.curS, pieces: gs.pieces };
       if (subOK && !gb && !best0) sg = scatterT();
       const cb = sg ? { ...sg, kind: 'group', fit: 1 - fit.e / TOL } : [pb, ub, sb, gb].filter(Boolean).sort((x, y) => x.S - y.S)[0] ?? null;
@@ -1474,7 +1509,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
   const preOf = (p, i) => { const f = !p.force && prefit?.fitOf(p, i); return f && !(f.shape === 'sweep' && coarseRole(p)) ? f : null; };
   // preUsed：用了 worker 的拟合的部件——它们的组合写法也可以取 worker 预先算好的（prefitComposite）
   const preUsed = new Set();
-  const fits = parts.map((p, i) => { if (typeOf.has(i) || roleP(p) === 'helper') return null; const f = preOf(p, i); if (f) { preUsed.add(i); return f; } return fitPart(p, i, PRIMS.has(p.force) ? p.force : null); });
+  const fits = parts.map((p, i) => { if (SUB_DEPTH && overBudget()) throw new BudgetOut(); if (typeOf.has(i) || roleP(p) === 'helper') return null; const f = preOf(p, i); if (f) { preUsed.add(i); return f; } return fitPart(p, i, PRIMS.has(p.force) ? p.force : null); });
   lap(`拟合 ${parts.length} 个部件（${types.length} 种类型覆盖 ${typeOf.size} 个实例）`);
   // 名字：L0 用源节点名；没有名字时按形状编号
   const used = new Map(), counters = {};
@@ -1491,10 +1526,12 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
       return { id: uniqueId(sanitize(cleanName(p.name) ?? T.name)), src: p.uid ?? p.name ?? null, meta: metaOf(p), role: roleP(p), scattered: SCATTERED.has(p), material: p.material, kind: T.name, props: {}, cols: R, at: add(t, mvC(R, T.c0)), box: b,
         fit: Math.max(0, Math.min(1, 1 - T.fit.e / TOL)), err: T.fit.e, vol: (b.max[0] - b.min[0]) * (b.max[1] - b.min[1]) * (b.max[2] - b.min[2]), symY: false, instance: true };
     }
+    if (SUB_DEPTH && overBudget()) throw new BudgetOut();
     const prim0 = primitiveOf(fits[i], p, srcFile);
     // worker 预先算好的组合写法（同样的源文件名、部件文件与开关才取用）
     const pc = preUsed.has(i) ? prefit?.compOf?.(p, i, { srcFile, partsFile: PARTS_FILE, panels: PANELS, shells: SHELLS, unions: UNIONS, subs: SUBS }) : undefined;
     if (pc?.sc != null) SCATTERED.set(p, pc.sc);
+    if (pc?.budget) BUDGET_HIT.push(pc.budget);
     const prim = (pc !== undefined ? pc.out : panelPrim(fits[i], p, prim0, i)) ?? prim0;
     const nm = p.name && !/^part_\d+$|^merged_/.test(p.name) ? cleanName(p.name) : null;
     const id = p.forceName ? uniqueId(sanitize(p.forceName), true) : uniqueId(nm ? sanitize(nm) : `${prim.kind}${(counters[prim.kind] = (counters[prim.kind] ?? 0) + 1)}`);
@@ -2009,6 +2046,7 @@ export function reverse(parts, { srcFile = 'source.glb', level = 'L0', compress 
     shells: [...types.filter((T) => T.prim.shell).map((T) => ({ type: T.name, instances: T.count, ...T.prim.shell })), ...objs.filter((o) => o.shell).map((o) => ({ id: nm(o.id), ...o.shell, instead: o.shell.kind }))],
     scattered: [...types.filter((T) => T.prim.scatter).map((T) => ({ type: T.name, instances: T.count, blocks: T.prim.scatter.blocks })), ...objs.filter((o) => o.scatter).map((o) => ({ id: nm(o.id), blocks: o.scatter.blocks }))],
     unions: [...types.filter((T) => T.prim.union).map((T) => ({ type: T.name, instances: T.count, prims: T.prim.union.prims, S: T.prim.union.S, was: T.prim.union.was })), ...objs.filter((o) => o.union).map((o) => ({ id: nm(o.id), prims: o.union.prims, S: o.union.S, was: o.union.was, instead: o.union.kind }))],
+    budget: SUB_DEPTH ? [] : [...BUDGET_HIT],
     subs: [...types.filter((T) => T.prim.sub).map((T) => ({ type: T.name, instances: T.count, pieces: T.prim.sub.pieces, S: T.prim.sub.S, was: T.prim.sub.was })), ...objs.filter((o) => o.sub).map((o) => ({ id: nm(o.id), pieces: o.sub.pieces, S: o.sub.S, was: o.sub.was, instead: o.sub.kind }))],
     roles: Object.fromEntries([...parts.reduce((m, p) => m.set(roleP(p), (m.get(roleP(p)) ?? 0) + 1), new Map())].sort()),
     helpers: helpers.map((p) => p.uid ?? p.name ?? p.from),
@@ -2712,8 +2750,8 @@ export function prefitComposite(item, i, { role = 'structure', srcFile }) {
   PREFIT = { unionOf: () => union };
   try {
     const prim0 = primitiveOf(fit, part, srcFile);
-    const out = panelPrim(fit, part, prim0, i);
-    return { fit, union, comp: { out, sc: SCATTERED.get(part) ?? null } };
+    const n0 = BUDGET_HIT.length, out = panelPrim(fit, part, prim0, i);
+    return { fit, union, comp: { out, sc: SCATTERED.get(part) ?? null, ...(BUDGET_HIT.length > n0 ? { budget: BUDGET_HIT[BUDGET_HIT.length - 1] } : {}) } };
   } finally { PREFIT = null; }
 }
 
