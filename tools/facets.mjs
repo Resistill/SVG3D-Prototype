@@ -50,8 +50,23 @@ const polyDist = (p, P) => {
 // 三角形 → 面（连成一片、共面）
 export function facetsOf(tris, { tau, angle = 5 }) {
   const cosA = Math.cos((angle * Math.PI) / 180);
-  const q = Math.max(tau * 1e-3, 1e-6), key = (v) => `${Math.round(v[0] / q)},${Math.round(v[1] / q)},${Math.round(v[2] / q)}`;
-  const info = tris.map((t) => { const c = cross(sub(t[1], t[0]), sub(t[2], t[0])), a = len(c) / 2; return { n: a > 0 ? scl(c, 1 / (2 * a)) : [0, 1, 0], a, k: t.map(key) }; });
+  // 顶点焊接：相距不到 w 的顶点算同一个（网格里常有相差一毫米的“同一个点”，按取整的键会分成两个，
+  // 共边对不上、T 形接缝的修补又把边从这里切开，整块面的轮廓就乱了）。空间哈希，查相邻的 27 格
+  const q = Math.max(tau * 1e-3, 1e-6), w = Math.max(tau * 0.02, 1e-5);
+  const cells = new Map(), reps = [];
+  const key = (v) => {
+    const c = v.map((x) => Math.floor(x / w));
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+      for (const r of cells.get(`${c[0] + dx},${c[1] + dy},${c[2] + dz}`) ?? []) if (Math.abs(reps[r][0] - v[0]) <= w && Math.abs(reps[r][1] - v[1]) <= w && Math.abs(reps[r][2] - v[2]) <= w) return `v${r}`;
+    }
+    const r = reps.length, ck = c.join();
+    reps.push(v);
+    if (!cells.has(ck)) cells.set(ck, []);
+    cells.get(ck).push(r);
+    return `v${r}`;
+  };
+  // 退化的三角形（两个顶点重合、面积几乎为 0）不要：它们的边会把共边计数弄乱，整块面就没有轮廓了
+  const info = tris.map((t) => { const c = cross(sub(t[1], t[0]), sub(t[2], t[0])), k = t.map(key); let a = len(c) / 2; if (k[0] === k[1] || k[1] === k[2] || k[0] === k[2] || a < q * q) a = 0; return { n: a > 0 ? scl(c, 1 / (2 * a)) : [0, 1, 0], a, k }; });
   // 相邻：共用一个顶点就算（布尔运算、拼接出来的网格常有 T 形接缝，共边的判断会把一块面切成好几片）
   const byVert = new Map();
   info.forEach((x, i) => { if (!(x.a > 0)) return; for (const k of new Set(x.k)) { if (!byVert.has(k)) byVert.set(k, []); byVert.get(k).push(i); } });
@@ -98,19 +113,36 @@ export function facetsOf(tris, { tau, angle = 5 }) {
     }
     const used = new Map();
     for (const [a, b] of dir) { const k2 = a < b ? `${a}|${b}` : `${b}|${a}`; used.set(k2, (used.get(k2) ?? 0) + 1); }
-    const next = new Map();
-    for (const [a, b] of dir) {
-      if (used.get(a < b ? `${a}|${b}` : `${b}|${a}`) !== 1) continue;
-      if (!next.has(a)) next.set(a, []);
-      next.get(a).push(b);
-    }
-    const loops = [], seen = new Set();
-    for (const start of next.keys()) {
-      if (seen.has(start)) continue;
-      const loop = [];
-      let cur = start;
-      while (cur != null && !seen.has(cur)) { seen.add(cur); loop.push(pos.get(cur)); cur = (next.get(cur) ?? []).find((x) => !seen.has(x)) ?? null; }
-      if (loop.length >= 3) loops.push(loop);
+    const adj = new Map(), link = (a, b) => { if (!adj.has(a)) adj.set(a, []); adj.get(a).push(b); };
+    for (const [k2, c] of used) { if (c !== 1) continue; const [a, b] = k2.split('|'); link(a, b); link(b, a); }
+    const gone = new Set(), ek = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+    const nextOf = (v) => (adj.get(v) ?? []).find((w) => !gone.has(ek(v, w)));
+    const loops = [];
+    for (const start of adj.keys()) {
+      while (nextOf(start) != null) {
+        const path = [start], at = new Map([[start, 0]]);
+        let cur = start;
+        for (let guard = 0; guard < 1e6; guard++) {
+          const nx = nextOf(cur);
+          if (nx == null) break;
+          gone.add(ek(cur, nx));
+          if (at.has(nx)) {
+            // 回到路上的点：切下这一圈（一块面只在一个顶点上连着时有好几圈）
+            const k = at.get(nx), ring = path.slice(k);
+            for (const v of ring) at.delete(v);
+            path.length = k;
+            if (ring.length >= 3) loops.push(ring.map((v) => pos.get(v)));
+            if (!path.length) break;
+            at.set(nx, path.length);
+            path.push(nx);
+            cur = nx;
+            continue;
+          }
+          at.set(nx, path.length);
+          path.push(nx);
+          cur = nx;
+        }
+      }
     }
     F.loops = loops;
   }
@@ -136,58 +168,79 @@ function orientOf([ex, n]) {
 export function facetPlates(tris, { tau, thick, maxThick, digits = 2, angle = 5, maxPlates = 200, minArea = 0 }) {
   const facets = facetsOf(tris, { tau, angle }).sort((a, b) => b.area - a.area);
   const areaAll = facets.reduce((a, F) => a + F.area, 0);
-  // 每块面：坐标系、外轮廓与洞（二维）、在法线上的位置
+  // 每块面：坐标系、在法线上的位置；外轮廓与洞按绕向分（与面里三角形同向的是外轮廓，反向的是洞），
+  // 洞归到包住它的外轮廓；每个外轮廓一块板（units）
+  const units = [];
   for (const F of facets) {
     const cols = frameOf(F.n), [ex, n, ez] = cols;
     const p0 = F.c;
     const to2 = (v) => [dot(sub(v, p0), ex), dot(sub(v, p0), ez)];
+    // 外轮廓与洞按包含关系分（不看绕向）：从大到小，落在已有外轮廓里的是洞，否则是又一个外轮廓
     const loops = F.loops.map((L) => L.map(to2)).map((L) => ({ L, A: polyArea2(L) / 2 })).sort((a, b) => Math.abs(b.A) - Math.abs(a.A));
-    Object.assign(F, { cols, p0, to2, outer: loops[0] ? simplifyLoop(loops[0].L, tau) : null, holes: loops.slice(1).filter((x) => Math.abs(x.A) > 4 * tau * tau).map((x) => simplifyLoop(x.L, tau)), dn: dot(n, p0) });
+    const outers = [], holeList = [];
+    for (const x of loops) (outers.some((O) => inPoly(x.L[0], O.L) && inPoly(x.L[Math.floor(x.L.length / 2)], O.L)) ? holeList : outers).push(x);
+    Object.assign(F, { cols, p0, to2, dn: dot(n, p0) });
+    // 洞：只有真的空着的才挖——同一个网格里别的面（倾角略不同的一片）把它填上了的，不是洞（挖了就少一块）
+    const mine = new Set(F.ids);
+    const filled = (H) => tris.some((t, i) => {
+      if (mine.has(i)) return false;
+      const c = scl(add(add(t[0], t[1]), t[2]), 1 / 3);
+      return Math.abs(dot(n, c) - F.dn) <= maxThick + tau && inPoly(to2(c), H.L);
+    });
+    const holes = holeList.filter((x) => Math.abs(x.A) > 4 * tau * tau && !filled(x));
+    const own = outers.map(() => []);
+    for (const H of holes) { const k = outers.findIndex((O) => inPoly(H.L[0], O.L)); if (k >= 0) own[k].push(H); }
+    outers.forEach((O, k) => {
+      const holeA = own[k].reduce((a, H) => a + Math.abs(H.A), 0);
+      units.push({ F, n, cols, to2, dn: F.dn, p0, outer: simplifyLoop(O.L, tau), holes: own[k].map((H) => simplifyLoop(H.L, tau)), area: Math.abs(O.A) - holeA, ids: F.ids });
+    });
   }
+  units.sort((a, b) => b.area - a.area);
   const done = new Set(), lines = [], names = new Map();
   const name = (k) => { const c = (names.get(k) ?? 0) + 1; names.set(k, c); return c === 1 ? k : `${k}_${c}`; };
   let covered = 0, plates = 0;
-  for (const F of facets) {
-    if (done.has(F) || !F.outer || F.outer.length < 3 || F.area < minArea || Math.abs(polyArea2(F.outer)) < 2 * tau * tau) continue;
-    done.add(F);
-    const [ex, n, ez] = F.cols;
-    // 配对：背后的反向面
+  for (const U of units) {
+    if (done.has(U) || U.outer.length < 3 || U.area < minArea || Math.abs(polyArea2(U.outer)) < 2 * tau * tau) continue;
+    done.add(U);
+    const [ex, n, ez] = U.cols;
+    // 配对：背后的反向面（同一块面的别的外轮廓不算）
     let h = thick, mate = null;
-    for (const G of facets) {
-      if (done.has(G) || !G.outer || dot(G.n, n) > -Math.cos((angle * Math.PI) / 180)) continue;
-      const t = F.dn - dot(n, G.p0);
+    for (const G of units) {
+      if (done.has(G) || G.F === U.F || dot(G.n, n) > -Math.cos((angle * Math.PI) / 180)) continue;
+      const t = U.dn - dot(n, G.p0);
       if (!(t > 0.5 * tau && t <= maxThick)) continue;
-      // 投影：G 的面积不比 F 小太多、G 的轮廓点大多落在 F 的轮廓里
-      const g2 = G.loops[0].map(F.to2);
-      const inside = g2.filter((p) => inPoly(p, F.outer) || polyDist(p, F.outer) <= 2 * tau).length;
-      if (G.area < 0.5 * F.area || inside < 0.8 * g2.length) continue;
+      // 投影：G 的面积不比 U 小太多、G 的轮廓点大多落在 U 的轮廓里
+      const g2 = G.outer.map((p) => U.to2(add(G.p0, add(scl(G.cols[0], p[0]), scl(G.cols[2], p[1])))));
+      const inside = g2.filter((p) => inPoly(p, U.outer) || polyDist(p, U.outer) <= 2 * tau).length;
+      if (G.area < 0.5 * U.area || inside < 0.8 * g2.length) continue;
       h = t; mate = G;
       break;
     }
     if (mate) {
       done.add(mate); covered += mate.area;
       // 夹在两面之间、轮廓上的侧面
-      for (const G of facets) {
+      for (const G of units) {
         if (done.has(G) || Math.abs(dot(G.n, n)) > 0.2) continue;
-        const vs = G.ids.flatMap((i) => tris[i]);
-        if (vs.every((v) => { const y = dot(n, v); return y <= F.dn + tau && y >= F.dn - h - tau && polyDist(F.to2(v), F.outer) <= 2 * tau; })) { done.add(G); covered += G.area; }
+        const vs = G.outer.map((p) => add(G.p0, add(scl(G.cols[0], p[0]), scl(G.cols[2], p[1]))));
+        if (vs.every((v) => { const y = dot(n, v); return y <= U.dn + tau && y >= U.dn - h - tau && polyDist(U.to2(v), U.outer) <= 2 * tau; })) { done.add(G); covered += G.area; }
       }
     }
-    covered += F.area;
+    covered += U.area;
     // 原点：外轮廓包围框的中心（底面上）；轮廓坐标相对它
-    const xs = F.outer.map((p) => p[0]), zs = F.outer.map((p) => p[1]);
+    const xs = U.outer.map((p) => p[0]), zs = U.outer.map((p) => p[1]);
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
-    const at = add(add(F.p0, add(scl(ex, cx), scl(ez, cz))), scl(n, -h));
+    const at = add(add(U.p0, add(scl(ex, cx), scl(ez, cz))), scl(n, -h));
     const ptsText = (P) => `[${P.map(([x, z]) => `(${fmt(x - cx, digits)},${fmt(z - cz, digits)})`).join('; ')}]`;
-    const orient = orientOf(F.cols);
+    const orient = orientOf(U.cols);
     const kind = Math.abs(n[1]) > 0.9 ? 'floor' : Math.abs(n[1]) < 0.2 ? 'wall' : 'slope';
     const nm = name(kind);
-    const holes = F.holes.filter((H) => H.length >= 3);
+    const holes = U.holes.filter((H) => H.length >= 3);
     if (holes.length) {
+      // 洞的坐标与外轮廓同一个原点：pin=origin（不按洞自己的包围盒放）
       const e = Math.max(tau, 0.01);
-      lines.push(`subtract ${nm} at=${at.map((v) => fmt(v, digits)).join(',')} pin=origin${orient ? ' ' + orient : ''} {`, `  plate body points=${ptsText(F.outer)} h=${fmt(h, digits)}`,
-        ...holes.map((H, k) => `  plate hole${k ? '_' + (k + 1) : ''} points=${ptsText(H)} h=${fmt(h + 2 * e, digits)} at=0,${fmt(-e, digits)},0`), '}');
-    } else lines.push(`plate ${nm} points=${ptsText(F.outer)} h=${fmt(h, digits)} at=${at.map((v) => fmt(v, digits)).join(',')}${orient ? ' ' + orient : ''}`);
+      lines.push(`subtract ${nm} at=${at.map((v) => fmt(v, digits)).join(',')} pin=origin${orient ? ' ' + orient : ''} {`, `  plate body points=${ptsText(U.outer)} h=${fmt(h, digits)} at=0,0,0 pin=origin`,
+        ...holes.map((H, k) => `  plate hole${k ? '_' + (k + 1) : ''} points=${ptsText(H)} h=${fmt(h + 2 * e, digits)} at=0,${fmt(-e, digits)},0 pin=origin`), '}');
+    } else lines.push(`plate ${nm} points=${ptsText(U.outer)} h=${fmt(h, digits)} at=${at.map((v) => fmt(v, digits)).join(',')}${orient ? ' ' + orient : ''}`);
     if (++plates > maxPlates) return null;
   }
   return lines.length ? { lines, plates, area: covered, areaAll } : null;

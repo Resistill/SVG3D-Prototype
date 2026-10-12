@@ -2225,11 +2225,11 @@ export function convexHull3(P) {
   const used = new Set([lo, hi, i2, i3]);
   for (let i = 0; i < n; i++) {
     if (used.has(i)) continue;
-    const p = P[i], vis = faces.filter((F) => dot3(F.n, p) - F.d > eps);
+    const p = P[i], vis = [], keep = [];
+    for (const F of faces) (dot3(F.n, p) - F.d > eps ? vis : keep).push(F);
     if (!vis.length) continue;
     const edges = new Set();
     for (const F of vis) for (let e = 0; e < 3; e++) edges.add(`${F.v[e]},${F.v[(e + 1) % 3]}`);
-    const keep = faces.filter((F) => !vis.includes(F));
     for (const F of vis) for (let e = 0; e < 3; e++) {
       const a = F.v[e], b = F.v[(e + 1) % 3];
       if (edges.has(`${b},${a}`)) continue; // 两边都可见：不是地平线

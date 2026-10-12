@@ -15,10 +15,7 @@ const outside = (planes, p) => { let m = -Infinity; for (const F of planes) { co
 
 export function simplifyHull(V, { tol, maxPts = 24 }) {
   if (V.length < 4) return null;
-  const all = convexHull3(V);
-  if (!all) return null;
-  // 只有凸包上的顶点才可能被选
-  const cand = [...new Set(all.flat())].map((i) => V[i]);
+  const cand = V;
   // 起点：六个方向上的极点（去重），不够四个不共面的点时用整个凸包的点
   const ext = new Set();
   for (let k = 0; k < 3; k++) {
@@ -28,7 +25,14 @@ export function simplifyHull(V, { tol, maxPts = 24 }) {
   }
   let pick = [...ext].map((i) => cand[i]);
   let faces = convexHull3(pick);
-  if (!faces) { pick = cand.slice(); faces = all.map((f) => f); return { pts: pick }; }
+  if (!faces) {
+    // 极点共面（扁的东西）：从全部顶点里补一个离这个平面最远的
+    const f0 = convexHull3(cand);
+    if (!f0) return null;
+    pick = [...new Set(f0.flat())].map((i) => cand[i]);
+    if (pick.length > maxPts) return null;
+    return { pts: pick };
+  }
   for (;;) {
     const planes = planesOf(pick, faces);
     let far = -1, dMax = tol;
@@ -68,13 +72,17 @@ export function hullVariants(comps, { maxPieces = 8 } = {}) {
 }
 
 // 一组三角形块 → 每块一个凸包（点、包围盒）
-export function hullsOf(pieces, { tol, maxPts = 24 }) {
+const areaTris = (tris) => tris.reduce((a, [p, q, r]) => a + Math.hypot(...cross(sub(q, p), sub(r, p))) / 2, 0);
+function hullArea(P) { const F = convexHull3(P); return F ? F.reduce((a, [i, j, k]) => a + Math.hypot(...cross(sub(P[j], P[i]), sub(P[k], P[i]))) / 2, 0) : 0; }
+export function hullsOf(pieces, { tol, maxPts = 24, maxAreaRatio = 1.6 }) {
   const out = [];
   for (const tris of pieces) {
     const seen = new Map();
     for (const t of tris) for (const v of t) seen.set(v.map((x) => Math.round(x * 1e5)).join(), v);
     const h = simplifyHull([...seen.values()], { tol, maxPts });
     if (!h) continue; // 平的一块（贴花、薄片）：凸包没有体积，不写
+    // 一块的表面积比它的凸包大很多：里面还有东西（楼的内墙、楼板、空腔），凸包会把它们填实——这种拆法不要
+    if (areaTris(tris) > maxAreaRatio * hullArea(h.pts)) return [];
     const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
     for (const p of h.pts) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], p[k]); hi[k] = Math.max(hi[k], p[k]); }
     out.push({ pts: h.pts, lo, hi });
