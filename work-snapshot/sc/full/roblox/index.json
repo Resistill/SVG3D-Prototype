@@ -1,0 +1,44 @@
+{
+ "root": "SpaceCenter",
+ "scale": 0.823529411764706,
+ "dy": 100.153,
+ "chunks": 59,
+ "parts": 235892,
+ "csgDecomposed": 472,
+ "csgApprox": 0,
+ "objects": 28723,
+ "colors": [
+  "#9fb0c3",
+  "#c8c8c8",
+  "#7a7a74",
+  "#e6e0c6",
+  "#ff4040"
+ ],
+ "materials": [
+  "SmoothPlastic",
+  "Concrete",
+  "Asphalt",
+  "ForceField"
+ ],
+ "shapes": [
+  "Block",
+  "Wedge",
+  "Cylinder",
+  "Ball"
+ ],
+ "counts": {
+  "decor": 118512,
+  "structure": 72831,
+  "terrain": 15586,
+  "decal": 27223,
+  "collision": 1740
+ },
+ "folders": [
+  "Structure",
+  "Terrain",
+  "Decor",
+  "Decal",
+  "Collision",
+  "Helper"
+ ]
+}

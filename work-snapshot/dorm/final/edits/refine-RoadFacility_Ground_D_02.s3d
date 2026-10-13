@@ -1,0 +1,10 @@
+// 细化到 structure：RoadFacility_Ground_D_02（体素 2.465（7 块），7 个部件）
+over RoadFacility_Ground_D_02 : group envelope=-118.5,0,-93,118.5,5,93 {
+  box beam size=234.2,4.6,2.5 at=1.4,0.2,-91.8
+  box beam_2 size=2.5,4.6,74 at=117.3,0.2,-53.6
+  box beam_3 size=2.5,4.6,78 at=117.3,0.2,54.4
+  box beam_4 size=2.5,2.1,140.5 at=-116.9,2.6,-22.8
+  box slab size=231.7,2.1,145.4 at=0.2,2.6,-17.8
+  box beam_5 size=2.5,2.1,32 at=117.3,2.6,-0.6
+  box slab_2 size=96.1,2.1,32 at=68,2.6,70.9
+}

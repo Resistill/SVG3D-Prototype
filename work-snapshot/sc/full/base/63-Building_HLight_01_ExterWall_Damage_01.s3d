@@ -1,0 +1,128 @@
+// 分区 63/233：2 个物体（2 组），x -4…-3，z -257…-251
+
+group Building_HLight_01_ExterWall_Damage_01 at=-4,-291.1,-250.8 turn=-90 ~fit=0 ~src="ProxyOnly/FarPhysicsProxy_52_-36/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_01" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple" {
+  box wall size=209.7,30,0.4 at=-13.2,172.2,101.4
+  box wall_2 size=184.2,149.8,0.4 at=-25.9,202.1,101.4
+  wedge wall_3 size=149.8,74.9,0.4 at=66.2,277,101.4 rot=(0,0,-1,90)
+  subtract slab at=8.2,172.2,0.6 {
+    box body size=239.7,0.4,209.7
+    box hole size=30,1.1,30 at=-104.9,-0.4,-89.9
+    box hole_2 size=30,1.1,30 at=-44.9,-0.4,-30
+    box hole_3 size=30,1.1,89.9 at=104.9,-0.4,59.9
+  }
+  subtract slab_2 at=7.3,351.1,2.8 {
+    box body size=239.7,0.4,209.7
+    box hole_4 size=89.9,1.1,119.8 at=-44.9,-0.4,15
+    box hole_5 size=30,1.1,89.9 at=104.9,-0.4,59.9
+    box hole_6 size=30,1.1,30 at=74.9,-0.4,89.9
+  }
+  box wall_4 size=30,119.8,0.4 at=108.8,172.2,87 turn=90
+  box wall_5 size=119.8,30,0.4 at=108.8,172.2,-47.8 turn=90
+  box wall_6 size=89.9,30,0.4 at=108.8,202.1,27.1 turn=90
+  box wall_7 size=149.8,59.9,0.4 at=108.8,232.1,-32.8 turn=90
+  box wall_8 size=30,59.9,0.4 at=108.8,292,57.1 turn=90
+  box wall_9 size=119.8,30,0.4 at=108.8,292,-47.8 turn=90
+  box wall_10 size=30,30,0.4 at=108.8,322,87 turn=90
+  box wall_11 size=30,30,0.4 at=108.8,322,27.1 turn=90
+  wedge wall_12 size=89.9,224.7,0.4 at=-113.1,159.7,52.2 turn=-90
+  box wall_13 size=25,89.9,0.4 at=-113.1,172.2,-70.1 turn=-90
+  wedge wall_14 size=89.9,89.9,0.4 at=-113.1,217.1,-57.6 rot=(0.577,-0.577,-0.577,120)
+  box wall_15 size=15,89.9,0.4 at=-113.1,262.1,-75.1 turn=-90
+  wedge wall_16 size=89.9,89.9,0.4 at=-113.1,307,-67.6 rot=(0.577,-0.577,-0.577,120)
+  box wall_17 size=119.8,179.8,0.4 at=-54.9,172.2,-82.3 turn=180
+  box wall_18 size=119.8,30,0.4 at=52.2,172.2,-104.5 turn=180
+  box wall_19 size=89.9,89.9,0.4 at=67.1,232.1,-104.5 turn=180
+  box wall_20 size=30,59.9,0.4 at=7.2,262.1,-104.5 turn=180
+  box wall_21 size=119.8,119.8,0.4 at=-128.7,239.7,6.9 turn=-90
+  box wall_22 size=59.9,149.8,0.4 at=-51.2,0,-52.1 turn=180
+  box wall_23 size=30,30,0.4 at=-36.2,149.8,-52.1 turn=180
+  box wall_24 size=30,119.8,0.4 at=-126.1,239.7,-52.1 turn=180
+  box wall_25 size=59.9,179.8,0.4 at=-67.9,0,-21.8 turn=-90
+  box wall_26 size=59.9,149.8,0.4 at=-39,0,1.1
+  box wall_27 size=30,30,0.4 at=-54,149.8,1.1
+  box wall_28 size=30,119.8,0.4 at=-113.9,239.7,1.1
+  box wall_29 size=59.9,179.8,0.4 at=-21.4,0,-29 turn=90
+  box slab_3 size=89.9,0.4,30 at=80.8,346.9,55.9
+  box slab_4 size=30,0.4,30 at=-99,346.9,85.9
+  box slab_5 size=59.9,0.4,30 at=65.8,346.9,85.9
+  box wall_30 size=30,30,0.4 at=5.2,172.2,-89.9 turn=-90
+  box wall_31 size=30,89.9,0.4 at=5.2,262.1,-89.9 turn=-90
+  box slab_6 size=59.9,0.4,59.9 at=80,302.8,70.9
+  box wall_32 size=59.9,30,0.4 at=66.8,303.2,43.4
+  box wall_33 size=30,30,0.4 at=81.8,333.1,43.4
+  box wall_34 size=30,119.8,0.4 at=95.8,202.1,75.9
+  box wall_35 size=30,89.9,0.4 at=-113.9,262.1,75.9
+  box wall_36 size=30,30,0.4 at=-84,322,75.9
+  box wall_37 size=59.9,59.9,0.4 at=49.8,303.2,71.3 turn=90
+  box slab_7 size=59.9,0.4,59.9 at=-38.1,0,-21.8
+  box wall_38 size=89.9,30,0.4 at=97.5,172.2,57.1 rot=(0.068,0.995,-0.068,89.9)
+  box wall_39 size=30,30,0.4 at=101.6,201.9,57.1 rot=(0.068,0.995,-0.068,89.9)
+  box wall_40 size=30,149.8,0.4 at=113.1,172.2,24.7
+  box ramp size=30,0.4,30 at=107.2,316.1,46.2 rot=(0.002,0.001,1,69.8)
+  box wall_41 size=59.9,30,0.4 at=104.3,303,70.9 turn=-90
+  box wall_42 size=30,30,0.4 at=104.3,333,55.9 turn=-90
+}
+group Building_HLight_01_ExterWall_Damage_02 at=-3.4,-94.3,-256.6 ~fit=0.1 ~src="ProxyOnly/FarPhysicsProxy_52_-36/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple" {
+  box wall size=84.3,121.7,0.8 at=45.1,47.3,121.9
+  box wall_2 size=37.4,46.8,0.8 at=-15.7,122.2,121.9
+  box wall_3 size=18.7,46.8,0.8 at=96.6,122.2,121.9
+  box wall_4 size=65.5,28.1,0.8 at=-67.2,131.5,121.9
+  box wall_5 size=9.4,37.4,0.8 at=110.6,131.5,121.9
+  box slab size=18.7,0.4,103 at=-18.7,167.3,75.8
+  box slab_2 size=121.7,0.4,96.8 at=51.5,167.3,78.9
+  wedge slab_3 size=121.7,26.7,0.4 at=51.5,167.5,30.5 rot=(-1,0,0,90)
+  box wall_6 size=56.2,121.7,0.5 at=109.6,47.3,67.9 turn=90
+  box wall_7 size=28.1,46.8,0.5 at=109.6,122.2,110.1 turn=90
+  box wall_8 size=28.1,46.8,0.5 at=109.6,122.2,25.8 turn=90
+  box wall_9 size=9.4,37.4,0.5 at=109.6,131.5,7.1 turn=90
+  box wall_10 size=93.6,9.4,1.2 at=-108.3,115.2,-73 turn=-90
+  box wall_11 size=18.7,9.4,1.2 at=-108.3,124.6,-110.5 turn=-90
+  box wall_12 size=65.5,37.4,1.2 at=-108.3,124.6,-59 turn=-90
+  box wall_13 size=9.4,18.7,1.2 at=-108.3,133.9,-115.2 turn=-90
+  box wall_14 size=18.7,9.4,1.2 at=-108.3,152.7,-101.1 turn=-90
+  box wall_15 size=121.7,26.9,1.2 at=-108.3,115.2,34.6 turn=-90
+  wedge wall_16 size=121.7,25.4,1.2 at=-108.3,142.1,34.6 turn=90
+  box slab_4 size=140.4,0.4,28.1 at=-7.6,157.4,-117
+  box slab_5 size=9.4,0.4,18.7 at=-82.5,157.4,-112.3
+  box slab_6 size=28.1,0.4,9.4 at=76.7,157.4,-107.6
+  box slab_7 size=18.7,0.4,149.8 at=-105.9,157.4,-28
+  box slab_8 size=18.7,0.4,103 at=81.4,157.4,-51.4
+  box slab_9 size=9.4,0.4,9.4 at=86,157.4,4.8
+  box slab_10 size=9.4,0.4,28.1 at=-110.6,157.4,70.3
+  box slab_11 size=65.5,0.4,18.7 at=-54.4,157.4,112.4
+  box slab_12 size=9.4,0.4,18.7 at=-91.8,157.4,121.8
+  box slab_13 size=140.4,0.4,28.1 at=-6.3,153.1,-117
+  box slab_14 size=9.4,0.4,18.7 at=-81.2,153.1,-112.3
+  box slab_15 size=28.1,0.4,9.4 at=77.9,153.1,-107.6
+  box slab_16 size=18.7,0.4,149.8 at=-104.6,153.1,-28
+  box slab_17 size=18.7,0.4,103 at=82.6,153.1,-51.4
+  box slab_18 size=9.4,0.4,28.1 at=-109.3,153.1,70.3
+  box slab_19 size=65.5,0.4,18.7 at=-53.1,153.1,112.4
+  box slab_20 size=9.4,0.4,18.7 at=-90.6,153.1,121.8
+  box wall_17 size=121.7,46.8,2.3 at=87.2,115.2,-54.8 turn=90
+  box wall_18 size=140.4,37.4,2.1 at=-8.4,122.4,-128.2 turn=180
+  box wall_19 size=46.8,28.1,1.1 at=-26.8,143.5,46.6 turn=-90
+  box wall_20 size=56.2,19.7,1.1 at=-26.8,151.9,98.1 turn=-90
+  wedge wall_21 size=56.2,41.7,1.1 at=-26.8,151.9,98.1 rot=(0.707,0,0.707,180)
+  box wall_22 size=93.6,28.1,1.4 at=18.1,144.7,24.9 turn=180
+  box wall_23 size=9.4,9.4,1.4 at=69.6,154.1,24.9 turn=180
+  box wall_24 size=18.7,46.8,1.3 at=102.4,122.5,7.2 turn=180
+  box wall_25 size=28.1,25.7,1.3 at=79,143.6,7.2 turn=180
+  wedge wall_26 size=28.1,42.1,1.3 at=79,143.6,7.2 rot=(1,0,0,180)
+  box wall_27 size=28.1,140.4,0.4 at=81.7,0,-13.2 turn=90
+  box wall_28 size=18.7,9.4,0.4 at=81.7,140.4,-8.5 turn=90
+  box wall_29 size=18.7,112.3,0.4 at=-19.7,12.4,115.1
+  box wall_30 size=9.4,9.4,0.4 at=-15.1,124.8,115.1
+  box slab_21 size=37.4,0.4,9.4 at=-18.8,124.3,-124.7
+  box slab_22 size=131.1,0.4,18.7 at=37.4,124.3,114
+  box ramp size=37.4,0.4,9.4 at=98.2,122.9,10.2 rot=(0.009,0.003,1,31)
+  box ramp_2 size=18.7,0.4,103 at=106.3,127.5,66.4 rot=(0.009,0.003,1,31)
+  box wall_31 size=28.1,37.4,1.9 at=74.3,115.2,-110.9 turn=180
+  box wall_32 size=9.4,9.4,1.9 at=-103.6,152.7,-110.9 turn=180
+  box slab_23 size=9.4,0.4,9.4 at=-77.3,116.3,-115.2
+  box slab_24 size=9.4,0.4,65.5 at=-105.4,116.3,-12.2
+  box wall_33 size=37.4,18.7,0.4 at=-93.7,116.6,-118.5 turn=180
+  box wall_34 size=9.4,28.1,0.4 at=-79.7,135.3,-118.5 turn=180
+  box wall_35 size=18.7,9.4,0.4 at=-103.1,135.3,-118.5 turn=180
+  box wall_36 size=159.2,9.4,0.4 at=-7.3,152.6,-104.4
+}

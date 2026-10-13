@@ -1,0 +1,9 @@
+// 细化到 structure：HLight_01_ExterWall_Damage_01（面积前 90%（6/17 块），6 个部件）
+over HLight_01_ExterWall_Damage_01 : group envelope=-120.5,0,-106,120.5,353,106 {
+  box box1 size=225,352.5,208.9 at=7.7,-0.3,-1.4 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_01#0"
+  box box5 size=114,117.4,0 against=box1[1,0.52,-0.423] turn=-90 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_01#3"
+  box box3 size=171.3,172.9,0 at=-87.3,228,101.1 rot=(0,0,-1,43.7) mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_01#5"
+  box box6 size=58.1,112.9,17.3 at=-112.1,239.3,39.9 turn=90 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_01#6"
+  box box4 size=85.4,112.8,18.4 at=-111.6,239.4,-40.9 turn=-90 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_01#4"
+  box box2 size=220.3,48.6,203.6 at=6.4,302.7,-1.5 turn=-0.2 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_01#1"
+}

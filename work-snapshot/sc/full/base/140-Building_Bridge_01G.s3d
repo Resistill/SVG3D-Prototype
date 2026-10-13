@@ -1,0 +1,278 @@
+// 分区 140/233：1 个物体（1 组），x 6…6，z -393…-393
+
+group Building_Bridge_01G at=5.7,-132.7,-393.3 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_52_-37/SM_H_Building_FutureTech_Bridge_01G" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  group group12 at=52.7,-12.4,3.1 {
+    wedge wedge size=100.7,28.3,20.9 at=0.2,13,0.6 turn=170.3
+    box box size=21.8,1.1,18.4 at=-38.7,39.7,-7.6 turn=-15.5
+    box box_2 size=17.1,1.2,16.9 at=20,21.3,6 turn=-106
+    box box_3 size=99.4,14.2,13.5 at=-1.2,20.7,-8.4 rot=(0,0,-1,24.6)
+    box box_4 size=12.8,3.3,0 at=40.8,13,5.5 turn=-90
+  }
+  group group1 at=0,0,3 {
+    box slab size=11.4,0,12.3 at=20.7,31.3,-8.9
+    wedge slab_2 size=11.4,6.9,0 at=20.7,31.3,-2.8 rot=(0,0.707,0.707,180)
+    box slab_3 size=28.1,0,28.6 at=1,31.3,-0.8
+    wedge slab_4 size=28.6,17,0 at=-13.1,31.3,-0.8 rot=(-0.577,0.577,0.577,120)
+    box slab_5 size=17.1,0,2.9 at=-71.5,13,13.3
+    box slab_6 size=17.1,0,2.9 at=71.4,13,13.3
+    box slab_7 size=14.3,0,14.3 at=-72.9,13,4.8
+    wedge slab_8 size=14.3,5.7,0 at=-65.8,13,4.8 rot=(-0.577,-0.577,-0.577,120)
+    box ramp size=5.7,0,2.9 at=-30.7,29.3,-13.7 rot=(0.162,0.034,0.986,23.7)
+    box ramp_2 size=11.4,0,2.9 at=-38.4,25.8,-10.9 rot=(0.162,0.034,0.986,23.7)
+    box ramp_3 size=8.6,0,2.9 at=-47.5,21.6,-8 rot=(0.162,0.034,0.986,23.7)
+    box ramp_4 size=8.6,0,2.9 at=-55.3,18,-5.2 rot=(0.162,0.034,0.986,23.7)
+    box ramp_5 size=5.7,0,2.9 at=-64.4,13.9,-2.3 rot=(0.162,0.034,0.986,23.7)
+    box ramp_6 size=2.9,0,2.9 at=-26.3,30.2,0.5 rot=(0.162,0.034,0.986,23.7)
+    box ramp_7 size=11.4,0,2.9 at=-32.8,27.1,3.4 rot=(0.162,0.034,0.986,23.7)
+    box ramp_8 size=8.6,0,2.9 at=-41.9,23,6.2 rot=(0.162,0.034,0.986,23.7)
+    box ramp_9 size=8.6,0,2.9 at=-49.7,19.4,9.1 rot=(0.162,0.034,0.986,23.7)
+    box ramp_10 size=5.7,0,2.9 at=-58.8,15.3,12 rot=(0.162,0.034,0.986,23.7)
+    box ramp_11 size=28.6,0.1,2.9 at=-94.6,7,-0.9 rot=(0.162,0.034,0.986,23.7)
+    box ramp_12 size=28.6,0.1,2.9 at=-94.2,6.1,13.3 rot=(0.162,0.034,0.986,23.7)
+    box ramp_13 size=5.7,0.1,2.9 at=25.5,30.1,1 rot=(0.165,-0.034,-0.986,23.7)
+    box ramp_14 size=8.6,0.1,2.9 at=34.6,25.9,3.9 rot=(0.165,-0.034,-0.986,23.7)
+    box ramp_15 size=8.6,0.1,2.9 at=42.4,22.3,6.7 rot=(0.165,-0.034,-0.986,23.7)
+    box ramp_16 size=8.6,0.1,2.9 at=52.8,17.6,9.6 rot=(0.165,-0.034,-0.986,23.7)
+    box ramp_17 size=5.7,0.1,2.9 at=59.3,14.6,12.4 rot=(0.165,-0.034,-0.986,23.7)
+    box wall size=2.9,2.9,1 at=107.7,0,12.9 turn=180
+    box wall_2 size=5.7,2.9,1 at=-105.2,0,12.9 turn=180
+    box wall_3 size=2.9,2.9,1 at=99.1,2.9,12.9 turn=180
+    box wall_4 size=2.9,2.9,1 at=-100.9,2.9,12.9 turn=180
+    box wall_5 size=2.9,2.9,1 at=90.5,5.7,12.9 turn=180
+    box wall_6 size=2.9,2.9,1 at=-92.3,5.7,12.9 turn=180
+    box wall_7 size=5.7,2.9,1 at=86.2,8.6,12.9 turn=180
+    box wall_8 size=2.9,2.9,1 at=-80.9,11.4,12.9 turn=180
+    box ramp_18 size=28.6,0.1,2.9 at=93.1,7.2,13.7 rot=(0.165,-0.034,-0.986,23.7)
+    box wall_9 size=2.9,2.9,0.4 at=-107.7,0,-1.3
+    box wall_10 size=2.9,2.9,0.4 at=-99.1,2.9,-1.3
+    box wall_11 size=2.9,2.9,0.4 at=-90.5,5.7,-1.3
+    box wall_12 size=5.7,2.9,0.4 at=-86.2,8.6,-1.3
+  }
+  group group2 at=61.4,0,-4.4 {
+    box ramp size=5.7,0.1,2.9 at=-31.3,30,-6.4 rot=(0.186,-0.038,-0.982,23.6)
+    box ramp_2 size=8.6,0.1,2.9 at=-22.3,25.8,-3.5 rot=(0.186,-0.038,-0.982,23.6)
+    box ramp_3 size=8.6,0.1,2.9 at=-14.5,22.2,-0.7 rot=(0.186,-0.038,-0.982,23.6)
+    box ramp_4 size=11.4,0.1,2.9 at=-5.4,18.1,2.2 rot=(0.186,-0.038,-0.982,23.6)
+    box ramp_5 size=5.7,0.1,2.9 at=2.4,14.5,5 rot=(0.186,-0.038,-0.982,23.6)
+    box ramp_6 size=28.6,0.1,2.9 at=31.7,7.2,6.4 rot=(0.186,-0.038,-0.982,23.6)
+    box wall size=2.9,2.9,1.3 at=46.2,0,5.6
+    box wall_2 size=2.9,2.9,1.3 at=37.6,2.9,5.6
+    box wall_3 size=2.9,2.9,1.3 at=28.9,5.7,5.6
+    box wall_4 size=5.7,2.9,1.3 at=24.7,8.6,5.6
+    box slab size=14.3,0.1,2.9 at=-40.4,31.3,-6.3
+    box slab_2 size=11.4,0.1,2.9 at=11.1,13,6.4
+  }
+  span stairs_6 from=-63.4,13,8.2 to=-25.3,30.2,-4 steps=30 section=13.8,0.6
+  span stairs_3 from=63.4,13,8.2 to=40.6,23.3,0.9 steps=18 section=13.8,0.6
+  span stairs_4 from=106.2,0.8,8.6 to=80.1,13.4,8.6 steps=19 section=13.2,0.8
+  mirror stairs_5 of=stairs_4 across=(0.027817,0,0) axis=(1,0,0.000001)
+  span stairs from=31.7,27.7,-2 to=25.4,30.6,-4 steps=5 section=13.8,0.6
+  span stairs_2 from=39.3,24.2,0.5 to=33,27.1,-1.6 steps=5 section=13.8,0.6
+  group group11 at=54.4,0.2,10.9 turn=-90 {
+    box ramp size=2.9,0.2,2.9 at=4.3,11,-6.8 rot=(-0.995,0.022,-0.102,24.3)
+    box ramp_2 size=2.9,0.2,2.9 at=1.6,14.6,1 rot=(-0.995,0.022,-0.102,24.3)
+    box ramp_3 size=2.9,0.2,2.9 at=-1,20.6,14 rot=(-0.995,0.022,-0.102,24.3)
+    box ramp_4 size=2.9,0.2,2.9 at=-3.7,24.2,21.9 rot=(-0.995,0.022,-0.102,24.3)
+    box ramp_5 size=2.9,0.3,22.9 at=6.1,4.7,-37.8 rot=(-0.995,0.022,-0.102,24.3)
+    box slab size=2.9,0.3,17.1 at=6.3,10.3,-17.2
+    box slab_2 size=2.9,0.3,17.1 at=-6.4,28.6,39.8
+  }
+  group group14 at=-53.5,0.5,4.8 {
+    plate floor points=[(-1.3,-22.4); (-2,22.4); (1.3,22.4); (2,-22.4)] h=0.4 at=10.1,18.9,2.4 turn=106.89 tilt=155.78
+    plate floor_2 points=[(1,22.4); (2.2,-22.4); (-1.1,-22.4); (-2.2,22.4)] h=0.4 at=7.3,19,-7.4 turn=106.33 tilt=155.92
+    plate floor_3 points=[(2,-22.4); (0.1,22.4); (-2,22.4); (-0.2,-22.4)] h=0.4 at=8.3,17.8,-3.9 turn=105.28 tilt=155.81
+    plate floor_4 points=[(2,-22.4); (0.2,22.4); (-2,22.4); (-0.2,-22.4)] h=0.4 at=9.1,17.8,-1.1 turn=105.29 tilt=155.8
+    plate wall points=[(10.7,3.7); (-20.4,-10.2); (-20.9,-8.3); (20,10.2); (20.9,8.2)] h=0.9 at=6.6,18.3,-8.8 turn=-164.44 tilt=95.32
+    plate wall_2 points=[(-6.1,1.8); (20.6,-10.1); (20.6,-8.2); (-20.3,10.1); (-20.6,8.2)] h=0.9 at=10.5,18.2,4 turn=17.25 tilt=88.49
+    plate wall_3 points=[(1.9,-5); (-20,5); (-11.2,5); (-11.2,3); (2.2,-3.1); (20,-3.1); (19.6,-5)] h=0.9 at=-28.5,5,10.2 tilt=90
+    plate wall_4 points=[(-4,-5); (17.9,5); (9.1,5); (9.1,3); (-4.2,-3.1); (-17.9,-3.1); (-17,-5)] h=0.8 at=-30.5,5,-2.6 turn=-180 tilt=90
+    plate slope points=[(-19.1,-11.1); (19.1,12.5); (-18.8,-12.5)] h=0.4 at=8.2,18.3,-5.1 turn=176.9 tilt=128.68
+    plate slope_2 points=[(19.7,-10.4); (-19.4,11.6); (-19.7,10.4); (19.4,-11.6)] h=0.4 at=9.5,18.2,0.1 turn=35.05 tilt=123.37
+    plate floor_5 points=[(1.6,8); (1.6,-8); (-1.6,-8); (-1.6,8)] h=0.4 at=-33.8,6.4,8.7 turn=90.01 tilt=155.84
+    plate floor_6 points=[(-1.6,-8); (-1.6,8); (1.6,8); (1.6,-8)] h=0.4 at=-33.8,6.4,-1 turn=90 tilt=155.84
+    plate wall_5 points=[(11.7,-1); (-11.7,-1); (-11.7,1); (11.2,1)] h=0.8 at=37.5,27.4,-15.2 turn=-180 tilt=90
+    plate wall_6 points=[(-6.4,1.7); (6.4,1.7); (6.4,-1.7); (-6.4,-1.7)] h=0.4 at=-40.3,1.7,3.8 turn=90 tilt=90
+    plate wall_7 points=[(-9.3,-1); (9.4,-1); (9.4,1); (-9.4,1)] h=0.8 at=39.7,27.4,-2.4 tilt=90
+    plate floor_7 points=[(-1.1,7.5); (1.1,7.5); (1.1,-7.5); (-1.1,-7.5)] h=0.4 at=-33.3,5.6,2.4 turn=90.16 tilt=155.65
+    plate floor_8 points=[(-1.1,-7.5); (-1.1,7.5); (1.1,7.5); (1.1,-7.5)] h=0.4 at=-33.3,5.6,5.3 turn=89.95 tilt=155.65
+    plate floor_9 points=[(-0.9,22.4); (0.3,-22.4); (0.9,-22.4); (-0.3,22.4)] h=0.4 at=8.7,18.1,-2.4 turn=106.22 tilt=155.83
+    plate slope_3 points=[(-6.8,-4.4); (7.1,3.6); (5.9,4.4); (-7.1,-3.1)] h=0.4 at=-33.7,6,1.1 turn=161.9 tilt=124.6
+    plate slope_4 points=[(-7.1,3.5); (6.9,-4.3); (7.1,-3); (-6,4.3)] h=0.4 at=-33.7,6,6.6 turn=17.09 tilt=123.05
+    plate wall_8 points=[(-20.7,9); (-20.7,9.3); (20.7,-9); (20.7,-9.3)] h=0.4 at=10.8,19.3,5.1 turn=17.88 tilt=90
+    plate wall_9 points=[(-20.7,-9); (20.7,9.3); (20.7,9); (-20.7,-9.3)] h=0.4 at=6.1,19.3,-10.1 turn=-162.11 tilt=90
+    plate wall_10 points=[(-20.2,5.2); (2.4,-5.1); (20.2,-5.2); (2.4,-4.8)] h=0.4 at=-29,5.2,11.4 tilt=90
+    plate wall_11 points=[(-4.9,-5.1); (17.8,5.1); (-4.9,-4.8); (-17.8,-4.8)] h=0.4 at=-31.4,5.1,-3.7 turn=-180 tilt=90
+    plate slope_5 points=[(-20.2,-9.7); (20.2,9.9); (20.2,9.6); (-20.2,-9.9)] h=0.4 at=9,17.8,-1.8 turn=-171.61 tilt=110.17
+    plate slope_6 points=[(-20.2,9.7); (-20.2,10); (20.2,-9.7); (20.2,-10)] h=0.4 at=8.6,17.8,-3.1 turn=27.65 tilt=110.74
+    plate floor_10 points=[(-0.2,-7.5); (-0.3,7.5); (0.2,7.5); (0.3,-7.5)] h=0.4 at=-33.3,5.8,3.9 turn=90 tilt=155.85
+    plate wall_12 points=[(10.7,0.2); (-10.7,0.2); (-9.3,-0.2); (10.7,-0.1)] h=0.4 at=36.4,28.5,-16.4 turn=-180 tilt=90
+    plate slope_7 points=[(-6.8,3.1); (-6.7,3.4); (6.8,-3.1); (6.8,-3.4)] h=0.4 at=-33.2,5.5,3.2 turn=8.61 tilt=108.32
+    plate slope_8 points=[(-6.8,-3.1); (6.7,3.4); (6.8,3.1); (-6.8,-3.4)] h=0.4 at=-33.2,5.5,4.5 turn=171.42 tilt=108.43
+  }
+  group group6 at=57.6,0.5,-5.4 turn=90 {
+    box wall size=2.9,2.9,0.4 at=-5.8,10.3,8.2 turn=72.1
+    box wall_2 size=5.7,2.9,0.4 at=-3.6,13.1,1.4 turn=72.1
+    box wall_3 size=5.7,2.9,0.4 at=-1.9,16,-4.1 turn=72.1
+    box wall_4 size=5.7,2.9,0.4 at=-0.2,18.8,-9.5 turn=72.1
+    box wall_5 size=5.7,2.9,0.4 at=1.5,21.7,-14.9 turn=72.1
+    box wall_6 size=5.7,2.9,0.4 at=4.3,24.6,-23.1 turn=72.1
+    box wall_7 size=2.9,2.9,0.4 at=5.6,27.4,-27.2 turn=72.1
+    box wall_8 size=5.7,2.9,0.4 at=-6.3,0,44 turn=90
+    box wall_9 size=5.7,2.9,0.4 at=-6.3,2.9,38.3 turn=90
+    box wall_10 size=5.7,2.9,0.4 at=-6.3,5.7,32.6 turn=90
+    box wall_11 size=17.1,2.9,0.4 at=-6.3,8.6,18.3 turn=90
+    box wall_12 size=17.1,2.9,0.4 at=6.4,28.6,-38.3 turn=90
+  }
+  group group7 at=-57.5,0.5,-5.4 turn=90 {
+    box wall size=2.9,2.9,0.4 at=-5.4,10.3,-7 turn=107.9
+    box wall_2 size=5.7,2.9,0.4 at=-4.1,13.1,-2.9 turn=107.9
+    box wall_3 size=5.7,2.9,0.4 at=-2.4,16,2.5 turn=107.9
+    box wall_4 size=5.7,2.9,0.4 at=0.2,18.8,10.7 turn=107.9
+    box wall_5 size=5.7,2.9,0.4 at=2,21.7,16.1 turn=107.9
+    box wall_6 size=5.7,2.9,0.4 at=3.8,24.6,21.6 turn=107.9
+    box wall_7 size=5.7,2.9,0.4 at=5.4,27.4,27 turn=107.9
+    box wall_8 size=5.7,2.9,0.4 at=-6.3,0,-44 turn=90
+    box wall_9 size=5.7,2.9,0.4 at=-6.3,2.9,-38.2 turn=90
+    box wall_10 size=5.7,2.9,0.4 at=-6.3,5.7,-32.5 turn=90
+    box wall_11 size=17.1,2.9,0.4 at=-6.3,8.6,-18.2 turn=90
+    box wall_12 size=17.1,2.9,0.4 at=6.4,28.6,38.3 turn=90
+  }
+  group group3 at=-58,0.5,9.9 turn=-90 {
+    box wall size=5.7,2.9,0.4 at=6.3,0,43.6 turn=90
+    box wall_2 size=5.7,2.9,0.4 at=6.3,2.9,37.9 turn=90
+    box wall_3 size=5.7,2.9,0.4 at=6.3,5.7,32.1 turn=90
+    box wall_4 size=20,2.9,0.4 at=6.3,8.6,16.4 turn=90
+    box wall_5 size=2.9,2.9,0.4 at=5.9,10.3,3.1 turn=107.9
+    box wall_6 size=5.7,2.9,0.4 at=3.7,13.2,-3.7 turn=107.9
+    box wall_7 size=5.7,2.9,0.4 at=1.9,16,-9.2 turn=107.9
+    box wall_8 size=5.7,2.9,0.4 at=0.2,18.9,-14.6 turn=107.9
+    box wall_9 size=5.7,2.9,0.4 at=-1.6,21.7,-20.1 turn=107.9
+    box wall_10 size=5.7,2.9,0.4 at=-4.2,24.6,-28.2 turn=107.9
+    box wall_11 size=2.9,2.9,0.4 at=-5.5,27.4,-32.3 turn=107.9
+    box wall_12 size=11.4,2.9,0.4 at=-6.4,28.6,-40.7 turn=90
+  }
+  group group5 at=60,0.5,9.9 turn=-90 {
+    box wall size=5.7,2.9,0.4 at=6.4,0,-42.3 turn=90
+    box wall_2 size=8.6,2.9,0.4 at=6.4,2.9,-35.2 turn=90
+    box wall_3 size=5.7,2.9,0.4 at=6.4,5.7,-28 turn=90
+    box wall_4 size=22.9,2.9,0.4 at=6.4,8.6,-13.8 turn=90
+    box wall_5 size=2.9,2.9,0.4 at=5.6,10.3,0.2 turn=72.1
+    box wall_6 size=5.7,2.9,0.4 at=4.2,13.2,4.3 turn=72.1
+    box wall_7 size=5.7,2.9,0.4 at=2.4,16,9.8 turn=72.1
+    box wall_8 size=5.7,2.9,0.4 at=-0.2,18.9,17.9 turn=72.1
+    box wall_9 size=5.7,2.9,0.4 at=-2,21.7,23.4 turn=72.1
+    box wall_10 size=5.7,2.9,0.4 at=-3.6,24.6,28.8 turn=72.1
+    box wall_11 size=5.7,2.9,0.4 at=-5.4,27.4,34.2 turn=72.1
+    box wall_12 size=8.6,2.9,0.4 at=-6.4,28.6,40.9 turn=90
+  }
+  box box14 size=15.2,2.3,0.1 at=100.3,4.7,0.7 rot=(0,0,-1,24)
+  mirror box26 of=box14 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box20 size=15.2,2.3,0.1 at=-100.2,4.7,16.5 rot=(0,0,1,24)
+  mirror box35 of=box20 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box152 size=3.9,0.9,0.9 at=-86.8,6,13.1 rot=(-0.243,0.953,0.179,92.6)
+  box box141 size=4,0.8,0.8 at=86.9,6,4.1 rot=(0.255,0.954,-0.158,91.5)
+  mirror box151 of=box141 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box142 size=3.9,0.8,0.8 at=86.9,6.1,13.1 rot=(-0.25,-0.955,-0.162,91.4)
+  group group19 at=-71,8.8,8.7 {
+    plate floor points=[(5.1,6.4); (8.8,-6.4); (-8.8,-6.4); (-8.8,6.4)] h=0.4 at=0,0.4,0 tilt=180
+    plate wall points=[(6.6,0.6); (6.7,-0.6); (-6.6,-0.5); (-6.7,0.6)] h=0.4 at=6.6,0.6,0.1 turn=106 tilt=90
+    plate wall_2 points=[(6.4,-0.6); (-6.4,-0.6); (-6.4,0.6); (6.4,0.6)] h=0.4 at=-8.4,0.6,0 turn=-90 tilt=90
+  }
+  box box8 size=15.2,2.3,0.1 at=86.6,10.7,16.5 rot=(0,0,-1,24)
+  mirror box19 of=box8 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box13 size=15.2,2.3,0.1 at=86.6,10.7,0.7 rot=(0,0,-1,24)
+  mirror box25 of=box13 across=(0.027817,0,0) axis=(1,0,0.000001)
+  group group13 at=-74.3,11.9,0.9 {
+    box wall size=14.3,2.9,0.4 at=0,0,0 turn=180
+  }
+  group group10 at=73.8,11.9,0.9 {
+    box wall size=11.4,2.9,0.4 at=0,0,0 turn=180
+  }
+  group group15 at=-70.9,12,16.4 {
+    box wall size=17.1,2.9,0.4 at=0,0,0
+  }
+  group group9 at=71,12,16.4 {
+    box wall size=17.1,2.9,0.4 at=0,0,0
+  }
+  box box140 size=13.2,0.6,0.2 at=-80,12.3,8.6 turn=-90
+  box box89 size=13.2,0.6,0.1 at=80,12.3,8.6 turn=-90
+  box box3 size=14.6,0,0.6 at=72.7,13,2 turn=-0.5
+  box box1 size=18.5,0,13.2 at=70.7,13,8.4
+  box box2 size=18.6,0,0.6 at=70.7,13,15.1 turn=-1.4
+  box box143 size=4.1,0.9,0.8 at=57.7,13,1.5 rot=(0.318,0.938,-0.138,75.7)
+  mirror box153 of=box143 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box147 size=4.2,0.8,0.8 at=55.2,13.1,10.5 rot=(0.219,0.943,-0.251,79.1)
+  mirror box157 of=box147 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box4 size=16.9,2.4,0.1 at=71.3,13.6,16.5
+  mirror box15 of=box4 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box9 size=12.3,2.4,0.1 at=73.5,13.6,0.7
+  box box146 size=4.2,0.9,0.8 at=49.8,16.7,-1.1 rot=(0.317,0.938,-0.139,75.9)
+  mirror box156 of=box146 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box148 size=4.2,0.8,0.8 at=47.3,16.7,7.9 rot=(0.218,0.943,-0.252,79.2)
+  mirror box158 of=box148 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box12 size=15.2,2.2,0.1 at=60.2,16.9,-1.6 rot=(0.126,-0.596,-0.793,29.7)
+  mirror box24 of=box12 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box5 size=15.2,2.2,0.1 at=55.3,16.9,14.2 rot=(0.126,-0.596,-0.793,29.7)
+  mirror box16 of=box5 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box149 size=4.2,0.8,0.8 at=39.5,20.4,5.4 rot=(0.217,0.943,-0.253,79.4)
+  mirror box159 of=box149 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box145 size=4.2,0.9,0.8 at=42,20.4,-3.6 rot=(0.317,0.938,-0.139,76)
+  mirror box155 of=box145 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box7 size=15.1,2.2,0.1 at=42.3,23,10 rot=(0.126,-0.594,-0.795,29.9)
+  mirror box18 of=box7 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box10 size=15.1,2.2,0.1 at=47.1,23,-5.8 rot=(0.126,-0.593,-0.795,29.9)
+  mirror box22 of=box10 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box55 size=13.8,0.1,0 at=40.6,23.6,0.9 turn=-107
+  box box56 size=13.8,0.4,0 at=40.6,23.7,0.9 turn=-107
+  box box150 size=4.2,0.8,0.8 at=31.6,24.1,2.9 rot=(0.215,0.943,-0.254,79.6)
+  mirror box160 of=box150 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box144 size=4.2,0.8,0.8 at=34.1,24.1,-6.1 rot=(0.316,0.938,-0.14,76.2)
+  mirror box154 of=box144 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box54 size=13.8,0.1,1.4 at=40,24.1,0.7 turn=-107
+  group group16 at=0.4,26.2,1.6 {
+    box slab size=5.7,1.1,25.7 at=-5.7,0,0
+    box slab_2 size=5.7,1.1,25.7 at=5.8,0,0
+  }
+  box box63 size=13.8,0.5,0 at=33,27.1,-1.6 turn=-107
+  group group20 at=-15.7,27.2,-4.2 {
+    plate floor points=[(-7.7,-6.4); (-11.3,6.4); (11.3,6.4); (11.3,-6.4)] h=0.4 at=0,0.4,0 tilt=180
+    plate wall points=[(6.7,-0.6); (-6.7,-0.6); (-6.7,0.6); (6.7,0.6)] h=0.4 at=-9.2,0.6,-0.1 turn=-74.49 tilt=90
+  }
+  box box62 size=13.8,0.1,1.4 at=32.4,27.6,-1.8 turn=-107
+  group group18 at=0,28.2,-8.9 {
+    plate wall points=[(2.5,0.3); (2.5,-0.3); (-2.5,-0.3); (-2.5,0.3)] h=0.4 at=0,0.3,2.1 tilt=90
+    plate wall_2 points=[(2.5,-0.3); (-2.5,-0.3); (-2.5,0.3); (2.5,0.3)] h=0.4 at=0,0.3,-2.1 turn=-180 tilt=90
+    plate wall_3 points=[(2.4,0.3); (2.4,-0.3); (-2.4,-0.3); (-2.4,0.3)] h=0.4 at=-2.2,0.3,0 turn=-90 tilt=90
+    plate wall_4 points=[(2.4,-0.3); (-2.4,-0.3); (-2.4,0.3); (2.4,0.3)] h=0.4 at=2.2,0.3,0 turn=90 tilt=90
+  }
+  group group17 at=0,28.2,6.5 {
+    plate wall points=[(2.5,0.3); (2.5,-0.3); (-2.5,-0.3); (-2.5,0.3)] h=0.4 at=0,0.3,-2.1 turn=-180 tilt=90
+    plate wall_2 points=[(2.5,0.3); (-2.5,0.3); (-2.5,-0.3); (2.5,-0.3)] h=0.4 at=0,0.3,2.1 tilt=90
+    plate wall_3 points=[(-2.4,0.3); (2.4,0.3); (2.4,-0.3); (-2.4,-0.3)] h=0.4 at=2.2,0.3,0 turn=90 tilt=90
+    plate wall_4 points=[(-2.4,0.3); (-2.4,-0.3); (2.4,-0.3); (2.4,0.3)] h=0.4 at=-2.2,0.3,0 turn=-90 tilt=90
+  }
+  group group8 at=0,28.9,-0.7 {
+    wedge wedge size=26.5,0,6.9 at=0,0,-2.7 turn=-90
+    box box size=30.1,0.3,11.5 at=0,0,10.2
+  }
+  box box11 size=15.2,2.2,0.1 at=34,29.1,-10 rot=(0.126,-0.596,-0.793,29.7)
+  mirror box23 of=box11 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box6 size=15.2,2.2,0.1 at=29.1,29.1,5.8 rot=(0.125,-0.596,-0.793,29.7)
+  mirror box17 of=box6 across=(0.027817,0,0) axis=(1,0,0.000001)
+  group group4 on=group11 offset=-54.4,0.1,-1.3 turn=90 {
+    box wall size=28.6,2.9,0.4 at=-0.7,0,5.5
+    box wall_2 size=11.4,2.9,0.4 at=14.8,0,0.1 turn=90
+    box wall_3 size=11.4,2.9,0.4 at=-14.7,0,-0.1 turn=-90
+  }
+  box box69 size=13.8,0.6,0 at=25.4,30.6,-4 turn=73
+  box box120 size=13.8,0.7,0.2 at=-25.3,30.6,-4 turn=-73
+  box box29 size=12.4,2.4,0.1 at=21.3,31.9,-12
+  mirror box32 of=box29 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box27 size=10.6,2.4,0.1 at=15,31.9,9.2 turn=-90
+  box box33 size=14,2.4,0.1 at=7.3,31.9,15.1
+  mirror box34 of=box33 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box30 size=10.6,2.4,0.1 at=-14.9,31.9,9.2 turn=-90
+  box box28 size=7.7,2.4,0.1 at=18.9,31.9,3.8
+  mirror box31 of=box28 across=(0.027817,0,0) axis=(1,0,0.000001)
+  box box21 size=12.3,2.4,0.1 at=-73.5,13.6,0.7
+}

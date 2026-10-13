@@ -1,0 +1,255 @@
+// 分区 40/233：105 个物体（1 组），x -218…-183，z -240…-163
+
+group Building_HLight_01_ExterWall_01 at=-194.2,-321.3,-163.2 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_51_-36/SM_H_Building_FutureTech_HLight_01_ExterWall_01" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  subtract slab at=-3.9,172.2,-10.3 {
+    box body size=206,0.4,224.7
+    box hole size=18.7,1.1,112.3 at=-93.6,-0.4,56.2
+    box hole_2 size=37.4,1.1,37.4 at=-28.1,-0.4,37.4
+  }
+  box wall size=224.7,168.5,0.4 at=98.7,172.2,-1 turn=90
+  box wall_2 size=206,18.7,0.4 at=98.7,340.7,8.4 turn=90
+  subtract slab_2 at=-1.7,351.1,-6.8 {
+    box body size=206,0.4,224.7
+    box hole_3 size=18.7,1.1,112.3 at=-93.6,-0.4,56.2
+    box hole_4 size=131.1,1.1,74.9 at=0,-0.4,37.4
+  }
+  subtract wall_3 at=4.5,172.2,101.3 {
+    box body size=187.2,187.2,0.4
+    box hole_5 size=18.7,18.7,1.1 at=-46.8,56.2,0
+    box hole_6 size=112.3,74.9,1.1 at=37.4,112.3,0
+    box hole_7 size=18.7,18.7,1.1 at=-84.3,168.5,0
+  }
+  box wall_4 size=131.1,37.4,0.4 at=-41.6,172.2,-119.7 turn=180
+  box wall_5 size=56.2,18.7,0.4 at=52.1,209.6,-119.7 turn=180
+  box wall_6 size=18.7,112.3,0.4 at=-4.1,209.6,-119.7 turn=180
+  box wall_7 size=18.7,74.9,0.4 at=70.8,228.4,-119.7 turn=180
+  box wall_8 size=18.7,74.9,0.4 at=33.3,228.4,-119.7 turn=180
+  box wall_9 size=93.6,93.6,0.4 at=-60.3,228.4,-119.7 turn=180
+  box wall_10 size=18.7,18.7,0.4 at=52.1,284.5,-119.7 turn=180
+  box wall_11 size=56.2,37.4,0.4 at=52.1,322,-119.7 turn=180
+  box wall_12 size=112.3,168.5,0.4 at=-84.9,172.2,40.4 turn=-90
+  box wall_13 size=18.7,37.4,0.4 at=-84.9,303.3,105.9 turn=-90
+  box wall_14 size=18.7,18.7,0.4 at=-84.9,340.7,-6.4 turn=-90
+  box wall_15 size=74.9,18.7,0.4 at=-84.9,340.7,59.1 turn=-90
+  box wall_16 size=112.3,37.4,0.4 at=-106.3,172.2,-66.7 turn=-90
+  box wall_17 size=93.6,93.6,0.4 at=-106.3,228.4,-76 turn=-90
+  box wall_18 size=18.7,74.9,0.4 at=-106.3,247.1,-19.9 turn=-90
+  box wall_19 size=18.7,112.3,0.4 at=-46.4,239.7,118
+  box wall_20 size=93.6,112.3,0.4 at=28.5,239.7,118
+  box wall_21 size=18.7,56.2,0.4 at=-27.6,295.9,118
+  box wall_22 size=74.9,168.5,0.4 at=-28.4,0,10.8 turn=180
+  box wall_23 size=18.7,149.8,0.4 at=4.6,209.3,107.2
+  box wall_24 size=93.6,56.2,0.4 at=60.8,284.2,107.2
+  box wall_25 size=74.9,18.7,0.4 at=51.4,340.4,107.2
+  box wall_26 size=56.2,168.5,0.4 at=-23.6,0,57
+  box wall_27 size=56.2,168.5,0.4 at=-1.6,0,31.8 turn=90
+  box wall_28 size=18.7,112.3,0.4 at=-1.6,243.4,106.7 turn=90
+  box wall_29 size=56.2,168.5,0.4 at=-54.1,0,38.6 turn=-90
+  box wall_30 size=18.7,18.7,0.4 at=-54.1,318.3,113.5 turn=-90
+  box wall_31 size=18.7,168.5,0.4 at=93.4,172.2,-109.4 turn=180
+  box wall_32 size=18.7,149.8,0.4 at=18.5,190.9,-109.4 turn=180
+  box wall_33 size=18.7,37.4,0.4 at=-98.2,172.2,-16.4
+  box wall_34 size=18.7,131.1,0.4 at=-98.2,228.4,-16.4
+  box wall_35 size=112.3,18.7,0.4 at=4.8,340.7,-16.4
+  box slab_3 size=56.2,0.4,56.2 at=-26.3,0,38.6
+  box wall_36 size=56.2,37.4,0.4 at=52.7,172.2,-109 rot=(0,-0.997,0.077,179.7)
+  box wall_37 size=18.7,112.3,0.4 at=-58.3,239.7,109.8 turn=-90
+  box wall_38 size=18.7,112.3,0.4 at=66.9,239.7,106.7 turn=90
+  box wall_39 size=18.7,149.8,0.4 at=22,172.2,-112 turn=90
+  box wall_40 size=18.7,74.9,0.4 at=-10.4,228,112.5 turn=-90
+}
+Industrial_Container_SupplyBox_02B_29 Industrial_Container_SupplyBox_02B_21_4 at=-217.9,-141.1,-225.6 turn=3.4 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_H_Industrial_Container_SupplyBox_02B@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+BS_Military_Hospital_Box_02 BS_Military_Hospital_Box_02_7 at=-206.8,-133.9,-222.3 rot=(-0.797,0.427,0.427,102.9) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_BS_Military_Hospital_Box_02@4" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAsComplex"
+BS_Military_Hospital_Box_02 BS_Military_Hospital_Box_02_6 at=-209.5,-133.9,-221.6 rot=(-1,0,0,90) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_BS_Military_Hospital_Box_02@3" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAsComplex"
+Generic_Lighting_Spotlight_04_11 Generic_Lighting_Spotlight_04_6_2 at=-184,-125.3,-180.8 turn=-50 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH2/SM_Generic_Lighting_Spotlight_04@2" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+group Building_HLight_01_ExterWall_02 at=-196.8,-124.5,-165.8 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_51_-36/SM_H_Building_FutureTech_HLight_01_ExterWall_02" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box wall size=70.2,128.7,0.4 at=-56.2,47.1,-124.3 turn=180
+  box wall_2 size=46.8,58.5,0.4 at=2.4,117.3,-124.3 turn=180
+  box wall_3 size=11.7,58.5,0.4 at=-97.1,117.3,-124.3 turn=180
+  box wall_4 size=81.9,35.1,0.4 at=66.7,129,-124.3 turn=180
+  box wall_5 size=11.7,46.8,0.4 at=-108.8,129,-124.3 turn=180
+  box wall_6 size=234.1,11.7,1.5 at=106,150.3,-0.7 turn=90
+  box wall_7 size=203.8,35.1,1.5 at=106,115.2,14.5 turn=90
+  wedge wall_8 size=35.1,52.7,1.5 at=106,132.8,-87.5 rot=(-0.577,-0.577,0.577,120)
+  box slab size=140.4,0.4,105.3 at=-42.3,169.7,-73.7
+  box slab_2 size=46.8,0.4,11.7 at=-89.1,169.7,-15.1
+  box wall_9 size=58.5,70.2,0.4 at=-110.5,46.7,-73.7 turn=-90
+  box wall_10 size=35.1,58.5,0.4 at=-110.5,116.9,-73.7 turn=-90
+  box wall_11 size=35.1,46.8,0.4 at=-110.5,128.6,-108.8 turn=-90
+  box wall_12 size=46.8,46.8,0.4 at=-110.5,128.6,-32.7 turn=-90
+  box slab_3 size=81.9,0.4,23.4 at=68.9,157.3,-111.3
+  box slab_4 size=23.4,0.4,222.4 at=98.2,157.3,11.5
+  box slab_5 size=11.7,0.4,128.7 at=-83.2,157.3,46.6
+  box slab_6 size=58.5,0.4,23.4 at=57.2,157.3,111
+  box slab_7 size=46.8,0.4,11.7 at=51.4,157.3,128.6
+  box slab_8 size=105.3,0.4,21.6 at=-24.7,157.3,110.1
+  wedge slab_9 size=105.3,19.3,0.4 at=-24.7,157.4,120.9 rot=(1,0,0,90)
+  box wall_13 size=35.1,152.1,0.4 at=-84.8,0,9.6 turn=-90
+  box wall_14 size=81.9,35.1,0.4 at=-84.8,117,68.2 turn=-90
+  box wall_15 size=140.4,35.1,1.5 at=9.3,121.9,125.4
+  box wall_16 size=117,46.8,3.2 at=-87.5,117,51.4 turn=90
+  box wall_17 size=11.7,35.1,0.4 at=26.5,129.5,-124.9 turn=90
+  box wall_18 size=58.5,23.4,0.4 at=26.5,152.9,-54.7 turn=90
+  box wall_19 size=35.1,8.8,0.4 at=26.5,167.5,-101.5 turn=90
+  wedge wall_20 size=35.1,52.7,0.4 at=26.5,167.5,-101.5 rot=(0.707,0,-0.707,180)
+  box wall_21 size=23.4,117,0.4 at=12.1,12.4,-118.5 turn=180
+  box wall_22 size=81.9,23.4,0.4 at=64.8,129.5,-118.5 turn=180
+  box wall_23 size=105.3,11.7,0.4 at=-18.3,150.5,-26.6
+  box wall_24 size=93.6,11.7,0.4 at=-24.2,162.2,-26.6
+  box wall_25 size=11.7,46.8,0.4 at=-106.6,124.8,-8.9
+  box wall_26 size=35.1,20.5,0.4 at=-83.2,151.2,-8.9
+  wedge wall_27 size=35.1,52.7,0.4 at=-83.2,151.2,-8.9 rot=(0,0,1,180)
+  box slab_10 size=23.4,0.4,210.7 at=102.9,153.2,-6
+  box slab_11 size=11.7,0.4,11.7 at=108.7,153.2,105.2
+  box slab_12 size=35.1,0.4,23.4 at=50.2,153.2,122.7
+  box slab_13 size=70.2,0.4,11.7 at=-2.4,153.2,128.6
+  box wall_28 size=35.1,46.8,1.5 at=89.3,115.2,114.7
+  box wall_29 size=11.7,105.3,0.4 at=26.3,12.4,-119.9
+  box wall_30 size=81.9,23.4,0.4 at=61.4,129.5,-119.9
+  box wall_31 size=35.1,35.1,1.5 at=-71.5,115.2,108.2
+  box wall_32 size=23.4,11.7,1.5 at=-77.4,150.3,108.2
+  box slab_14 size=128.7,0.4,11.7 at=-37.7,121.6,-120.5
+  box wall_33 size=11.7,46.8,0.4 at=-59.8,115.2,113.8 turn=-90
+  box wall_34 size=11.7,23.4,0.4 at=-59.8,126.9,125.5 turn=-90
+  box ramp size=11.7,0.4,117 at=-105.8,123.7,-65.9 rot=(-0.001,0,-1,36)
+  box wall_35 size=11.7,81.9,0.4 at=-106.3,46.7,-45.9 turn=-65.1
+  box wall_36 size=11.7,81.9,0.4 at=-106,46.7,-102.5 turn=-114.9
+  box wall_37 size=11.7,81.9,0.4 at=-94.6,46.7,-120.4 turn=-155.1
+  box wall_38 size=11.7,81.9,0.4 at=-15.4,47.1,-120 turn=155.1
+  box slab_15 size=11.7,0.4,46.8 at=104,116.1,-57.6
+  box slab_16 size=11.7,0.4,140.4 at=104,116.1,47.8
+  box slab_17 size=23.4,0.4,11.7 at=-77.4,116.1,112.1
+  box slab_18 size=23.4,0.4,11.7 at=86.5,116.1,112.1
+}
+ISS_Destiny_01 ISS_Destiny_01_3 at=-202.3,-124.3,-171.2 turn=90 ~fit=0.6 ~src="Room/RoomBuilder_SpaceCenterH2/SM_FutureTech_ISS_Destiny_01@2" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Lighting_DecorativeLamp_02_E_v2 Lighting_DecorativeLamp_02_E_28 at=-212.9,-122.8,-235.3 rot=(0.577,0.577,-0.577,120) ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_H_FutureTech_Lighting_DecorativeLamp_02_E@6" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Government_Office_Cabinet_06 Government_Office_Cabinet_06 at=-195.5,-121.7,-233 turn=180 ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_H_Government_Office_Cabinet_06" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Government_Office_Mirror_01 Government_Office_Mirror_01_3 at=-186,-121.6,-240.4 ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_H_Government_Office_Mirror_01@2" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Government_Office_Cabinet_07 Government_Office_Cabinet_07_4 at=-204.1,-121.6,-233 turn=180 ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_H_Government_Office_Cabinet_07@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+box Government_Office_Box_01_6_5 size=2.5,2,1.5 at=-209.4,-121.6,-228.9 turn=10 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_M_Government_Office_Box_01@19" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Resort_Flowerpot_05_18 Resort_Flowerpot_05_6_4 at=-209.4,-121.6,-232.4 ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_H_FutureTech_Resort_Flowerpot_05@18" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Folder_01_C_v2_2 Furniture_Folder_01_C_4_5 at=-206.7,-121.5,-229.3 rot=(0.447,0.447,0.775,104.5) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_H_FutureTech_Furniture_Folder_01_C@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+box Industrial_Prop_Light_02_55_2 size=2.3,0.5,0.5 at=-186.9,-120.4,-165.7 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_Industrial_Prop_Light_02@46" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Industrial_Prop_Light_02_50_2 size=2.3,0.5,0.6 at=-206.5,-120.4,-176.7 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_Industrial_Prop_Light_02@28" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Industrial_Prop_Light_02_48_2 size=2.3,0.5,0.5 at=-217.6,-120.4,-165.7 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_Industrial_Prop_Light_02@25" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Industrial_Prop_Light_02_49_2 size=2.3,0.5,0.6 at=-217.6,-120.4,-176.7 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_Industrial_Prop_Light_02@29" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+mirror Industrial_Prop_Light_02_54_2 of=Industrial_Prop_Light_02_49_2 across=(-202.269993,0,0) axis=(1,0,0) ~role="decor"
+box Industrial_Prop_Light_02_53_2 size=2.3,0.5,0.6 at=-198.1,-120.4,-176.7 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_Industrial_Prop_Light_02@27" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Industrial_Prop_Light_02_51_2 size=2.3,0.5,0.5 at=-206.4,-120.3,-165.6 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_Industrial_Prop_Light_02@24" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+mirror Industrial_Prop_Light_02_52_2 of=Industrial_Prop_Light_02_51_2 across=(-202.269993,0,0) axis=(1,0,0) ~role="decor"
+box Government_Office_BoxLid_01_5_5 size=2.5,0.2,1.6 at=-209.5,-119.6,-229 rot=(-0.452,-0.02,0.892,10.3) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_M_Government_Office_BoxLid_01@14" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Commercial_Sanitary_HandSink_02_v3 Commercial_Sanitary_HandSink_02_5 at=-186.1,-118.7,-237.7 turn=-90 ~fit=0.8 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_M_Commercial_Sanitary_HandSink_02@4" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Lighting_DecorativeLamp_02_C_v4_2 Lighting_DecorativeLamp_02_C_19_2 at=-208.2,-110.4,-171.2 rot=(0.577,0.577,-0.577,120) ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Lighting_DecorativeLamp_02_C@21" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Lighting_DecorativeLamp_02_C_v4_2 Lighting_DecorativeLamp_02_C_24_2 at=-196.9,-110.4,-171.2 rot=(0.577,0.577,-0.577,120) ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Lighting_DecorativeLamp_02_C@14" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Emissive_Cylinder_01_75 size=18.2,0.2,0.1 at=-184.5,-108.9,-240.3 rot=(-0.015,1,0.015,90) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_Emissive_Cylinder_01@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseDefault"
+Lighting_OverheadLight_01_v3_5 Lighting_OverheadLight_01_53_4 at=-205.7,-108.7,-233.9 turn=-90 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_H_FutureTech_Lighting_OverheadLight_01@20" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAsComplex"
+Resort_ReminderBoard_01_11 Resort_ReminderBoard_01_4_2 at=-210,-108.7,-222.8 turn=151.2 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_51_-36/SM_H_FutureTech_Resort_ReminderBoard_01@2" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseSimpleAndComplex"
+Lighting_OverheadLight_01_v3_5 Lighting_OverheadLight_01_49_2 at=-213.7,-108.5,-233.9 turn=-90 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_H_FutureTech_Lighting_OverheadLight_01@6" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAsComplex"
+Lighting_OverheadLight_01_v3_5 Lighting_OverheadLight_01_56_4 at=-196.8,-108.5,-233.9 turn=-90 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_H_FutureTech_Lighting_OverheadLight_01@21" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAsComplex"
+Lighting_OverheadLight_01_v3_5 Lighting_OverheadLight_01_59_4 at=-189.8,-108.5,-233.9 turn=-90 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_H_FutureTech_Lighting_OverheadLight_01@22" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAsComplex"
+Machinery_RFID_01_B Machinery_RFID_01_B_4 at=-193.1,-108.5,-227.1 turn=-90 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_51_-36/SM_H_FutureTech_Machinery_RFID_01_B@3" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Lighting_DecorativeLamp_02_C_v2_2 Lighting_DecorativeLamp_02_C_18_2 at=-210.3,-108.5,-239.9 rot=(0,0.707,-0.707,180) ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_H_FutureTech_Lighting_DecorativeLamp_02_C@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Lighting_DecorativeLamp_02_C_v2_2 Lighting_DecorativeLamp_02_C_25_2 at=-193.5,-108.5,-239.9 rot=(0,0.707,-0.707,180) ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_H_FutureTech_Lighting_DecorativeLamp_02_C@27" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Fencing_01 Furniture_Fencing_01_8 at=-185.8,-108.5,-220.6 turn=30 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Furniture_Fencing_01@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Building_HBoss_01_InterWall_03C size=10.4,11.9,0.9 at=-183.7,-108.4,-218.8 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_Building_FutureTech_HBoss_01_InterWall_03C" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Machinery_RFID_01_A_6 Machinery_RFID_01_A_3_2 at=-193.6,-108.4,-235.4 turn=90 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_51_-36/SM_H_FutureTech_Machinery_RFID_01_A@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Machinery_RFID_01_A_6 Machinery_RFID_01_A_4_2 at=-193.2,-108.4,-234 turn=-90 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_51_-36/SM_H_FutureTech_Machinery_RFID_01_A@3" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Lighting_DecorativeLamp_02_E_v5 Lighting_DecorativeLamp_02_E_32 at=-203.5,-108.1,-225.5 rot=(0.577,0.577,-0.577,120) ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_103_-72/SM_H_FutureTech_Lighting_DecorativeLamp_02_E@4" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Resort_Flowerpot_05_18 Resort_Flowerpot_05_8_4 at=-198.1,-107.8,-223.6 rot=(-0.122,-0.122,0.985,90.9) ~fit=1 ~src="SmallMeshGroup/SmallMeshGroup_51_-36/SM_H_FutureTech_Resort_Flowerpot_05@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Resort_MopBucket_01_4 Resort_MopBucket_01_3_2 at=-207.2,-107.5,-223.3 rot=(-0.222,-0.2,0.954,98.6) ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_51_-36/SM_H_FutureTech_Resort_MopBucket_01@2" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Ladder_01_B_8 Furniture_Ladder_01_B_7 at=-194.9,-104.1,-215.1 rot=(-0.072,-0.995,0.072,90.3) ~fit=0.8 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Furniture_Ladder_01_B@3" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Update_Container_PlasticBox_02_28 Update_Container_PlasticBox_02_13_3 at=-183.5,-103.9,-214.8 turn=94.6 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_Update_Container_PlasticBox_02@12" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Commercial_Lighting_EXIT_01_10 Commercial_Lighting_EXIT_01_6_2 at=-193.7,-92.4,-234.9 turn=90 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_Commercial_Lighting_EXIT_01@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Generic_Lighting_Chandelier_01_4_2 size=18.1,0.4,0.3 at=-183.4,-87.1,-232 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_Generic_Lighting_Chandelier_01@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Lighting_DecorativeLamp_02_C_7 Lighting_DecorativeLamp_02_C_22_2 at=-206.5,-85.4,-207.2 rot=(0.577,0.577,-0.577,120) ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Lighting_DecorativeLamp_02_C@20" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Lighting_DecorativeLamp_02_C_7 Lighting_DecorativeLamp_02_C_28_2 at=-183.8,-85.4,-207.2 rot=(0.577,0.577,-0.577,120) ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Lighting_DecorativeLamp_02_C@13" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+group Building_HLight_01_InterWall_06 at=-195.4,-84.8,-209.5 ~fit=0.7 ~src="MidMeshGroup/MidMeshGroup_51_-36/SM_H_Building_FutureTech_HLight_01_InterWall_06" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box slab size=42.9,0.4,18.6 at=0.1,13.4,1.6
+  box slab_2 size=2.9,0.4,18.6 at=-19.8,0,1.6
+  box slab_3 size=1.4,0.4,10 at=21,0,-2.7
+  box slab_4 size=1.4,0.4,7.1 at=21,0,7.3
+  box slab_5 size=38.6,0.4,17.8 at=1,0,2
+  wedge slab_6 size=38.6,4.3,0.4 at=1,0.2,-6.8 rot=(0,0.707,-0.707,180)
+  subtract wall at=-0.3,0.3,11 turn=180 {
+    box body size=42.9,12.9,0.4
+    box hole size=32.9,5.7,1.1 at=-0.7,4.3,0
+  }
+  box wall_2 size=4.3,12.9,0.4 at=-19,0.3,-7.7
+  box wall_3 size=5.7,12.9,0.4 at=1.7,0.3,-7.7
+  box wall_4 size=1.4,12.9,0.4 at=21,0.3,-7.7
+  box wall_5 size=4.3,1.4,0.4 at=-14.7,1.7,-7.7
+  box wall_6 size=2.9,1.4,0.4 at=-2.6,1.7,-7.7
+  box wall_7 size=15.7,4.3,0.4 at=-9,8.9,-7.7
+  box wall_8 size=15.7,4.3,0.4 at=12.4,8.9,-7.7
+  box wall_9 size=18.6,12.9,0.4 at=21.3,0.3,1.8 turn=-90
+  box wall_10 size=10,12.9,0.4 at=-21.3,0.3,5.8 turn=90
+  box wall_11 size=2.9,12.9,0.4 at=-21.3,0.3,-6.4 turn=90
+  box wall_12 size=5.7,4.3,0.4 at=-21.3,8.9,-2.1 turn=90
+  box wall_13 size=17.1,10,0.4 at=-8.7,0.3,-10.7
+  box slab_7 size=17.1,0.4,2.9 at=-8.7,9.4,-9
+  box wall_14 size=2.9,10,0.4 at=0,0.3,-9 turn=-90
+  box wall_15 size=2.9,10,0.4 at=-17.5,0.3,-8.7 turn=90
+}
+Furniture_Cabinet_16_14 Furniture_Cabinet_16_6_3 at=-206.2,-84.6,-201.2 turn=180 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Furniture_Cabinet_16@13" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Cabinet_16_14 Furniture_Cabinet_16_7_2 at=-195.8,-84.6,-201.2 turn=180 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Furniture_Cabinet_16@14" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Cabinet_16_14 Furniture_Cabinet_16_8 at=-185.7,-84.6,-201.2 turn=180 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Furniture_Cabinet_16@15" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Government_Office_ServerComponents_06 size=13.2,9.3,5.5 at=-206.1,-84.6,-220.7 ~fit=1 ~src="MidMeshGroup/MidMeshGroup_51_-36/SM_H_Government_Office_ServerComponents_06" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Building_HLight_01_InterWall_06B size=16.6,8.7,0 at=-204.1,-84.5,-217.2 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_Building_FutureTech_HLight_01_InterWall_06B" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Government_Office_ServerParts_02_v2 Government_Office_ServerParts_02_3_2 at=-201.2,-84.5,-215.7 turn=-59.4 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_Government_Office_ServerParts_02@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Government_Office_Box_01_5_5 size=2.5,2,1.5 at=-213.7,-84.5,-200.6 turn=3.8 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_M_Government_Office_Box_01@10" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Government_Office_Box_01_4_5 size=2.5,2,1.5 at=-214,-84.5,-202.5 turn=7.9 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_M_Government_Office_Box_01@11" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Electron_Computer_02_01_10 Electron_Computer_02_01_3_4 at=-209.8,-84.5,-200.9 turn=180 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Electron_Computer_02_01@14" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Electron_Computer_02_01_10 Electron_Computer_02_01_4_3 at=-203,-84.5,-200.3 turn=170 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Electron_Computer_02_01@13" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Machinery_Cabinet_03d Machinery_Cabinet_03d at=-198.4,-84.5,-219 ~fit=0 ~src="SmallMeshGroup/SmallMeshGroup_51_-36/SM_H_FutureTech_Machinery_Cabinet_03d@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Machinery_Cabinet_03d Machinery_Cabinet_03d_2 at=-196.4,-84.5,-219 ~fit=0 ~src="SmallMeshGroup/SmallMeshGroup_51_-36/SM_H_FutureTech_Machinery_Cabinet_03d@1" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box BlockWallCube_52 size=28.5,3.4,1.9 at=-196.8,-84.5,-200.7 ~fit=1 ~src="Blocker/RoomBuilder_SpaceCenterH2/BlockWallCube@17" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"
+Government_Office_ServerParts_02_v2 Government_Office_ServerParts_02_2_2 at=-207.8,-84.4,-215.7 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_Government_Office_ServerParts_02@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+wedge Building_HLight_01_InterWall_06D_2 size=6.7,0,4.1 at=-204,-84.4,-213.1 turn=-30 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_Building_FutureTech_HLight_01_InterWall_06D" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Building_HLight_01_InterWall_06C size=3.9,6.7,0 at=-202,-84.4,-216.7 turn=15 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_Building_FutureTech_HLight_01_InterWall_06C" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Chair_09_02_11 Furniture_Chair_09_02_8 at=-184.2,-84.3,-204.3 turn=-140 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Furniture_Chair_09_02@1" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Chair_09_02_11 Furniture_Chair_09_02_5 at=-207,-84.3,-203.6 turn=34.5 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Furniture_Chair_09_02@3" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Chair_09_02_11 Furniture_Chair_09_02_6 at=-195.6,-84.3,-205.1 turn=-24.9 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Furniture_Chair_09_02@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Government_Office_ServerParts_07_2 size=1.5,0.7,1.3 on=Government_Office_ServerParts_02_3_2[0.2,1,0.3] turn=103.5 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_Government_Office_ServerParts_07" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Government_Office_ServerParts_04_v2 Government_Office_ServerParts_04_5 at=-207.9,-84.2,-215.9 turn=-47.8 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_Government_Office_ServerParts_04@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Office_ComputerMonitors_03_15 Office_ComputerMonitors_03_9_3 at=-186.9,-84,-201.9 rot=(-0.951,0.219,0.219,92.9) ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Office_ComputerMonitors_03@17" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Government_Office_BoxLid_01_3_5 size=2.5,0.2,1.6 at=-214,-82.6,-202.5 turn=7.9 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_M_Government_Office_BoxLid_01@7" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Government_Office_BoxLid_01_4_5 size=2.5,0.2,1.6 at=-213.7,-82.6,-200.6 turn=3.8 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_M_Government_Office_BoxLid_01@6" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+IceLand_Props_IndustrialExtinguisher_01a IceLand_Props_IndustrialExtinguisher_01a_4 at=-192.9,-81.9,-223.2 turn=180 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_IceLand_Props_IndustrialExtinguisher_01a@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box IceLand_Props_IndustrialExtinguisher_01c_16 size=1.2,1.9,0.6 at=-192.9,-81.8,-222.7 turn=-68.3 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_IceLand_Props_IndustrialExtinguisher_01c@9" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box IceLand_Props_IndustrialExtinguisher_01c_13 size=1.2,1.9,0.6 at=-192.9,-81.8,-223.7 turn=-83.3 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_IceLand_Props_IndustrialExtinguisher_01c@10" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+group Government_Office_FoldingTable_01 at=-214.3,-81.3,-201.9 ~fit=0.3 ~src="Room/RoomBuilder_SpaceCenterH2/SM_M_Government_Office_FoldingTable_01" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" ~scatter=15 {
+  plate floor points=[(-1.1,3.2); (1.7,2.9); (1.1,-3.2); (-1.7,-2.9)] h=0.4 at=0,0,0
+  plate floor_2 points=[(1.7,-2.9); (1.1,3.2); (-1.7,2.9); (-1.1,-3.2)] h=0.4 at=0,0.5,0 tilt=180
+}
+Electron_Computer_01_03_4 Electron_Computer_01_03_3_5 at=-193.2,-81,-201.3 turn=-150 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Electron_Computer_01_03" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+repeat Window_02_13 n=5 step=6.85,0,0 at=Building_HLight_01_InterWall_08 offset=-25.15,4.12,-58.85 pin=origin {
+  Window_02_2 Window_02_2 turn=180 ~fit=0
+}
+Office_ComputerMonitors_03_15 Office_ComputerMonitors_03_6_3 at=-209.1,-81,-201.3 turn=-30 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Office_ComputerMonitors_03@14" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Government_Office_StorageBasket_01_3_5 size=1.7,1.1,1.2 at=-214.6,-81,-200.4 turn=-11.6 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_M_Government_Office_StorageBasket_01@3" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Folder_01_C_v2_2 Furniture_Folder_01_C_5_5 at=-196.7,-80.9,-201.6 rot=(0.664,0.664,0.345,141.9) ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Furniture_Folder_01_C@4" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Folder_01_A_8 Furniture_Folder_01_A_6_5 at=-197.4,-80.9,-200.4 rot=(-0.578,-0.688,0.439,139.6) ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Furniture_Folder_01_A@5" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Folder_02_8 Furniture_Folder_02_5_5 at=-214.2,-80.9,-200.3 turn=167.5 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Furniture_Folder_02@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Office_ComputerMonitors_03_15 Office_ComputerMonitors_03_7_3 at=-204.3,-80.6,-200.4 rot=(-0.954,0.212,0.212,92.7) ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Office_ComputerMonitors_03@15" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Commercial_Lighting_EXIT_01_10 Commercial_Lighting_EXIT_01_7_2 against=Building_HLight_01_InterWall_08[-0.001,0.56,-1] turn=180 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_Commercial_Lighting_EXIT_01@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Branding_Office_doorplate_RoomUnit_07 Branding_Office_doorplate_RoomUnit_07_2 at=-183.4,-74.6,-218.3 turn=180 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_Branding_Office_doorplate_RoomUnit_07@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseDefault"
+Lighting_OverheadLight_01_v3_5 Lighting_OverheadLight_01_57_3 at=-194.9,-71.6,-200 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Lighting_OverheadLight_01@35" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex"
+Lighting_OverheadLight_01_v3_5 Lighting_OverheadLight_01_52_5 at=-207.6,-71.6,-200 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Lighting_OverheadLight_01@34" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex"
+repeat Lighting_DecorativeLamp_02_E_44 n=3 step=12.01,0,0 at=Building_HLight_01_InterWall_08 offset=-27.7,14.21,-68.53 pin=origin {
+  Lighting_DecorativeLamp_02_E_v7 Lighting_DecorativeLamp_02_E_v7 rot=(0.577,0.577,-0.577,120) ~role="decor" ~fit=1
+}
+box BlockWallCube_53 size=48.9,29,21.6 at=-194.9,-69.6,-206.4 ~fit=1 ~src="Blocker/RoomBuilder_SpaceCenterH2/BlockWallCube@3" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"
+box Generic_Lighting_Chandelier_01_5 size=18.1,0.4,0.3 at=-183.4,-64.2,-231.9 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_Generic_Lighting_Chandelier_01@3" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Resort_Flowerpot_05_18 Resort_Flowerpot_05_9_4 at=-191.2,-62.7,-219.9 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Resort_Flowerpot_05@13" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+IceLand_Props_IndustrialExtinguisher_01a IceLand_Props_IndustrialExtinguisher_01a_5 at=-192.9,-59.1,-223.2 turn=180 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_IceLand_Props_IndustrialExtinguisher_01a@3" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box IceLand_Props_IndustrialExtinguisher_01c_14 size=1.2,1.9,0.6 at=-192.9,-59,-222.6 turn=-68.3 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_IceLand_Props_IndustrialExtinguisher_01c@11" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box IceLand_Props_IndustrialExtinguisher_01c_15 size=1.2,1.9,0.6 at=-192.9,-59,-223.6 turn=-68.3 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_IceLand_Props_IndustrialExtinguisher_01c@12" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Generic_Lighting_WallLamp_07_12 Generic_Lighting_WallLamp_07_9 at=-204.6,-40.3,-215 rot=(0,1,0.016,180) ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_Generic_Lighting_WallLamp_07@4" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Generic_Lighting_Chandelier_01_6 size=18.1,0.4,0.3 at=-183.4,-40.1,-225.6 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH2/SM_Generic_Lighting_Chandelier_01@5" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Road_FlowerBed_04_01_4 Road_FlowerBed_04_01_3_4 at=-190.7,-35.3,-214.7 ~fit=0.6 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Road_FlowerBed_04_01" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Resort_Flowerpot_05_18 Resort_Flowerpot_05_10_4 at=-190.7,-35.3,-223.9 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Resort_Flowerpot_05@8" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Resort_Flowerpot_05_18 Resort_Flowerpot_05_11_4 at=-190,-35.3,-205.8 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Resort_Flowerpot_05@7" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Lighting_DecorativeLamp_05_15 Lighting_DecorativeLamp_05_5_2 at=-204.2,-20.5,-194.5 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Lighting_DecorativeLamp_05@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Lighting_DecorativeLamp_05_15 Lighting_DecorativeLamp_05_6_2 at=-204.2,-20.5,-174.6 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Lighting_DecorativeLamp_05@4" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Lighting_DecorativeLamp_06_A_9 Lighting_DecorativeLamp_06_A_9 at=-183.3,-3.6,-235.7 rot=(0,0.707,-0.707,180) ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Lighting_DecorativeLamp_06_A@10" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Lighting_DecorativeLamp_06_A_9 Lighting_DecorativeLamp_06_A_2_3 at=-183.3,-3.6,-218.2 rot=(0,0.707,-0.707,180) ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH2/SM_H_FutureTech_Lighting_DecorativeLamp_06_A@15" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"

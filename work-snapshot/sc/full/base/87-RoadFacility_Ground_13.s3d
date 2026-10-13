@@ -1,0 +1,281 @@
+// 分区 87/233：154 个物体（1 组），x -266…-209，z 109…398
+
+repeat EFX_BlockPlane_122_2 n=8 step=16.89,0,0.12 at=-315.5,-247.7,397.4 pin=origin {
+  EFX_BlockPlane_v11_4 EFX_BlockPlane_v11_4 turn=-0.4 ~role="collision" ~fit=1
+}
+repeat Fence_Metal_01B_23_2 n=5 step=25.24,0,0 at=RoadFacility_Ground_R_02H offset=36.7,30.06,87.9 pin=origin {
+  Fence_Metal_01B_v3_2 Fence_Metal_01B_v3_2 ~fit=0
+}
+Tools_Box_01_34 Tools_Box_01_31_2 at=-247.3,-122.2,317.8 turn=8.9 ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_103_-70/SM_H_FutureTech_Tools_Box_01" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+group RoadFacility_Ground_13 at=-218.3,-122.2,196.6 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_I_RoadFacility_Ground_H_13" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box slab size=92.9,0.4,47.1 at=-8.8,2.3,-7.5
+  box slab_2 size=137.1,0.4,25.7 at=-0.4,14,-43.2
+  box slab_3 size=10,0.4,18.6 at=63.2,14,-21
+  box slab_4 size=72.9,0.4,40 at=-18.8,1.5,35.3
+  box wall size=91.4,12.9,0 at=-23.2,1.5,-31.1
+  box wall_2 size=44.3,1.2,0 at=44.6,13.2,-31.1
+  wedge wall_3 size=44.3,13.2,0 at=44.6,13.2,-31.1 rot=(0,0,1,180)
+  box ramp size=27.1,0.4,27.1 at=50,7.7,0.8 rot=(0,0,1,20.8)
+  box wall_4 size=15.7,12.9,0.4 at=-68.8,1.5,-48.1 turn=-90
+  box wall_5 size=44.3,9.1,0.4 at=-68.8,1.5,-18.1 turn=-90
+  wedge wall_6 size=44.3,3,0.4 at=-68.8,10.7,-18.1 turn=90
+  box ramp_2 size=30,0.4,18.6 at=44.2,10.1,-21.8 rot=(0,0,1,20.8)
+  box slab_5 size=12.9,0.4,35.7 at=-62.5,10.5,-13.2
+  box wall_7 size=35.7,8.6,0.4 at=-56.1,1.8,-13.8 turn=90
+  box wall_8 size=34.3,1.4,0.4 at=-56.1,10.3,-13 turn=90
+  box wall_9 size=12.9,2.9,0.4 at=36.2,2.7,-13
+  box wall_10 size=4.3,1.4,0.4 at=44.8,4.1,-13
+  wedge wall_11 size=20,3.6,0.4 at=58.3,12.8,-13
+  wedge wall_12 size=20,7.5,0.4 at=58.3,13.1,-13 rot=(0,0,1,180)
+  box wall_13 size=2.4,5.7,0.4 at=47.2,5.5,-13
+  wedge wall_14 size=5.7,18.9,0.4 at=46,8.4,-13 rot=(0.707,-0.707,0,180)
+  box wall_15 size=92.9,2.9,0.4 at=-8.8,0.7,15.2
+  box slab_6 size=7.1,0.4,27.1 at=65.5,12.9,0.8
+  box wall_16 size=87.1,1.4,0.4 at=-55.1,0.7,12.5 turn=-90
+  box wall_17 size=45.7,1.4,0.4 at=-55.1,2.1,-8.3 turn=-90
+  box wall_18 size=12.9,10,0.4 at=-62.5,1.8,3.9
+  box wall_19 size=72.9,1.4,0.4 at=-18.8,0.7,54.8
+}
+RoadFacility_Road_AsphaltRoad_512_01_6 RoadFacility_Road_AsphaltRoad_512_01_4_2 at=-264.7,-121.3,231.3 turn=-90 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_51_-35/SM_RoadFacility_Road_AsphaltRoad_512_01@3" ~role="terrain" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+RoadFacility_Road_AsphaltRoad_512_01_6 RoadFacility_Road_AsphaltRoad_512_01_5_2 at=-247.2,-121.3,317.8 turn=90 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_51_-35/SM_RoadFacility_Road_AsphaltRoad_512_01@1" ~role="terrain" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+group RoadFacility_Ground_13C at=-237,-120.7,231.2 turn=90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_I_RoadFacility_Ground_H_13C" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseSimpleAndComplex" {
+  box slab size=0.5,0.4,73.2 at=-17.8,0,0
+  box slab_2 size=0.9,0.4,73.2 at=-1.1,0,0
+  box slab_3 size=0.5,0.4,73.2 at=1,0,0
+  box slab_4 size=0.9,0.4,73.2 at=17.7,0,0
+}
+group RoadFacility_Ground_13B at=-218.4,-120.7,195.4 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_I_RoadFacility_Ground_H_13B" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseSimpleAndComplex" {
+  box slab size=134.3,0.4,1.4 at=0.1,12.5,-54.3
+  box slab_2 size=1.4,0.4,2.9 at=-50.7,12.5,-52.1
+  box slab_3 size=1.4,0.4,2.9 at=-39.2,12.5,-52.1
+  box slab_4 size=1.4,0.4,2.9 at=-3.5,12.5,-52.1
+  box slab_5 size=1.4,0.4,2.9 at=7.9,12.5,-52.1
+  box slab_6 size=1.4,0.4,2.9 at=43.6,12.5,-52.1
+  box slab_7 size=2.9,0.4,2.9 at=54.3,12.5,-52.1
+  box slab_8 size=10,0.4,1.4 at=-44.9,12.5,-51.4
+  box slab_9 size=10,0.4,1.4 at=2.2,12.5,-51.4
+  box slab_10 size=8.6,0.4,1.4 at=48.6,12.5,-51.4
+  box slab_11 size=132.9,0.4,1.4 at=-0.7,12.5,-47.1
+  box slab_12 size=1.4,0.4,15.7 at=-66.4,12.5,-38.6
+  box slab_13 size=1.4,0.4,14.3 at=66.5,12.5,-39.3
+  box slab_14 size=131.4,0.4,1.4 at=0.1,12.5,-31.4
+  box slab_15 size=92.9,0.4,2.9 at=-8.7,0,17.9
+  box slab_16 size=72.9,0.4,1.4 at=-18.7,0,54.3
+  box slab_17 size=84.3,0.4,1.4 at=-13,0.8,-28.2
+  box slab_18 size=1.4,0.4,42.9 at=-54.4,0.8,-6
+  box slab_19 size=7.1,0.4,1.4 at=34.2,0.8,-11
+  box slab_20 size=1.4,0.4,25.7 at=37,0.8,2.5
+  box wall size=85.7,1.4,0.4 at=-13,1.2,-29.9
+  box wall_2 size=4.3,1.4,0.4 at=50.6,9.8,-29.9
+  box wall_3 size=2.9,1.4,0.4 at=55.6,9.8,-29.9
+  box slab_21 size=10,0.4,1.4 at=44.3,7.3,-29.1
+  box slab_22 size=1.4,0.4,17.1 at=48.5,7.3,-19.8
+  box slab_23 size=1.4,0.4,25.7 at=52.8,7.3,1.6
+  box slab_24 size=1.4,0.4,25.7 at=57.1,7.3,1.6
+  box slab_25 size=1.4,0.4,27.1 at=62.7,11.4,2
+  box slab_26 size=1.4,0.4,27.1 at=68.4,11.4,2
+  box slab_27 size=1.4,0.4,27.1 at=41.9,3.4,2
+  box slab_28 size=10,0.4,1.4 at=34.9,4.2,-29.1
+  box slab_29 size=1.4,0.4,17.1 at=39.2,4.2,-19.8
+  box slab_30 size=10,0.4,1.4 at=53.6,10.1,-29.1
+  box slab_31 size=1.4,0.4,17.1 at=57.9,10.1,-19.8
+  box slab_32 size=1.4,0.4,25.7 at=60.8,10.1,1.6
+  box wall_4 size=17.1,1.4,0.4 at=30.2,1.2,-21.2 rot=(-0.026,-0.999,-0.026,90)
+  box wall_5 size=18.6,1.4,0.4 at=58.3,10.4,-20.5 rot=(-0.026,-0.999,-0.026,90)
+  box wall_6 size=18.6,1.4,0.4 at=39.4,3.5,-20.5 rot=(-0.026,-0.999,-0.026,90)
+  box wall_7 size=2.9,2.9,0.4 at=-68.8,1.7,3.9 rot=(-0.026,-0.999,-0.026,90)
+  box wall_8 size=8.6,1.4,0.4 at=34.4,1.2,-11.8
+}
+BlockWallCube_v9_2 BlockWallCube_62_2 at=-212.5,-120.4,251.1 turn=-90.1 ~fit=1 ~src="Blocker/BigMeshGroup_51_-35/BlockWallCube@2" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"
+BlockWallCube_v9_2 BlockWallCube_63_2 at=-212.5,-120.4,211.7 turn=-90.1 ~fit=1 ~src="Blocker/BigMeshGroup_51_-35/BlockWallCube@5" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"
+group Terrain_Road_Desert_Decal_Sand_06_8_4 at=-241.4,-120.3,282.4 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_I_Terrain_Road_Desert_Decal_Sand_06@5" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  hull prop points=[(-3.3,0,-1.4); (3.3,0.7,0.8); (2.4,1.8,-1.3); (2.5,0.2,1.4)] at=-2.6,0,-1.6
+  hull hull_2 points=[(-3.3,0.5,-1.6); (3.3,3.4,-2.8); (-2.7,0,-0.3); (-2.8,1.6,-3); (2.9,0.3,3); (3.2,1.6,-0.9)] at=2.6,0.2,0
+}
+hull Terrain_Road_Desert_Decal_Sand_06_12_3 points=[(-5.6,4.5,4.8); (5.6,0,7); (1,0,0.5); (-3.2,0,-7); (-4.9,2,1.1)] at=-225.2,-119.7,268.8 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_I_Terrain_Road_Desert_Decal_Sand_06@1" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+hull Terrain_Road_Desert_Decal_Sand_06_10_4 points=[(-4.8,0,6.5); (4.8,2.8,4.6); (-0.7,0,0); (2.5,0,-6.5); (1.8,1.3,5.2)] at=-240,-119.6,263.6 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_I_Terrain_Road_Desert_Decal_Sand_06@4" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+hull Terrain_Road_Desert_Decal_Sand_07_5_3 points=[(-2.1,0,0.4); (2.1,0,-2.1); (-0.1,0,-10.1); (-0.4,1.2,1.2); (-0.2,0,10.1); (1.1,0.6,6.3); (1.7,0,5.8); (1,0.9,-5.9); (1.9,0,-6.4); (-0.6,1.1,-2.8); (-2,0,-2.9)] at=-249.5,-119.6,191.9 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_51_-35/SM_I_Terrain_Road_Desert_Decal_Sand_07@5" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Industrial_Container_02_21 Industrial_Container_02_13_3 at=-248,-119.6,344.1 turn=90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_H_Industrial_Container_02@6" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_02_v2_5 Industrial_Container_02_15_3 at=-236.8,-119.6,196.8 turn=-90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_H_Industrial_Container_02@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+hull Terrain_Road_Desert_Decal_Sand_07_7_3 points=[(-1.6,0.1,-3.8); (1.6,0,5.7); (1.6,0,7.1); (0,0.7,-0.5); (-1.2,0.1,-7.1); (1,0,-1.8); (0.1,0.5,4); (0,0.1,4.7)] at=-225.8,-119.6,263.9 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_51_-35/SM_I_Terrain_Road_Desert_Decal_Sand_07@6" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Industrial_Container_02_v2_5 Industrial_Container_02_16_3 at=-236.4,-119.5,186.6 turn=-90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_H_Industrial_Container_02@4" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_02_v2_5 Industrial_Container_02_18_3 at=-210.5,-119.5,196 turn=-90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_H_Industrial_Container_02@1" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+hull Terrain_Road_Desert_Decal_Sand_06_14_3 points=[(-5.8,4.5,5.5); (5.8,0,6.1); (0.2,0,0.5); (-5.1,0,-6.1); (-5.6,2,1.9)] at=-218.2,-119.5,187.6 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_I_Terrain_Road_Desert_Decal_Sand_06@3" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Industrial_Container_SupplyBox_02B_65 Industrial_Container_SupplyBox_02B_56 at=-239.5,-119.5,267.5 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_51_-35/SM_H_Industrial_Container_SupplyBox_02B" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+group Terrain_Road_Desert_Decal_Sand_02_3_6 at=-227.5,-119.5,390.6 ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_I_Terrain_Road_Desert_Decal_Sand_02@4" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  hull hull points=[(-15.7,0.1,7.1); (15.7,4.6,8.3); (-10.3,0,1.9); (13.3,0,-8.3); (0.4,3.6,8); (15,1.7,-0.7)] at=-40.1,0,-0.7
+  hull hull_2 points=[(-15.3,3.3,4.7); (15.3,0.8,1.4); (6.4,0,-6.2); (-12.3,4.6,8); (-14.7,0,-8.5); (14.4,3.2,8.5); (13.5,0,-2.2)] at=-12.1,0,-0.4
+  hull hull_3 points=[(16.6,3.8,5.6); (-9,3.1,5.2); (6.8,3.4,5.5); (12.7,0,-3.7); (-1.6,3.2,5.3); (3.3,0,-3.3); (-6.2,3.1,5.2); (-1.9,0.9,-0.7); (-1.5,0,-3.3); (-4.5,0.8,-1.2); (-11.9,3.2,5.1); (-7.6,0.9,-1); (-5.6,0.4,-2.4); (-4.6,0,-3.6); (-8.6,0.7,-1.8); (-7.4,0.3,-3); (-9.8,0,-4.6); (-9.8,0.4,-3.1); (-16.6,1.4,-1.9); (-12.7,0,-5.6); (-11,0.8,-2); (-15,2.6,2.6); (-15.3,1.9,0.2); (-12.6,0.4,-3.8)] at=14.2,0,3
+  hull hull_4 points=[(-15.3,2.3,0.8); (15.3,0,4.9); (-9.1,0,-4.5); (-9.7,3.8,4.5); (-13.6,0,-4.9); (8.5,0,0.6); (-2.7,3.2,4.6)] at=40.5,0,4.2
+}
+hull Terrain_Road_Desert_Decal_Sand_07_6_3 points=[(-3.3,0,0.4); (3.3,0,-1.4); (-0.5,0,-5.7); (-0.5,0.8,0.7); (0.2,0,5.7); (2.2,0.4,3.4); (3.1,0,3.1); (1.5,0.6,-3.4); (2.9,0,-3.7); (-1.1,0.8,-1.5); (-3.3,0,-1.5)] at=-244.6,-119.5,275.1 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_51_-35/SM_I_Terrain_Road_Desert_Decal_Sand_07@4" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+RoadFacility_Ground_05_v2 RoadFacility_Ground_05_7 at=-213.2,-119.5,357.6 turn=180 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_I_RoadFacility_Ground_H_05@2" ~role="terrain" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_01_70 Industrial_Container_SupplyBox_01_52_2 at=-240.8,-119.5,274.9 turn=-90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_H_Industrial_Container_SupplyBox_01@3" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_01_70 Industrial_Container_SupplyBox_01_54 at=-232.2,-119.5,261.2 turn=180 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_H_Industrial_Container_SupplyBox_01@1" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_01_70 Industrial_Container_SupplyBox_01_55 at=-232,-119.5,278.8 turn=90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_H_Industrial_Container_SupplyBox_01@6" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_01_70 Industrial_Container_SupplyBox_01_57 at=-231.3,-119.5,269.6 turn=180 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_H_Industrial_Container_SupplyBox_01@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_01_70 Industrial_Container_SupplyBox_01_59 at=-223.2,-119.5,279.4 turn=-95.5 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_H_Industrial_Container_SupplyBox_01@4" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+IceLand_Props_MetalFrame_01a_12 IceLand_Props_MetalFrame_01a_9_3 at=-241,-119.4,258.9 rot=(-0.002,1,0.003,165) ~fit=0.7 ~src="MidMeshGroup/MidMeshGroup_51_-35/SM_H_IceLand_Props_MetalFrame_01a@6" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+repeat Fence_Metal_01_21_2 n=5 step=25.23,0,-0.01 at=Fence_Metal_01B_16_2 offset=23.05,2.38,9.37 pin=origin {
+  Fence_Metal_01_v3 Fence_Metal_01_v3 turn=180 ~fit=1
+}
+Transport_Utility_Guardrail_02_46 Transport_Utility_Guardrail_02_39_3 at=-216.6,-119.2,338.9 turn=176.9 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_51_-35/SM_H_Transport_Utility_Guardrail_02@3" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_Trademark_01_3 Transport_Utility_Trademark_01_2_4 at=-220.5,-119.2,347.3 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_51_-35/SM_H_Transport_Utility_Trademark_01" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_01_70 Industrial_Container_SupplyBox_01_56 at=-231.6,-112.5,267.8 turn=-80 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_H_Industrial_Container_SupplyBox_01@5" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_02_15 Industrial_Container_SupplyBox_02_13_4 at=-230.4,-112.5,275.8 ~fit=1 ~src="MidMeshGroup/MidMeshGroup_51_-35/SM_H_Industrial_Container_SupplyBox_02" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_02_21 Industrial_Container_02_11_3 on=Industrial_Container_02_10_4[0.06,1,1.69] turn=2 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_H_Industrial_Container_02@7" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_02_v2_5 Industrial_Container_02_17_3 on=Industrial_Container_02_15_3[-0.36,1,-0.09] turn=-1.7 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_H_Industrial_Container_02@3" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+wedge Generic_Lighting_WallLamp_05_4_3 size=0.4,0.4,1.4 at=-221.7,-108.5,114.6 turn=-110 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_Generic_Lighting_WallLamp_05@52" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+group Branding_LocationSign_02_A_3 at=-234.8,-103.2,395.7 ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_Branding_LocationSign_FutureTech_02_A" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex" {
+  box wall size=11.4,1.4,1.2 at=1,0,0 turn=180
+  box wall_2 size=1.4,1.4,1.2 at=-2.6,1.4,0 turn=180
+  box wall_3 size=1.6,5.7,1.2 at=0.9,4.3,0 turn=180
+  wedge wall_4 size=5.7,7.4,1.2 at=0.1,7.1,0 rot=(0,0,1,90)
+  wedge wall_5 size=5.7,5.7,1.2 at=1.7,7.1,0 rot=(0.707,0.707,0,180)
+  box wall_6 size=1.2,5.7,1.2 at=0.9,10,0 turn=180
+  wedge wall_7 size=5.7,5.7,1.2 at=0.3,12.9,0 rot=(0.707,-0.707,0,180)
+  wedge wall_8 size=5.7,4,1.2 at=1.5,12.9,0 rot=(0,0,-1,90)
+}
+Furniture_Cabinet_16_v2_4 Furniture_Cabinet_16_4_5 at=-241.6,-99.5,136.4 turn=180 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Furniture_Cabinet_16@24" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Flowerpot_01_9 Furniture_Flowerpot_01_6_5 at=-250.9,-99.4,109.3 turn=-90 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Furniture_Flowerpot_01@22" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Government_Office_ServerComponents_06_2 size=15.6,10.4,3.6 at=-254.6,-99.4,137.7 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Government_Office_ServerComponents_06@1" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+group Government_Office_ServerCabinet_04 at=-265.7,-99.4,138 turn=-90 ~fit=0.6 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Government_Office_ServerCabinet_04" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex" {
+  box wall size=5.7,13.6,2.9 at=0,0,0 turn=90
+}
+group Government_Office_ServerComponents_09 at=-227,-99.3,137.4 turn=-180 ~fit=0.8 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Government_Office_ServerComponents_09" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box wall size=18.6,4.3,1.5 at=0,0,-1.3 turn=180
+  box slab size=2.9,0.4,1.4 at=-3.5,0.1,0
+  box slab_2 size=1.4,0.4,1.4 at=-4.3,0.1,1.4
+}
+box Government_Office_Box_01_6_7 size=2.5,1.5,2 at=-263.9,-99.3,123.2 turn=-34.9 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_M_Government_Office_Box_01@3" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Chair_08_10 Furniture_Chair_08_3_4 at=-264.5,-97.4,129.4 turn=-100 ~fit=0.6 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Furniture_Chair_08@27" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Chair_08_10 Furniture_Chair_08_8_2 at=-243.1,-97.4,133.4 turn=30 ~fit=0.6 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Furniture_Chair_08@26" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Office_ComputerMonitors_03_9 Office_ComputerMonitors_03_9_5 at=-239,-95.9,136.3 turn=20 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Office_ComputerMonitors_03@11" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Electron_Computer_02_01_9 Electron_Computer_02_01_9_3 at=-244.9,-95.9,136.4 turn=-170 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Electron_Computer_02_01@5" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Electron_Computer_01_6 Electron_Computer_01_2_6 on=Government_Office_ServerComponents_09[-0.64,1,-0.6] turn=-10.1 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Electron_Computer_01_01@16" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Branding_Screen_Monitor_05_9 size=12.6,6.1,0.1 at=-224.6,-93,138.9 rot=(-1,0,0,15) ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Branding_Screen_Monitor_05@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex"
+Furniture_Display_01_7 Furniture_Display_01_2_6 at=-238.7,-93,138.5 rot=(0,1,0.002,180) ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Furniture_Display_01@7" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Display_01_7 Furniture_Display_01_3_6 at=-224.7,-93,138.5 rot=(0,1,0.002,180) ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Furniture_Display_01@8" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Branding_Screen_Monitor_01D size=12.6,6.1,0 at=-238.6,-92.9,138.9 rot=(-1,0,0,15) ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Branding_Screen_Monitor_01D@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex"
+Industrial_Lighting_WallLamp_02B_14 Industrial_Lighting_WallLamp_02B_10_5 at=-240,-85.2,143.7 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_51_-36/SM_H_Industrial_Lighting_WallLamp_02B@5" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Generic_Lighting_Chandelier_03_v2_2 Generic_Lighting_Chandelier_03_17 at=-220.3,-82.4,128.1 turn=-90 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_Generic_Lighting_Chandelier_03@4" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Lighting_DecorativeLamp_02_C_9 Lighting_DecorativeLamp_02_C_6_4 at=-213.4,-78.7,114.4 rot=(0.996,-0.065,0.065,90.2) ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Lighting_DecorativeLamp_02_C@28" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Tools_Box_01_34 Tools_Box_01_28_3 at=-248.5,-71.9,125.6 turn=-21.5 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_Box_01@6" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Ladder_01_A Furniture_Ladder_01_A_5 at=-258.5,-71.9,146.2 turn=-130 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Furniture_Ladder_01_A@1" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Government_Office_Box_01_17_6 size=2.5,1.5,2 at=-210,-71.9,149.2 turn=-45 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_M_Government_Office_Box_01@29" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Flowerpot_01_9 Furniture_Flowerpot_01_4_6 at=-252.7,-71.9,120.8 turn=30 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Furniture_Flowerpot_01@16" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Flowerpot_01_9 Furniture_Flowerpot_01_5_5 at=-251.2,-71.9,116.4 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Furniture_Flowerpot_01@11" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Flowerpot_01_9 Furniture_Flowerpot_01_7_5 at=-211.5,-71.9,122 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Furniture_Flowerpot_01@9" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Utility_Dustbin_01_B_4 Furniture_Utility_Dustbin_01_B_3_6 at=-250.7,-71.9,108.9 turn=-90 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Furniture_Utility_Dustbin_01_B@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Industrial_Container_PackingBox_01_v2_2 Industrial_Container_PackingBox_01_6_5 at=-218.4,-71.9,127.1 turn=167.8 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Industrial_Container_PackingBox_01@7" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_PackingBox_01_v2_2 Industrial_Container_PackingBox_01_7_5 at=-216.8,-71.9,127.3 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Industrial_Container_PackingBox_01@6" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Tools_MetalShelf_04_5 Tools_MetalShelf_04_5 at=-236.7,-71.9,123 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_MetalShelf_04@1" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Tools_MetalShelf_04_5 Tools_MetalShelf_04_2_2 at=-236.4,-71.9,152 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_MetalShelf_04@4" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Tools_MetalShelf_04_5 Tools_MetalShelf_04_3_2 at=-222.1,-71.9,123 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_MetalShelf_04@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Tools_MetalShelf_04_5 Tools_MetalShelf_04_4 against=Tools_MetalShelf_04_2_2[1,0,0] ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_MetalShelf_04@3" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Furniture_Cabinet_06_5 size=7.9,8.6,1.9 at=-247.7,-71.9,120.4 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Furniture_Cabinet_06@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Government_Office_Box_01_16_6 size=2.5,2,1.5 at=-211.7,-71.9,152.7 turn=-90 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_M_Government_Office_Box_01@28" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Tools_MetalShelf_02_4 Tools_MetalShelf_02_3_4 at=-262.6,-71.9,151.5 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_MetalShelf_02@3" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Government_Office_BoxLid_01_2_7 size=2.5,0.2,1.6 at=-209.2,-71.9,148.9 turn=25 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_M_Government_Office_BoxLid_01@7" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Tools_Box_01_34 Tools_Box_01_30_2 at=-247.7,-71.9,149.2 turn=73.5 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_Box_01@8" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+group Road_FlowerBed_04_01_25 at=-260.7,-71.9,115.9 ~fit=0.6 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Road_FlowerBed_04_01@2" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex" {
+  box slab size=8.6,0.1,1.4 at=0.4,1.9,0.1
+  box slab_2 size=1.4,0.1,1.4 at=-5.7,0,-0.1
+  box slab_3 size=1.4,0.1,1.4 at=5.7,0,-0.1
+}
+hull Government_Office_ClothLarge_03 points=[(-5.9,11.4,0.2); (5.9,11.5,0.2); (3.6,0,-0.2); (-3.6,11.5,0.2); (1.3,0.1,-0.6); (2.8,10.8,0.6); (-3.9,0.4,0)] at=-263.4,-71.9,148.7 ~fit=0.8 ~src="Room/RoomBuilder_SpaceCenterH1/SM_M_Government_Office_ClothLarge_03" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+hull Government_Office_ClothServer_01_2 points=[(-7.9,0,-3.3); (7.9,0,-2.5); (5.5,0,3.8); (7.1,7,-2.1); (-4.5,0,-4.6); (3,0,4.6); (-7.3,6.9,3.2); (-7.4,0,4.1); (-7.4,6.6,-3); (7.2,6.9,3.1); (5.2,0,-4.6); (7.7,0.7,2.9)] at=-234.3,-71.8,137.2 ~fit=0.7 ~src="Room/RoomBuilder_SpaceCenterH1/SM_M_Government_Office_ClothServer_01" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Update_Container_PlasticBox_02 Update_Container_PlasticBox_02_14_5 at=-253,-71.8,151.7 turn=-141.3 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Update_Container_PlasticBox_02@16" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Government_Utility_FireBox_03_5 Government_Utility_FireBox_03_3_2 at=-214.8,-71.6,127.9 turn=-90 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_Government_Utility_FireBox_03@7" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Government_Utility_FireBox_03_5 Government_Utility_FireBox_03_4_2 at=-212.6,-71.6,144.8 turn=90 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_Government_Utility_FireBox_03@6" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Electron_Computer_02_01_9 Electron_Computer_02_01_3_5 at=-232.9,-71.3,123.6 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Electron_Computer_02_01@9" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Electron_Computer_02_01_9 Electron_Computer_02_01_4_4 at=-231.8,-71.3,123.6 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Electron_Computer_02_01@10" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Electron_Computer_02_01_9 Electron_Computer_02_01_6_4 at=-228.3,-71.3,123.6 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Electron_Computer_02_01@13" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Electron_Computer_02_01_9 Electron_Computer_02_01_5_4 at=-230.5,-71.3,123.6 rot=(0,0,1,12.7) ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Electron_Computer_02_01@11" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Tools_Box_03_13 Tools_Box_03_5_6 at=-237.8,-71.3,123.9 turn=50.2 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_Box_03@9" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Update_Container_PlasticBox_02 Update_Container_PlasticBox_02_12_5 at=-259.7,-71.1,151.4 turn=-154.3 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Update_Container_PlasticBox_02@14" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Update_Container_PlasticBox_02_v3 Update_Container_PlasticBox_02_22_3 at=-237.2,-71.1,150.5 rot=(0.097,0.991,-0.092,59.1) ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Update_Container_PlasticBox_02@24" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_PackingBox_01_v2_2 Industrial_Container_PackingBox_01_8_5 on=Industrial_Container_PackingBox_01_7_5[0.1,1,-0.3] turn=-163.8 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Industrial_Container_PackingBox_01@8" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Electron_Computer_02_01_9 Electron_Computer_02_01_2_7 at=-233.6,-70.8,123.6 rot=(0,0,1,90) ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Electron_Computer_02_01@12" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Chair_08_10 Furniture_Chair_08_6_2 at=-255.3,-70.7,124.7 rot=(-0.288,-0.288,0.913,95.2) ~fit=0.6 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Furniture_Chair_08@12" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Chair_08_10 Furniture_Chair_08_7_2 at=-251.4,-70,148.1 turn=-140 ~fit=0.6 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Furniture_Chair_08@14" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Government_Office_BoxLid_01_36 size=2.5,0.2,1.6 at=-211.7,-70,152.7 turn=-90 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_M_Government_Office_BoxLid_01@6" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Chair_08_10 Furniture_Chair_08_4_4 at=-258.6,-70,121.1 turn=110 ~fit=0.6 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Furniture_Chair_08@13" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Chair_08_10 Furniture_Chair_08_5_3 at=-255.8,-70,121 turn=-45 ~fit=0.6 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Furniture_Chair_08@11" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Update_Container_PlasticBox_02 Update_Container_PlasticBox_02_13_5 at=-253.4,-68.6,151.3 turn=-15.2 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Update_Container_PlasticBox_02@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+group Window_03_9 at=-259.9,-68.5,119 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Window_03" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex" {
+  subtract shell {
+    box outer size=13.7,6.9,1.2
+    box cavity size=13.3,6.5,1.6 at=0,0.2,0
+  }
+  box wall size=13.6,0.4,0.2 at=0.1,0.2,0
+  box wall_2 size=0.4,6.1,0.2 at=-6.5,0.6,0
+  box wall_3 size=0.7,6.1,0.2 at=6.6,0.6,0
+  box wall_4 size=12.5,0.4,0.2 at=0,6.3,0
+}
+Update_Container_PlasticBox_02_v2_3 Update_Container_PlasticBox_02_17_5 at=-249.2,-68.1,152.3 turn=-70.3 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Update_Container_PlasticBox_02@3" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Tools_Box_01_34 Tools_Box_01_29_3 on=Tools_Box_01_28_3[-0.1,1,-0.7] turn=30.8 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_Box_01@7" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Update_Container_PlasticBox_02_v2_3 Update_Container_PlasticBox_02_19_4 on=Tools_Box_01_30_2[0.1,1,0.5] turn=-33.5 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Update_Container_PlasticBox_02@8" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Office_ComputerMonitors_03_9 Office_ComputerMonitors_03_2_7 at=-238.4,-67.7,122.4 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Office_ComputerMonitors_03@10" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Office_ComputerMonitors_03_9 Office_ComputerMonitors_03_3_6 at=-237.5,-67.7,123.5 turn=40 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Office_ComputerMonitors_03@8" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Tools_Box_03_13 Tools_Box_03_2_6 at=-241.4,-67.7,123.1 turn=83.3 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_Box_03@8" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Update_Container_PlasticBox_02 Update_Container_PlasticBox_02_11_5 at=-260.3,-67.6,151 turn=113.4 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Update_Container_PlasticBox_02@12" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Update_Container_PlasticBox_02_v3 Update_Container_PlasticBox_02_24_3 at=-234.6,-67.6,151.9 turn=167.2 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Update_Container_PlasticBox_02@26" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Update_Container_PlasticBox_02_v3 Update_Container_PlasticBox_02_27_3 at=-218.4,-67.6,151.9 turn=82.5 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Update_Container_PlasticBox_02@25" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Update_Container_PlasticBox_02_v3 Update_Container_PlasticBox_02_26_3 at=-220,-67.5,124 rot=(-0.062,-0.998,0.031,52.9) ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Update_Container_PlasticBox_02@20" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Office_ComputerMonitors_03_9 Office_ComputerMonitors_03_4_6 at=-236.3,-67.2,123.5 rot=(-0.644,-0.541,-0.541,114.4) ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Office_ComputerMonitors_03@9" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Update_Container_PlasticBox_02 Update_Container_PlasticBox_02_18_5 at=-246.8,-65,149.3 turn=-12.1 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Update_Container_PlasticBox_02@10" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Government_Office_Box_01_11_6 size=2.5,2,1.5 at=-235.8,-64.2,152.6 turn=-110 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_M_Government_Office_Box_01@21" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Government_Office_Box_01_14_6 size=2.5,2,1.5 at=-222.8,-64.2,123.5 turn=-110 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_M_Government_Office_Box_01@24" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Government_Office_Box_01_10_7 size=2.5,2,1.5 at=-237.9,-64.2,151.9 turn=-90 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_M_Government_Office_Box_01@22" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Government_Office_Box_01_13_6 size=2.5,2,1.5 at=-224.9,-64.2,123.6 turn=-90 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_M_Government_Office_Box_01@25" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Government_Office_Box_01_15_6 size=2.5,2,1.5 at=-220.1,-64.2,123 turn=10 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_M_Government_Office_Box_01@23" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Government_Office_Box_01_12_6 size=2.5,2,1.5 at=-232.9,-64.2,150.9 turn=10 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_M_Government_Office_Box_01@20" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Tools_Box_03_13 Tools_Box_03_3_7 at=-240.4,-64,150.9 turn=17.8 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_Box_03@10" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Update_Container_PlasticBox_02 Update_Container_PlasticBox_02_9_5 at=-265.1,-64,151.3 turn=-171.7 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Update_Container_PlasticBox_02@13" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Update_Container_PlasticBox_02 Update_Container_PlasticBox_02_10_5 at=-260.8,-64,150.4 turn=93 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Update_Container_PlasticBox_02@11" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+BS_Military_Hospital_Box_02_4 BS_Military_Hospital_Box_02_2_2 at=-257.3,-64,149.4 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_BS_Military_Hospital_Box_02@1" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex"
+BS_Military_Hospital_Box_02_4 BS_Military_Hospital_Box_02_3_2 at=-256.8,-64,150.3 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_BS_Military_Hospital_Box_02@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex"
+Update_Container_PlasticBox_02_v3 Update_Container_PlasticBox_02_25_3 at=-224.8,-64,150.9 rot=(0.094,0.995,0.037,42.7) ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Update_Container_PlasticBox_02@27" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Update_Container_PlasticBox_02_v3 Update_Container_PlasticBox_02_21_3 at=-238.7,-64,123.8 rot=(-1,0,0,4.3) ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Update_Container_PlasticBox_02@18" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+BS_Military_Hospital_Box_02_4 BS_Military_Hospital_Box_02_4_2 at=-257.3,-63.6,151.2 rot=(0.935,-0.251,0.251,93.8) ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_BS_Military_Hospital_Box_02@3" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex"
+box Branding_Office_doorplate_RoomUnit_10_2 size=1.6,0.3,0 at=-214.8,-61.7,136.1 turn=90 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_Branding_Office_doorplate_RoomUnit_10@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseDefault"
+Branding_Office_doorplate_RoomUnit_06 Branding_Office_doorplate_RoomUnit_06_2 at=-212.5,-61.7,136.1 turn=90 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_Branding_Office_doorplate_RoomUnit_06@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseDefault"
+Industrial_Container_PackingBox_01_v2_2 Industrial_Container_PackingBox_01_5_5 on=Tools_MetalShelf_04_3_2[0.25,1,0.4] turn=-93.9 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Industrial_Container_PackingBox_01@1" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Government_Office_Box_01_7_7 size=2.5,2,1.5 on=Tools_MetalShelf_04_5[-0.78,1,0.2] turn=-90 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_M_Government_Office_Box_01@4" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Government_Office_Box_01_9_7 size=2.5,2,1.5 on=Tools_MetalShelf_04_5[-0.43,1,0.2] turn=56.3 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_M_Government_Office_Box_01@5" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_PackingBox_01_9 Industrial_Container_PackingBox_01_9_5 on=Tools_MetalShelf_04_2_2[-0.04,1,-0.3] turn=50.3 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Industrial_Container_PackingBox_01@5" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_PackingBox_01_9 Industrial_Container_PackingBox_01_2_5 on=Tools_MetalShelf_04_2_2[0.36,1,-0.4] ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Industrial_Container_PackingBox_01@3" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_PackingBox_01_9 Industrial_Container_PackingBox_01_4_5 on=Tools_MetalShelf_04_2_2[0.68,1,-0.4] ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Industrial_Container_PackingBox_01@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Government_Office_Box_01_8_7 size=2.5,2,1.5 on=Tools_MetalShelf_04_2_2[-0.58,1,-0.2] turn=-90 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_M_Government_Office_Box_01@6" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Tools_Box_03_13 Tools_Box_03_6_5 on=Tools_MetalShelf_04_5[0.71,1,0.2] ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_Box_03@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Tools_Box_03_13 Tools_Box_03_7_6 on=Tools_MetalShelf_04_3_2[-0.8,1,0.3] turn=-87.2 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_Box_03@3" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Tools_Box_03_13 Tools_Box_03_8_7 on=Tools_MetalShelf_04_4[-0.72,1,-0.4] turn=-79.5 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_Box_03@6" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Tools_Box_03_13 Tools_Box_03_9_7 on=Tools_MetalShelf_04_3_2[-0.46,1,0.2] turn=-6.9 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_Box_03@5" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Tools_Box_03_13 Tools_Box_03_10_6 on=Tools_MetalShelf_04_4[-0.36,1,-0.4] ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_Box_03@7" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Tools_Box_03_13 Tools_Box_03_11_6 on=Tools_MetalShelf_04_3_2[-0.09,1,0.2] turn=-109.6 ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_Box_03@4" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Tools_Box_03_13 Tools_Box_03_12_7 on=Tools_MetalShelf_04_3_2[0.6,1,0.3] ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_Box_03@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Tools_Box_01_33_2 size=4.5,2.9,3.2 on=Tools_MetalShelf_04_4[0.42,1,-0.3] ~fit=0.9 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Tools_Box_01@1" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Update_Container_PlasticBox_02 Update_Container_PlasticBox_02_23_3 on=Tools_MetalShelf_04_5[0.15,1,0.1] turn=82.2 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Update_Container_PlasticBox_02@1" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Industrial_Container_PackingBox_01_3_5 size=2.2,1.1,1.6 on=Industrial_Container_PackingBox_01_2_5[1.3,1,-0.2] turn=21.7 ~fit=1 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_Industrial_Container_PackingBox_01@4" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Generic_Lighting_Chandelier_03_v2_2 Generic_Lighting_Chandelier_03_12_2 at=-247.8,-57.6,130.6 turn=90 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_Generic_Lighting_Chandelier_03@10" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+repeat Generic_Lighting_Chandelier_03_21 n=(2,1,2) step=39.33,0,13.77 at=Building_HOrange_01_InterWall_08 offset=-24.95,4.65,46.48 pin=origin {
+  Generic_Lighting_Chandelier_03_v2_2 Generic_Lighting_Chandelier_03_v2_2 turn=90 ~role="decor" ~fit=0
+}
+Generic_Lighting_Chandelier_03_v2_2 Generic_Lighting_Chandelier_03_9_2 at=-261,-57.3,144.3 turn=90 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_Generic_Lighting_Chandelier_03@14" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Generic_Lighting_Chandelier_03_v2_2 Generic_Lighting_Chandelier_03_10_2 at=-260.7,-57.3,130.6 turn=90 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_Generic_Lighting_Chandelier_03@11" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Generic_Lighting_Chandelier_03_v2_2 Generic_Lighting_Chandelier_03_11_2 at=-247.8,-57.3,144.4 turn=90 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_Generic_Lighting_Chandelier_03@6" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Generic_Lighting_Chandelier_03_v2_2 Generic_Lighting_Chandelier_03_15_2 at=-223.9,-57.3,144.4 turn=90 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_Generic_Lighting_Chandelier_03@5" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Generic_Lighting_Chandelier_03_v2_2 Generic_Lighting_Chandelier_03_16 at=-223.9,-57.3,130.6 turn=90 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_Generic_Lighting_Chandelier_03@8" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Lighting_OverheadLight_01_v2_7 Lighting_OverheadLight_01_6_5 at=-216.1,-56.5,145.8 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Lighting_OverheadLight_01@26" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex"
+Lighting_OverheadLight_01_v2_7 Lighting_OverheadLight_01_7_5 at=-216.1,-56.5,126 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Lighting_OverheadLight_01@27" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex"
+Lighting_OverheadLight_01_v2_7 Lighting_OverheadLight_01_8_6 at=-216.1,-56.5,136.1 ~fit=0 ~src="Room/RoomBuilder_SpaceCenterH1/SM_H_FutureTech_Lighting_OverheadLight_01@30" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex"
+Industrial_Lighting_WallLamp_02B_14 Industrial_Lighting_WallLamp_02B_11_5 at=-239.9,-26.9,161 ~fit=0.9 ~src="SmallMeshGroup/SmallMeshGroup_51_-36/SM_H_Industrial_Lighting_WallLamp_02B@29" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+group Furniture_Dome_01 at=-256.2,-17.7,113.4 ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_51_-36/SM_H_FutureTech_Furniture_Dome_01@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  hull volume points=[(-12.5,4.9,-1.2); (12.5,12.8,1.8); (-7.9,0,4.4); (0,21.4,0.1); (0,12.8,-12.6); (3.1,4.9,12.6); (6.4,0,-5.9); (-3.3,12.8,12.5); (-6.3,4.9,-11.2); (-10.5,12.8,-7.1); (-11.8,12.8,4.6); (10.6,4.9,7.5); (10.1,12.8,-7); (8.1,12.8,9.7); (5.1,0,7.7); (-8.6,4.9,9.9); (5.6,4.9,-11.4); (12.3,4.9,-1.6); (1.4,19.4,7); (-3,19.4,-6.2); (-8,0,-4); (6.7,19.4,-1.6); (-4.8,19.4,5.2); (-1.2,0,-8.9)] at=0.3,6.6,0
+  hull hull_2 points=[(-0.3,6,0.3); (0.3,6,0.3); (-0.3,0,0.3); (-0.3,6,-0.3)] at=-13.3,0,13.3
+  hull hull_3 points=[(-0.3,6,-0.3); (0.3,6,-0.3); (0.3,0,-0.3); (-0.3,6,0.3)] at=-13.3,0,-13.3
+  hull hull_4 points=[(-0.3,6,-0.3); (0.3,6,-0.3); (0.3,0,-0.3); (0.3,6,0.3)] at=13.3,0,-13.3
+  hull hull_5 points=[(-0.3,6,0.3); (0.3,6,0.3); (-0.3,0,0.3); (0.3,0,-0.3)] at=13.3,0,13.3
+  hull hull_6 points=[(-13.9,1.3,-13.9); (13.9,1.3,-13.9); (13.9,0,13.9); (13.9,1.3,13.9); (-13.9,1.3,13.9); (13.9,0,-13.9); (-13.9,0,13.9); (-13.9,0,-13.9)] at=0,5.3,0
+}

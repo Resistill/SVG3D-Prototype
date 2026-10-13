@@ -1,0 +1,8 @@
+// 细化到 structure：Building_Dormitory_02_InterWall_04（面积前 90%（2/4 块），2 个部件）
+def Building_Dormitory_02_InterWall_04 : Building_Dormitory_02_InterWall_04 {
+  drop body
+  group body envelope=-19,0,-35.5,19,14,35.5 {
+    box box1 size=71.2,13.7,38 at=0.5,-0.1,0.2 turn=-90 mat=whitebox ~src="MidMeshGroup/MidMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_InterWall_04@2#0"
+    box box2 size=10,13.8,4.7 at=3.7,-0.1,-15.7 turn=-90 mat=whitebox ~src="MidMeshGroup/MidMeshGroup_50_-37/SM_H_Building_FutureTech_Dormitory_02_InterWall_04@2#2"
+  }
+}

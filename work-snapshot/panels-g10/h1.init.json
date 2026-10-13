@@ -1,0 +1,31 @@
+{
+  "dir": "C:\\Workspace\\SVG3D\\work\\panels\\g10\\h1",
+  "fidelity": "structure",
+  "unit": 0.28,
+  "parts": 1964,
+  "arrays": 57,
+  "mirrors": 9,
+  "overBudget": 1,
+  "meshes": 0,
+  "renamed": 71,
+  "sidecar": {
+    "matched": 1964,
+    "parts": 1964,
+    "match": [
+      "category",
+      "level",
+      "mesh"
+    ],
+    "position": [
+      "rb_x",
+      "rb_y",
+      "rb_z"
+    ],
+    "fields": [
+      "shape",
+      "collidable",
+      "collision_profile",
+      "trace_flag"
+    ]
+  }
+}

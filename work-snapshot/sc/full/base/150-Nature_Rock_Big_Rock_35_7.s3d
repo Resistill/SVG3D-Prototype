@@ -1,0 +1,196 @@
+// 分区 150/233：50 个物体（24 组），x 645…896，z -2002…-808
+
+EFX_BlockPlane_v3_8 EFX_BlockPlane_14_5 at=798.2,-245.9,-1110.5 turn=90.6 ~fit=1 ~src="Blocker/BigMeshGroup_53_-38/SM_EFX_BlockPlane@47" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+box EFX_BlockPlane_16_5 size=17.5,365.7,0 at=798.3,-245.9,-1093.7 turn=-89.6 ~fit=1 ~src="Blocker/BigMeshGroup_53_-38/SM_EFX_BlockPlane@46" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+box EFX_BlockPlane_34_3 size=17,365.7,0 at=799.1,-245.9,-991.1 turn=-89.6 ~fit=1 ~src="Blocker/BigMeshGroup_53_-38/SM_EFX_BlockPlane@1" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v8_7 EFX_BlockPlane_31_4 at=799,-245.9,-1008.1 turn=90.4 ~fit=1 ~src="Blocker/BigMeshGroup_53_-38/SM_EFX_BlockPlane@12" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v8_7 EFX_BlockPlane_40_3 at=799.2,-245.9,-974.1 turn=90.4 ~fit=1 ~src="Blocker/BigMeshGroup_53_-38/SM_EFX_BlockPlane@49" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v6_7 EFX_BlockPlane_22_5 at=798.6,-245.9,-1059.4 turn=90.4 ~fit=1 ~src="Blocker/BigMeshGroup_53_-38/SM_EFX_BlockPlane@31" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v4_8 EFX_BlockPlane_18_4 at=798.5,-245.9,-1076.5 turn=90.4 ~fit=1 ~src="Blocker/BigMeshGroup_53_-38/SM_EFX_BlockPlane@42" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+repeat EFX_BlockPlane_73_2 n=5 step=17.94,0,0.1 at=804.1,-185.9,-966.3 pin=origin {
+  EFX_BlockPlane_v12_6 EFX_BlockPlane_v12_6 turn=179.7 ~role="collision" ~fit=1
+}
+BlockWallCube_39 BlockWallCube_3_9 at=797.9,-157.2,-1109.8 turn=179.9 ~fit=1 ~src="Blocker/BigMeshGroup_53_-38/BlockWallCube@3" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"
+hull Nature_Rock_Flat_Rock_04_QL_4_2 points=[(-67.3,13.5,-52); (67.3,23.3,4.5); (-40,0,6.2); (22.5,28.6,16.3); (-21.6,11.2,-68.5); (12.3,12.6,68.5); (-37.7,20.8,27.6); (62.1,5.9,-9.6); (52.5,10.7,46.1); (48.2,24.9,48.7); (-62.1,7.3,-13.7); (-35.7,23.7,-58.3); (7.8,23.9,-52.6); (12.9,24.5,63.9); (-43.4,3,20.2); (10.7,3.2,63.4); (-27.7,3.9,-67.5); (57,23.3,-15.3); (49.5,5.8,-25.9); (-49.9,18.7,-62.2); (-67,14.4,-25.9); (-61,4.1,-38.9); (-55.6,14.3,7.2); (0.1,22.9,61.5)] at=843.4,-151.2,-1399.1 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_54_-39/SM_Nature_Rock_Flat_Rock_04_QL" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01C_4 Fence_Metal_01C_4_2 at=797.5,-144.8,-981.7 rot=(0.054,0.997,-0.05,85.6) ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_53_-38/SM_H_Fence_Metal_1024x768_01C@1" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+hull Nature_Rock_Flat_Rock_04_QL_12 points=[(-86.2,28.8,-7.4); (86.2,20.2,-31.9); (68.4,0,-3.3); (-55.2,42.5,-6.4); (12.9,26.7,-69); (-19.1,14.3,69); (-77.4,37.7,27.1); (62.2,21.5,17.7); (64.1,7.8,-56.1); (-69.9,41.2,-31.1); (-17.4,11.2,-55); (-70.8,12.7,26); (76.6,18.5,-58.2); (-29.8,31.4,63.9); (-79.1,17.8,-23); (-66.1,18.2,45.6); (79.3,8.3,0.6); (84.6,9.3,-46); (0.6,3.4,58.6); (-22.7,5.2,65.2); (49.2,12.4,-67.3); (-83.5,25.3,21.7); (-82,40.5,-20.7); (-38.2,27.4,66.9)] at=724.1,-143.9,-1775.3 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-40/SM_Nature_Rock_Flat_Rock_04_QL" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+group RoadFacility_Ground_B_02B at=753.6,-142.3,-808.5 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_53_-38/SM_I_RoadFacility_Ground_B_02B" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseSimpleAndComplex" {
+  group group2 at=17.7,-0.4,-81.9 ~role="terrain" {
+    plate floor points=[(23.9,9.5); (-4.9,9.2); (-12,7.7); (-20,1.5); (-22.7,-3.8); (-23.9,-9.5); (-23,-3.6); (-20.3,1.7); (-12.2,8.1); (-4.9,9.5)] h=0.4 at=0,0,0
+  }
+  group group1 at=17.7,-0.4,27 ~role="terrain" {
+    plate floor points=[(-4.9,-64); (23.9,-64); (23.9,-64.4); (-4.9,-64.4); (-9.3,-63.9); (-13.5,-62.3); (-16.1,-60.7); (-18.4,-58.8); (-21.1,-55.3); (-23,-51.2); (-23.7,-48.3); (-23.9,-45.3); (-23.9,64.4); (-23.6,64.4); (-23.6,-45.3); (-23.3,-48.3); (-22.7,-51.1); (-21.6,-53.8); (-19.1,-57.5); (-17,-59.6); (-14.6,-61.3); (-12,-62.6); (-7.8,-63.8)] h=0.4 at=0,0,0
+  }
+  box box1 size=109.7,0,0.3 at=-22.7,0,36.6 turn=-90 ~role="terrain"
+  box box3 size=109.7,0,0.3 at=-24.8,0,36.6 turn=-90 ~role="terrain"
+  box box6 size=73.1,0,0.3 at=-23.8,0,-54.9 turn=-90 ~role="terrain"
+  box box4 size=28.8,0,0.3 at=27.2,0,-53.8 ~role="terrain"
+  box box5 size=28.8,0,0.3 at=27.2,0,-56 ~role="terrain"
+  box box2 size=182.9,0,0.3 at=-41.4,0,0 turn=-90 ~role="terrain"
+}
+Electrical_BigConditioners_01_7 Electrical_BigConditioners_01_7_2 at=807.4,-141.5,-958.9 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_54_-38/SM_H_FutureTech_Electrical_BigConditioners_01@1" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Fence_Metal_01_9 Fence_Metal_01_5_4 at=863.5,-141.2,-966.3 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_54_-38/SM_H_Fence_Metal_1024x768_01@2" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01_9 Fence_Metal_01_6_5 at=809,-141.2,-966.3 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_54_-38/SM_H_Fence_Metal_1024x768_01@8" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01_9 Fence_Metal_01_7_5 at=836.1,-141.2,-966.3 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_54_-38/SM_H_Fence_Metal_1024x768_01@9" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Fence_Metal_01D_9 size=27.4,37.2,4.8 at=799,-141,-1008.1 rot=(-0.054,-0.997,-0.048,83.2) ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-38/SM_H_Fence_Metal_1024x768_01D" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+group SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Decal_Mesh_x107_y76_16982_HD at=732.8,-140.7,-1318.1 ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_53_-39/SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Decal_Mesh_x107_y76_16982_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  box beam size=33.8,0,4.1 at=4.1,1.8,-109.8 turn=-5.2
+  box box_2 size=37.3,0,3.9 at=-2.4,0,111.2 rot=(0.551,-0.834,-0.001,1)
+  box box_3 size=37,0,4 at=-1.4,1.4,-28 rot=(0.191,-0.982,0.002,2.7)
+}
+Nature_Rock_Big_Rock_30_11 Nature_Rock_Big_Rock_30_3_5 at=794.4,-140.3,-1180 rot=(0.06,-0.997,0.057,93.2) ~fit=0.1 ~src="BigMeshGroup/BigMeshGroup_53_-38/SM_Nature_Rock_Big_Rock_30@4" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+group SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Macadam_Decal_Mesh_x107_y76_16982_HD at=732.9,-140.3,-1335.5 ~fit=0.5 ~src="BigMeshGroup/BigMeshGroup_53_-39/SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Macadam_Decal_Mesh_x107_y76_16982_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  box box size=12.2,0,3.7 at=8.2,0.1,88.4 rot=(0.006,1,0.005,80.3)
+  box box_2 size=11.7,0,3.4 at=1.2,0.2,71.6 rot=(0.005,1,0.005,90)
+  box box_3 size=15.2,0,6.4 at=-5.7,0.3,63.6 rot=(0.005,1,0.005,90)
+  box box_4 size=14.6,0,4.5 at=-4.2,0.3,61.7 rot=(0.006,1,0.005,80.7)
+  box box_5 size=12.3,0,6.1 at=2,0.4,57.3 rot=(0.005,1,0.005,90)
+  box box_6 size=14.6,0,6.6 at=-7.8,0.7,17.4 rot=(0.005,1,0.005,90)
+  box box_7 size=12.2,0,4.1 at=-13.5,0.7,17.9 rot=(0.005,1,0.005,90)
+  box box_8 size=15.2,0,3.9 at=0.2,1.1,-28.3 turn=90
+  box box_9 size=9.2,0,5.2 at=13,1.3,-47.1 turn=90
+  box box_10 size=10,0,4.6 at=4.7,1.5,-85.3 turn=90
+  box box_11 size=7.9,0,3.5 at=-1.5,1.5,-90.7 turn=90
+  box box_12 size=3.9,0,1.9 at=-4.4,1.5,-93.7
+}
+group SpaceCenter_Long3_GenerateRoad_JTDecal_Asphalt_BM_Line_Mesh_x107_y76_16982_HD at=731.1,-140.2,-1289.4 ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_53_-39/SpaceCenter_Long3_GenerateRoad_JTDecal_Asphalt_BM_Line_Mesh_x107_y76_16982_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  box beam size=11.8,0,2.8 at=-9.3,0,70 turn=90
+  box box_2 size=11.9,0,3.2 at=-7.8,1.2,-71 rot=(0.004,-1,-0.005,90)
+  box box_3 size=11.8,0,2.8 at=7.7,0.1,71.1 rot=(0.001,1,0.006,90)
+  box box_4 size=11.9,0,3.2 at=9.1,1.2,-68.9 rot=(0.004,1,0.005,90)
+}
+Nature_Rock_Big_Rock_30_11 Nature_Rock_Big_Rock_30_4_4 at=823.2,-140.1,-1057.9 rot=(-0.022,-0.997,-0.072,91.9) ~fit=0.1 ~src="BigMeshGroup/BigMeshGroup_54_-38/SM_Nature_Rock_Big_Rock_30@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+wedge SpaceCenter_Long3_GenerateRoad_Asphalt_Mesh_x107_y76_16982_HD size=230,0.5,48.1 at=732.2,-139.6,-1316 rot=(0.003,1,0.005,88.3) ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-39/SpaceCenter_Long3_GenerateRoad_Asphalt_Mesh_x107_y76_16982_HD" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseComplexAsSimple"
+group SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Decal_Mesh_x107_y77_16983_HD at=761.6,-138.8,-1544.9 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-39/SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Decal_Mesh_x107_y77_16983_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  box step size=9.4,0,3.6 at=37.8,3.4,-110.4 rot=(0.015,1,0.023,64.2)
+  box box_2 size=13.5,0,1.6 at=-34.7,0,114.2 turn=-3
+  box box_3 size=38.5,0,3.6 at=-8.8,0.5,25.4 rot=(0.039,-0.999,0.004,13)
+  box box_4 size=35.8,0,3.7 at=2.9,1.1,-19.5 rot=(0.058,-0.998,0.008,16.2)
+  box box_5 size=37.8,0,3.9 at=-19.8,0.1,81.4 turn=-8.6
+}
+group SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Macadam_Decal_Mesh_x107_y77_16983_HD at=765.4,-138.8,-1540.1 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-39/SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Macadam_Decal_Mesh_x107_y77_16983_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  box box size=11.7,0,4.9 at=35.2,3.1,-103.7 rot=(0.01,1,0.02,80.6)
+  box box_2 size=3.5,0,1.1 at=-34.2,0,109.2
+  box box_3 size=12.8,0,7.1 at=-35.1,0,103.4 turn=90
+  box box_4 size=13.7,0,7.1 at=-34.1,0,101.5 turn=90
+  box box_5 size=9,0,3.9 at=-10.2,0.2,70.6 turn=90
+  box box_6 size=14.6,0,6 at=-25.6,0.2,65.7 turn=90
+  box box_7 size=12.3,0,4.2 at=-32.6,0.2,62.4 turn=90
+  box box_8 size=12.5,0,5.1 at=-13.4,0.2,56.8 turn=90
+  box box_9 size=10.7,0,6 at=-4.9,0.3,44.1 turn=90
+  box box_10 size=15.8,0,9.5 at=-5.6,0.4,39.9 turn=90
+  box box_11 size=16.9,0,5.6 at=-6.1,0.4,32.6 turn=90
+  box box_12 size=11.4,0,4.7 at=-1.3,0.5,26.2 rot=(0.004,1,0.005,90)
+  box box_13 size=15.9,0,3.8 at=-19.6,0.8,-7.4 rot=(0.005,1,0.008,82.4)
+  box box_14 size=11.7,0,3.9 at=-13.9,0.8,-9.2 rot=(0.006,1,0.009,76.5)
+  box box_15 size=10.2,0,7.5 at=-14.6,0.8,-8.5 rot=(0.004,1,0.009,90)
+  box box_16 size=14.4,0,3.9 at=1.5,1.1,-23.6 rot=(0.007,1,0.01,90)
+  box box_17 size=14,0,8.1 at=9.5,1.1,-21.3 rot=(0.006,1,0.01,90)
+  box box_18 size=9.9,0,4.8 at=-0.1,1.7,-59.7 rot=(0.005,1,0.014,90)
+  box box_19 size=12.1,0,3.6 at=33.5,3.1,-102.8 rot=(0.013,1,0.021,69.2)
+}
+Nature_Rock_Flat_Rock_04_QL Nature_Rock_Flat_Rock_04_QL_5_2 at=821.2,-138.7,-1190.1 rot=(0.997,-0.074,-0.003,180) ~fit=0.3 ~src="BigMeshGroup/BigMeshGroup_54_-38/SM_Nature_Rock_Flat_Rock_04_QL@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+group SpaceCenter_Long3_GenerateRoad_JTDecal_Asphalt_BM_Line_Mesh_x107_y77_16983_HD at=769.2,-138.3,-1566.1 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-39/SpaceCenter_Long3_GenerateRoad_JTDecal_Asphalt_BM_Line_Mesh_x107_y77_16983_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  wedge wedge size=5.2,0,12.1 at=-29.4,0.1,65.7 rot=(-0.004,-1,-0.006,180)
+  wedge wedge_2 size=11.9,0,7.3 at=11.7,2.5,-69 rot=(0.02,1,0.008,90)
+  box box size=12.1,0,5.2 at=-12.7,0,68.9 turn=90
+  wedge wedge_3 size=7.3,0.1,11.9 at=28.3,2.4,-64.7 rot=(-0.002,-1,-0.012,180)
+}
+group SpaceCenter_Long3_GenerateRoad_Asphalt_Mesh_x107_y77_16983_HD at=760.8,-137.8,-1543.9 rot=(0,1,0.007,166) ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_53_-39/SpaceCenter_Long3_GenerateRoad_Asphalt_Mesh_x107_y77_16983_HD" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseComplexAsSimple" {
+  box slab size=8.6,0.4,11.4 at=15,0,-115.7
+  box slab_2 size=11.4,0.4,8.6 at=5,0,-114.2
+  box slab_3 size=11.4,0.4,5.7 at=-6.5,0,-112.8
+  box slab_4 size=11.4,0.4,2.9 at=-17.9,0,-111.4
+  box slab_5 size=48.6,0.4,5.7 at=0.7,0,38.6
+  box slab_6 size=45.7,0.4,28.6 at=-0.7,0,55.8
+  box slab_7 size=2.9,0.4,11.4 at=-25,0,70
+  box slab_8 size=42.9,0.4,17.1 at=-2.2,0,78.6
+  box slab_9 size=40,0.4,2.9 at=-0.7,0,88.6
+  box slab_10 size=37.1,0.4,8.6 at=-2.2,0,94.3
+  box slab_11 size=34.3,0.4,8.6 at=-0.7,0,102.9
+  box slab_12 size=31.4,0.4,2.9 at=-2.2,0,108.6
+  box slab_13 size=40.2,0.4,145.7 at=0.8,0,-37.1
+  wedge slab_14 size=145.7,5.4,0.4 at=21,0.2,-37.1 rot=(-0.577,-0.577,-0.577,120)
+  wedge slab_15 size=145.7,5.9,0.4 at=-19.3,0.2,-37.1 rot=(-0.577,0.577,0.577,120)
+  box slab_16 size=11.4,0.4,11.4 at=-9.3,0,115.8
+  wedge slab_17 size=11.4,22.9,0.4 at=-3.6,0.2,115.8 rot=(0.577,0.577,-0.577,120)
+}
+Industrial_Container_SupplyBox_02_32 Industrial_Container_SupplyBox_02_2_8 at=803.2,-137.2,-1103.2 rot=(0.777,0.37,-0.509,71.7) ~fit=1 ~src="MidMeshGroup/MidMeshGroup_54_-38/SM_H_Industrial_Container_SupplyBox_02@11" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+group SpaceCenter_Long3_GenerateRoad_Asphalt_Mesh_x108_y77_17141_HD at=812.2,-137,-1633.6 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_54_-39/SpaceCenter_Long3_GenerateRoad_Asphalt_Mesh_x108_y77_17141_HD" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseComplexAsSimple" {
+  plate floor points=[(5.5,-25.8); (-11.5,-24.3); (-7.2,26.3); (11.5,-26.3)] h=0.4 at=0,0.7,0 turn=-4.81 tilt=1.61
+  plate floor_2 points=[(-1.6,2.4); (9.2,-18.8); (-9.2,18.8)] h=0.4 at=-0.7,0.9,-6.2 turn=1.52 tilt=1.59
+}
+group SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Decal_Mesh_x107_y78_16984_HD at=802.5,-135.7,-1662 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-40/SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Decal_Mesh_x107_y78_16984_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  plate floor points=[(-0.5,3.8); (1.7,2.7); (-1.6,-4.3); (-1.7,4.3)] h=0.4 at=0,0.1,0 turn=-25.1 tilt=1.64
+}
+box SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Macadam_Decal_Mesh_x108_y77_17141_HD size=7.1,0,2.1 at=803.9,-135.7,-1645.4 rot=(0.008,1,0.019,90) ~fit=1 ~src="BigMeshGroup/BigMeshGroup_54_-39/SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Macadam_Decal_Mesh_x108_y77_17141_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault"
+group SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Decal_Mesh_x108_y78_17142_HD at=833.8,-135.4,-1714.2 ~fit=0.5 ~src="BigMeshGroup/BigMeshGroup_54_-40/SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Decal_Mesh_x108_y78_17142_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  box beam size=22.9,0,4.2 at=-27.2,0.3,44.6 rot=(0.014,1,0.023,66.8)
+  box box_2 size=36.5,0,19.3 at=-2.5,2,-7.7 rot=(0.907,-0.006,0.421,1.7)
+  box box_3 size=38.5,0,3.7 at=15.3,3.3,-46.6 rot=(0.064,-0.998,0.013,23.2)
+}
+box SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Decal_Mesh_x108_y77_17141_HD size=0.6,0,0.2 at=802.9,-135.3,-1658.6 rot=(0.012,1,0.021,73.7) ~fit=1 ~src="SmallMeshGroup/SmallMeshGroup_54_-39/SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Decal_Mesh_x108_y77_17141_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault"
+hull SpaceCenter_Long3_GenerateRoad_Asphalt_Mesh_x107_y78_16984_HD points=[(-13.2,0,27.8); (13.2,1.7,-27.8); (13.2,0.1,27.8); (13.2,1.6,-15.3); (11.5,0.1,27.8); (-7.3,0.1,27.8)] at=789.6,-135.3,-1686.6 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-40/SpaceCenter_Long3_GenerateRoad_Asphalt_Mesh_x107_y78_16984_HD" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseComplexAsSimple"
+group SpaceCenter_Long3_GenerateRoad_Asphalt_Mesh_x108_y78_17142_HD at=849.8,-135.1,-1777.3 ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_54_-40/SpaceCenter_Long3_GenerateRoad_Asphalt_Mesh_x108_y78_17142_HD" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseComplexAsSimple" {
+  plate floor points=[(44.1,116); (46.6,118.6); (63.4,102.9); (39.4,27.5); (20.1,-25.7); (-5.1,-81.1); (-21.4,-109.1); (-34.4,-118.6); (-63.4,-91.5); (-49.4,-69.2); (-29.3,-27.9); (-12.6,13.8); (8.6,78)] h=0.4 at=0,3.2,0 turn=-43.07 tilt=1.45
+  plate floor_2 points=[(11.3,120.2); (7,-20.9); (-0.8,-79.1); (-11.3,-120.2); (-1.3,-79); (6.5,-20.9)] h=0.4 at=-3.9,3,2.7 turn=-26.25 tilt=1.35
+  plate floor_3 points=[(5.5,6.8); (31.4,84.3); (-4.5,-22.4); (-31.4,-84.3)] h=0.4 at=5.6,2.8,36.1 turn=-44 tilt=1.89
+  plate floor_4 points=[(63.3,55.5); (64.9,56); (-11.2,-15.5); (-64.9,-56); (-11.7,-14.9)] h=0.4 at=-15.1,3.3,-3.4 turn=-71 tilt=2.07
+  plate floor_5 points=[(0.3,7.9); (-2.7,-7.9); (2.7,-7.9)] h=0.4 at=58.6,5.5,-102.2
+  plate floor_6 points=[(31.7,8.1); (3.6,-1.1); (-31.7,-8.1)] h=0.4 at=48.6,5.3,-78.3 turn=-89.25 tilt=1.33
+  plate floor_7 points=[(-1.5,5.4); (2.6,-13.6); (-2.6,13.6)] h=0.4 at=19.4,5.3,-96.5
+}
+group SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Macadam_Decal_Mesh_x108_y78_17142_HD at=844.8,-135.1,-1778.4 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_54_-40/SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Macadam_Decal_Mesh_x108_y78_17142_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  box box size=13,0,3.9 at=-39.9,0.7,85 rot=(0.007,1,0.02,90)
+  box box_2 size=15,0,8.2 at=35.9,5.5,-101.5 rot=(0.005,1,0.006,90)
+  box box_3 size=13.8,0,4.4 at=-39.7,0.2,102.1 rot=(0.007,1,0.02,90)
+  box box_4 size=12.2,0,3.8 at=-36.5,0.3,100.9 rot=(0.015,1,0.023,64.9)
+  box box_5 size=13.8,0,11.8 at=-34.9,0.4,97.5 rot=(0.007,1,0.02,90)
+  box box_6 size=16.5,0,7.6 at=-34.5,0.7,87.6 rot=(0.007,1,0.02,90)
+  box box_7 size=11.6,0,7.4 at=-36.5,0.8,81.2 rot=(0.007,1,0.02,90)
+  box box_8 size=10.6,0,7.9 at=5.2,2.8,25.7 rot=(0.007,1,0.018,90)
+  box box_9 size=11.7,0,9.9 at=-2.7,2.9,16 rot=(0.007,1,0.018,90)
+  box box_10 size=9,0,5.2 at=9.7,2.9,21.7 rot=(0.007,1,0.018,90)
+  box box_11 size=14,0,9.6 at=0.3,3,15.9 rot=(0.008,1,0.018,90)
+  box box_12 size=10.2,0,8.4 at=9.2,3.4,0.5 rot=(0.007,1,0.017,90)
+  box box_13 size=12.2,0,8.1 at=11.1,3.6,-5.2 rot=(0.008,1,0.016,90)
+  box box_14 size=15,0,8.1 at=11.3,3.7,-8.1 rot=(0.007,1,0.016,90)
+  box box_15 size=18.1,0,9.7 at=8.6,3.6,-7.6 rot=(0.007,1,0.016,90)
+  box box_16 size=12,0,8.9 at=21.9,3.8,-10.5 rot=(0.006,1,0.016,90)
+  box box_17 size=9,0,5.1 at=14.8,3.8,-14.3 rot=(0.008,1,0.015,90)
+  box box_18 size=10,0,6 at=31.5,4,-16.6 rot=(0.006,1,0.015,90)
+  box box_19 size=11.8,0,6.4 at=25.5,5.2,-83.5 rot=(0.006,1,0.008,90)
+  box box_20 size=10.1,0,7.6 at=28.4,5.3,-85.2 rot=(0.006,1,0.008,90)
+  box box_21 size=12.9,0,7.9 at=26.6,5.3,-87.8 rot=(0.006,1,0.008,90)
+  box box_22 size=13.5,0,4.7 at=39.6,5.4,-94.4 rot=(0.005,1,0.007,90)
+}
+box SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Macadam_Decal_Mesh_x107_y78_16984_HD size=30.1,0,3.9 at=800.9,-134.7,-1682.9 rot=(0.007,1,0.02,90) ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_53_-40/SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Macadam_Decal_Mesh_x107_y78_16984_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault"
+group SpaceCenter_Long3_GenerateRoad_JTDecal_Asphalt_BM_Line_Mesh_x108_y78_17142_HD at=867.8,-132,-1819.5 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_54_-40/SpaceCenter_Long3_GenerateRoad_JTDecal_Asphalt_BM_Line_Mesh_x108_y78_17142_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  box box size=11.9,0,7.3 at=-27.1,0.2,56.6 rot=(0.011,-1,-0.013,90)
+  box box_2 size=12,0,7.3 at=-10.9,0.6,61.9 rot=(-0.022,0.999,0.032,90)
+  box box_3 size=3.1,0,2.3 at=29.3,2.9,-66.7
+}
+group Nature_Rock_Big_Rock_30_11 at=644.6,-110.3,-1783.2 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-40/SM_Nature_Rock_Big_Rock_30" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  hull volume points=[(-21.4,14.2,-1.7); (21.4,2.7,8.9); (8.2,0,4.2); (1.1,22.2,-2.3); (7.4,4.3,-13.1); (-5.8,7.5,13.1); (13.7,15.1,10.6); (13.6,20,-0.8); (-12.8,4.4,8.1); (16.8,4,-7.3); (-17.2,6.4,-1); (-6,18.8,5.2); (-15.2,20.2,-2.1); (-20.5,9.6,3.7); (-20.4,17,-3.7); (20.4,7.8,10.8); (-0.7,4.5,-10.9); (11.1,19.2,4.8); (6,3.4,10.6)] at=-0.6,0,-9.5
+  hull hull_2 points=[(-18,3.1,-3.2); (18,3.1,-0.5); (8,0,2.4); (9.1,14.9,-8.1); (-4.2,2,-13.4); (4.6,5.9,13.4); (-11.3,10.1,-12); (16.8,2.5,-9.8); (12.2,0.2,11.8); (12.2,10,9.5); (-2.9,13.9,1.4); (-17.4,4.2,-10.6); (-16.2,5.3,0.9); (12.2,9,-11.5); (2.4,2.2,12.1); (17.8,0.6,2.7); (15.8,7.6,-7.9); (-2.6,13.2,-11.6); (8,8.3,13.1); (-14.3,9,-8.2); (13.5,6,10.7); (-1.1,12.1,5.8)] at=4,0.2,9.2
+}
+BlockWallCube_v2_8 BlockWallCube_8_9 at=863.4,-107.2,-966.1 turn=-90.1 ~fit=1 ~src="Blocker/BigMeshGroup_54_-38/BlockWallCube@5" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"
+BlockWallCube_v2_8 BlockWallCube_9_9 at=808.9,-107.2,-966.1 turn=-90.1 ~fit=1 ~src="Blocker/BigMeshGroup_54_-38/BlockWallCube@7" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"
+BlockWallCube_v2_8 BlockWallCube_10_9 at=835.3,-107.2,-966.1 turn=-90.1 ~fit=1 ~src="Blocker/BigMeshGroup_54_-38/BlockWallCube@6" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"
+pipe Nature_Rock_Big_Rock_35_7 path=[(817.8,-164,-1812.4); (772.9,-143.6,-1837.6); (723.4,-119.7,-1834.4); (675.8,-102.5,-1853.1); (622.5,-101.1,-1867.9)] r=36.6 smooth=true ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-40/SM_Nature_Rock_Big_Rock_35" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01_21 Fence_Metal_01_21_5 at=890.9,-141.2,-966.3 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_54_-38/SM_H_Fence_Metal_1024x768_01@3" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+group SpaceCenter_Long3_GenerateRoad_Asphalt_Mesh_x108_y79_17143_HD at=882.3,-129.9,-2002 ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_54_-40/SpaceCenter_Long3_GenerateRoad_Asphalt_Mesh_x108_y79_17143_HD" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseComplexAsSimple" {
+  plate floor points=[(18,83.5); (24.4,-65.7); (30.3,-114.3); (-9.4,-114.3); (-30.3,114.3); (14.8,114.3)] h=0.4 at=14.1,0.8,0.4
+  plate floor_2 points=[(-82,6.7); (82,-1.2); (81.2,-6.7); (56.3,-6.4)] h=0.4 at=-5.8,1.2,-32.6 turn=81.88 tilt=10.36
+  plate floor_3 points=[(-38.3,-0.7); (50.7,4.1); (114.1,10.7); (83.1,6); (-66.1,-3.8); (-114.1,-10.7); (-85.2,-5.3)] h=0.4 at=31.2,1,0.4 turn=-88.72 tilt=2.63
+  plate floor_4 points=[(-48.6,8.2); (67.7,-13); (113.3,-17); (67.8,-12.3); (-79.6,14); (-113.3,17)] h=0.4 at=-3.1,0.8,0.4 turn=77.4 tilt=2.08
+  plate floor_5 points=[(0.7,-39.1); (-4,82); (-8,114.3); (-2.7,50); (1.9,-67.6); (8,-114.3)] h=0.4 at=14.1,0.7,0.4
+}
+hull SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Macadam_Decal_Mesh_x108_y79_17143_HD points=[(-15.8,0.3,73.2); (15.8,0.7,-83.7); (-14.9,0,114.3); (3.5,0.9,-114.3); (-0.6,0.9,-114.3); (9.9,0.4,57.3)] at=895.9,-129.5,-2001.6 ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_54_-40/SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Macadam_Decal_Mesh_x108_y79_17143_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" ~scatter=32
+group SpaceCenter_Long3_GenerateRoad_JTDecal_Asphalt_BM_Line_Mesh_x108_y79_17143_HD at=892.8,-129.2,-1965.9 ~fit=0.2 ~src="BigMeshGroup/BigMeshGroup_54_-40/SpaceCenter_Long3_GenerateRoad_JTDecal_Asphalt_BM_Line_Mesh_x108_y79_17143_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  box box size=12,0,4.1 at=-11.6,0.1,68.4 turn=90
+  box box_2 size=11.9,0,3.4 at=-4.7,0.6,-72.5 turn=-90
+  box box_3 size=9.8,0,4 at=4.9,0,73.5 turn=90
+  wedge wedge size=3.2,0,11.9 at=12,0.6,-65.1 rot=(0.006,-1,0.001,180)
+}
+BlockWallCube_61 BlockWallCube_61_4 at=890.8,-107.2,-966 turn=-90.1 ~fit=1 ~src="Blocker/BigMeshGroup_54_-38/BlockWallCube@4" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"

@@ -1,0 +1,18 @@
+// 细化到 structure：HOrange_01_ExterWall_01（面积前 90%（12/108 块），12 个部件）
+def HOrange_01_ExterWall_01 : HOrange_01_ExterWall_01 {
+  drop body
+  group body envelope=-106.5,0,-123,106.5,129,123 {
+    box box1 size=227.4,126,193.9 at=-0.8,0.2,-9 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Building_FutureTech_HOrange_01_ExterWall_01#2"
+    box box10 size=79.4,1,12.1 at=100.3,37.7,51.7 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Building_FutureTech_HOrange_01_ExterWall_01#66"
+    box box5 size=52.6,3.2,42.5 at=73,39.6,-96.4 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Building_FutureTech_HOrange_01_ExterWall_01#67"
+    box box12 size=46.9,2.7,19.2 at=71.4,41.5,113.2 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Building_FutureTech_HOrange_01_ExterWall_01#10"
+    box box9 size=25,68.5,15.7 at=-24.4,43.3,94.4 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Building_FutureTech_HOrange_01_ExterWall_01#44"
+    box box8 size=25,68.5,15.7 at=-71.4,43.3,94.4 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Building_FutureTech_HOrange_01_ExterWall_01#46"
+    box box6 size=145.9,4.1,113 at=-26.3,44,43.1 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Building_FutureTech_HOrange_01_ExterWall_01#36"
+    box box2 size=145.5,61.5,112.2 at=-26.2,48,43.1 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Building_FutureTech_HOrange_01_ExterWall_01#55"
+    box box7 size=57.4,21.7,43.1 at=70.8,102.4,87.7 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Building_FutureTech_HOrange_01_ExterWall_01#77"
+    box box3 size=120,5.8,98.3 at=-13.4,106.1,30.7 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Building_FutureTech_HOrange_01_ExterWall_01#38"
+    box box11 size=107.7,1.6,58.3 at=70.7,124.6,55.8 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Building_FutureTech_HOrange_01_ExterWall_01#26"
+    box box4 size=108.9,2.8,60 on=box1 offset=71.6,0,65.1 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Building_FutureTech_HOrange_01_ExterWall_01#23"
+  }
+}

@@ -1,0 +1,6 @@
+// 分区 11/11：4 个物体（2 组），x -536…-511，z -209…-167
+
+mesh Resort_Litter_02B src="../dorm.glb#BigMeshGroup/BigMeshGroup_51_-36/SM_H_FutureTech_Resort_Litter_02B" size=18,0,36 pivot=-536,-144,-209 at=-536,-144,-209 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_51_-36/SM_H_FutureTech_Resort_Litter_02B" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Building_BigDoor_03 size=97,71,26 at=-511,-120,-167 turn=-90 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_51_-36/SM_H_Building_FutureTech_BigDoor_03" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Branding_LocationSign_02_D_2 size=5,23,0 at=-523,-96,-205 turn=-90 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_51_-36/SM_Branding_LocationSign_FutureTech_02_D" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Branding_LocationSign_02_C size=8,8,1 at=-523,-71,-205 turn=-90 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_51_-36/SM_Branding_LocationSign_FutureTech_02_C" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"

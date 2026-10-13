@@ -1,0 +1,1124 @@
+{
+  "source": "../dorm.glb",
+  "level": "project",
+  "parts": 2000,
+  "kinds": {
+    "BS_BostonIvy_01_B": 2,
+    "BS_BostonIvy_01_B_v2": 2,
+    "BS_BostonIvy_01_C": 7,
+    "BS_BostonIvy_01_D": 4,
+    "BS_BostonIvy_01_E2": 4,
+    "BS_BostonIvy_01_E2_v2": 2,
+    "BS_Bougainvillea_01_A": 2,
+    "Branding_LocationSign_02G": 2,
+    "Branding_LocationSign_02G_v2": 4,
+    "Branding_LocationSign_02I": 5,
+    "Branding_LocationSign_02_B": 2,
+    "Branding_LocationSign_02_D": 2,
+    "Branding_LocationSign_02_D_v2": 4,
+    "Building_Dormitory_01": 5,
+    "Building_Dormitory_01B": 5,
+    "Building_Dormitory_01C": 5,
+    "Building_Dormitory_01_Ornament_03": 4,
+    "Building_Dormitory_02_ExterWall_01": 3,
+    "Building_Dormitory_02_ExterWall_01B": 4,
+    "Building_Dormitory_02_ExterWall_01C": 4,
+    "Building_Dormitory_02_ExterWall_01D": 4,
+    "Building_Dormitory_02_ExterWall_01E": 4,
+    "Building_Dormitory_02_ExterWall_03": 3,
+    "Building_Dormitory_02_InterWall_03": 3,
+    "Building_Dormitory_02_InterWall_04": 3,
+    "Building_Dormitory_02_InterWall_04B": 4,
+    "Building_Dormitory_02_InterWall_05": 3,
+    "Building_Dormitory_02_InterWall_06": 3,
+    "Building_Dormitory_02_Ornament_01": 6,
+    "Building_Dormitory_02_Ornament_02": 5,
+    "Building_HSupport_01": 4,
+    "Commercial_Lighting_OverheadLight_01": 36,
+    "Commercial_Resort_Bed_01_02": 3,
+    "Commercial_Resort_Bed_01_02_v2": 3,
+    "Commercial_Resort_Bed_01_02_v3": 3,
+    "Commercial_Resort_Bed_01_02_v4": 3,
+    "Commercial_Resort_Bed_03_02": 3,
+    "Commercial_Resort_Box_01": 4,
+    "Commercial_Resort_Box_01_v2": 3,
+    "Commercial_Resort_Box_02": 4,
+    "Commercial_Resort_Curtain_09b": 12,
+    "Commercial_Resort_Curtain_09b_v2": 6,
+    "Commercial_Resort_Curtain_09b_v3": 3,
+    "Commercial_Resort_DeckChair_Table_01": 8,
+    "Commercial_Resort_DeckChair_Table_01_v2": 5,
+    "Commercial_Resort_Sofa_06_01": 23,
+    "Decal_Generic_09": 2,
+    "Electrical_BigConditioners_01": 2,
+    "Electrical_BigConditioners_01_v2": 10,
+    "Electron_Computer_01": 4,
+    "Electron_Computer_01_03": 5,
+    "Electron_Computer_02_01": 2,
+    "Emissive_Cylinder_01": 3,
+    "Emissive_Cylinder_01_v2": 36,
+    "Emissive_Cylinder_01_v3": 3,
+    "Emissive_Cylinder_01_v4": 2,
+    "Emissive_Cylinder_01_v5": 2,
+    "Fence_ConcreteWall_01": 17,
+    "Fence_ConcreteWall_01_v2": 29,
+    "Fence_ConcreteWall_01_v3": 11,
+    "Fence_ConcreteWall_01_v4": 2,
+    "Fence_ConcreteWall_01_v5": 2,
+    "Fence_ConcreteWall_01_v6": 2,
+    "Fence_Metal_01": 17,
+    "Fence_Metal_01B": 10,
+    "Fence_WoodWall_01": 21,
+    "Fence_WoodWall_01_v2": 18,
+    "Fence_WoodWall_01_v3": 2,
+    "Fence_WoodWall_01_v4": 2,
+    "Furniture_AirConditioning_01": 7,
+    "Furniture_AirConditioning_01_v2": 2,
+    "Furniture_Chair_05": 7,
+    "Furniture_Chair_06": 23,
+    "Furniture_Chair_07": 6,
+    "Furniture_Chair_07_v2": 6,
+    "Furniture_Coffee_01_A": 2,
+    "Furniture_Coffee_01_C": 4,
+    "Furniture_Coffee_01_D": 3,
+    "Furniture_Display_01": 3,
+    "Furniture_Flowerpot_01": 20,
+    "Furniture_Flowerpot_01_v2": 6,
+    "Furniture_Flowerpot_01_v3": 9,
+    "Furniture_Flowerpot_01_v4": 6,
+    "Furniture_Folder_01_A": 63,
+    "Furniture_Folder_01_B": 29,
+    "Furniture_Folder_01_C": 61,
+    "Furniture_Folder_01_D": 27,
+    "Furniture_Folder_02": 26,
+    "Furniture_Ladder_01_B": 4,
+    "Furniture_PaperCups_01_C": 3,
+    "Furniture_Radar_02": 4,
+    "Furniture_Trash_01": 11,
+    "Furniture_Utility_Dustbin_01_B": 15,
+    "Generic_Lighting_Chandelier_01": 3,
+    "Generic_Lighting_Chandelier_11": 9,
+    "Generic_Lighting_TableLamp_04": 2,
+    "Government_Office_BoxLid_01": 35,
+    "Government_Office_BoxLid_01_v2": 3,
+    "Government_Office_BoxLid_01_v3": 2,
+    "Government_Office_Box_01": 44,
+    "Government_Office_Box_01_v2": 39,
+    "Government_Office_Box_01_v3": 19,
+    "Government_Office_Box_01_v4": 3,
+    "Government_Office_CoffeeMachine_01": 13,
+    "Government_Office_Corsair_01": 2,
+    "Government_Office_FileCabinetWooden_01": 3,
+    "Government_Office_FileCabinetWooden_01_v2": 6,
+    "Government_Office_StorageBasket_01": 3,
+    "Government_Office_StorageBasket_01_v2": 3,
+    "Government_Office_Trophy_01": 3,
+    "Government_Office_Trophy_01_v2": 3,
+    "Government_Office_WoodenCabinet_01": 9,
+    "Government_Office_WoodenCabinet_01_v2": 3,
+    "Government_Office_WoodenCabinet_01_v3": 3,
+    "Government_Office_WoodenCabinet_01_v4": 3,
+    "Government_Office_WoodenCabinet_01_v5": 9,
+    "IceLand_Props_IndustrialRoadblock_01a": 16,
+    "IceLand_Props_MetalFrame_01a": 2,
+    "Industrial_Container_SupplyBox_01": 13,
+    "Industrial_Container_SupplyBox_01_v2": 2,
+    "Industrial_Container_SupplyBox_02": 10,
+    "Industrial_Container_SupplyBox_02B": 6,
+    "Industrial_Container_TrashBag_03": 6,
+    "Industrial_Lighting_Leuchtstabe_01": 4,
+    "Industrial_Lighting_Vent_01": 6,
+    "Industrial_Prop_Light_02": 2,
+    "Kitchen_CoffeMachine_01_A": 2,
+    "Kitchen_CoffeMachine_01_A_v2": 3,
+    "Kitchen_Microwave_01": 3,
+    "Lighting_OverheadLight_01": 8,
+    "Lighting_OverheadLight_01_v2": 118,
+    "Lighting_OverheadLight_01_v3": 69,
+    "Lighting_OverheadLight_01_v4": 21,
+    "Lighting_OverheadLight_01_v5": 27,
+    "Lighting_OverheadLight_01_v6": 36,
+    "Nature_Rock_Big_Rock_30": 4,
+    "Office_ComputerMonitors_03": 2,
+    "Residential_Bedroom_Cabinet_01": 6,
+    "Residential_Bedroom_Cabinet_02": 6,
+    "Residential_Bedroom_Cabinet_03": 6,
+    "Residential_Bedroom_Cupboard_01": 3,
+    "Residential_Bedroom_Cushion_01_04": 2,
+    "Residential_Bedroom_Cushion_01_10": 6,
+    "Residential_Bedroom_Shelf_01": 3,
+    "Residential_Bedroom_Table_01": 3,
+    "Residential_Electrical_Charher_01": 6,
+    "Resort_Flowerpot_05": 31,
+    "Resort_Flowerpot_05_v2": 5,
+    "Resort_MopBucket_01": 3,
+    "Resort_ReminderBoard_01": 2,
+    "RoadFacility_Road_AsphaltRoad_512_01": 2,
+    "RoadFacility_Road_FlowerBed_01": 6,
+    "RoadFacility_Road_FlowerBed_01_v2": 3,
+    "RoadFacility_Road_FlowerBed_01_v3": 2,
+    "Road_FlowerBed_04_01": 17,
+    "Small_Door_15": 16,
+    "Small_Door_15_Frame": 13,
+    "Small_Door_15_Frame_v2": 2,
+    "Small_Door_15_Frame_v3": 4,
+    "Small_Door_15_Frame_v4": 3,
+    "Small_Door_15_v2": 4,
+    "TR_PaperFlower_3m_HD": 3,
+    "TR_PaperFlower_Vine_3m_HD": 3,
+    "TR_PaperFlower_Vine_3m_HD_v2": 2,
+    "TR_PaperFlower_Vine_3m_HD_v3": 2,
+    "Tools_Box_01": 6,
+    "Tools_Box_03": 25,
+    "Tools_MetalShelf_02": 12,
+    "Transport_Utility_FlowerBed_03A": 10,
+    "Transport_Utility_FlowerBed_03A_v2": 26,
+    "Transport_Utility_FlowerBed_03A_v3": 4,
+    "Transport_Utility_FlowerBed_03A_v4": 2,
+    "Transport_Utility_Guardrail_02": 18,
+    "Transport_Utility_Guardrail_03": 11,
+    "Transport_Utility_ParkingShed_01": 3,
+    "Transport_Utility_Trademark_01": 2,
+    "Transport_Utility_Trademark_02": 9,
+    "Transport_Utility_Trademark_02B": 2,
+    "Transport_Utility_Trademark_02_v2": 2,
+    "Update_Container_PlasticBox_02": 25,
+    "Vehicle_ConceptCar_01_B": 2,
+    "Vehicle_DriverlessVans_01_Open": 2,
+    "Vehicle_DriverlessVans_02": 2,
+    "Vehicle_DriverlessVans_03": 3,
+    "Vehicle_DriverlessVans_04": 2,
+    "Vehicle_DriverlessVans_05_Left": 2,
+    "WalkwaySystem_Terrace_128_01": 8,
+    "WalkwaySystem_Terrace_192_01": 3,
+    "WalkwaySystem_Terrace_192_01_v2": 4,
+    "WalkwaySystem_Terrace_192_01_v3": 4,
+    "WalkwaySystem_Terrace_192_01_v4": 5,
+    "WalkwaySystem_Terrace_256_01": 16,
+    "WalkwaySystem_Terrace_256_01_v2": 11,
+    "box": 124,
+    "cone": 4,
+    "mesh": 98,
+    "pipe": 3,
+    "type_72": 3,
+    "wedge": 17
+  },
+  "arrays": [
+    {
+      "id": "Fence_Metal",
+      "n": 12,
+      "kind": "linear",
+      "children": [
+        "Fence_Metal_01"
+      ]
+    },
+    {
+      "id": "Fence_Metal_01_21",
+      "n": 5,
+      "kind": "linear",
+      "children": [
+        "Fence_Metal_01"
+      ]
+    },
+    {
+      "id": "Fence_Metal_01B_12",
+      "n": 6,
+      "kind": "linear",
+      "children": [
+        "Fence_Metal_01B"
+      ]
+    },
+    {
+      "id": "Fence_WoodWall_01_44",
+      "n": [
+        2,
+        2
+      ],
+      "kind": "grid",
+      "children": [
+        "Fence_WoodWall_01_v2"
+      ]
+    },
+    {
+      "id": "Fence_WoodWall_01_45",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Fence_WoodWall_01_v2"
+      ]
+    },
+    {
+      "id": "Fence_WoodWall_01_46",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Fence_WoodWall_01_v2"
+      ]
+    },
+    {
+      "id": "Fence_WoodWall_01_47",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Fence_WoodWall_01_v2"
+      ]
+    },
+    {
+      "id": "Commercial_Resort_Curtain_09b_27",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Commercial_Resort_Curtain_09b"
+      ]
+    },
+    {
+      "id": "Fence_ConcreteWall_01_76",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Fence_ConcreteWall_01"
+      ]
+    },
+    {
+      "id": "Fence_ConcreteWall_01_77",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Fence_ConcreteWall_01"
+      ]
+    },
+    {
+      "id": "Commercial_Resort_Curtain_09b_28",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Commercial_Resort_Curtain_09b"
+      ]
+    },
+    {
+      "id": "Commercial_Resort_Curtain",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Commercial_Resort_Curtain_09b"
+      ]
+    },
+    {
+      "id": "Fence_ConcreteWall_01_78",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Fence_ConcreteWall_01"
+      ]
+    },
+    {
+      "id": "Transport_Utility_FlowerBed_03A_45",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Transport_Utility_FlowerBed_03A_v2"
+      ]
+    },
+    {
+      "id": "Government_Office_WoodenCabinet_01_28",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_WoodenCabinet_01_v5"
+      ]
+    },
+    {
+      "id": "Government_Office_WoodenCabinet_01_29",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_WoodenCabinet_01_v5"
+      ]
+    },
+    {
+      "id": "Government_Office_WoodenCabinet_01_30",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_WoodenCabinet_01_v5"
+      ]
+    },
+    {
+      "id": "Fence_WoodWall",
+      "n": [
+        2,
+        2
+      ],
+      "kind": "grid",
+      "children": [
+        "Fence_WoodWall_01"
+      ]
+    },
+    {
+      "id": "Fence_WoodWall_01_48",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Fence_WoodWall_01"
+      ]
+    },
+    {
+      "id": "Fence_ConcreteWall_01_79",
+      "n": 7,
+      "kind": "linear",
+      "children": [
+        "Fence_ConcreteWall_01_v3"
+      ]
+    },
+    {
+      "id": "Fence_ConcreteWall_01_80",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Fence_ConcreteWall_01_v2"
+      ]
+    },
+    {
+      "id": "WalkwaySystem_Terrace_256_01_30",
+      "n": 4,
+      "kind": "rotate",
+      "children": [
+        "WalkwaySystem_Terrace_256_01",
+        "WalkwaySystem_Terrace_256_01_"
+      ]
+    },
+    {
+      "id": "WalkwaySystem_Terrace_256_01_31",
+      "n": 5,
+      "kind": "linear",
+      "children": [
+        "WalkwaySystem_Terrace_256_01_v2"
+      ]
+    },
+    {
+      "id": "Fence_ConcreteWall_01_81",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Fence_ConcreteWall_01_v2"
+      ]
+    },
+    {
+      "id": "Fence_ConcreteWall_01_82",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Fence_ConcreteWall_01_v2"
+      ]
+    },
+    {
+      "id": "Fence_ConcreteWall_01_83",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Fence_ConcreteWall_01_v2"
+      ]
+    },
+    {
+      "id": "WalkwaySystem_Terrace_256_01_32",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "WalkwaySystem_Terrace_256_01_v2"
+      ]
+    },
+    {
+      "id": "IceLand_Props_IndustrialRoadblock_01a_17",
+      "n": 6,
+      "kind": "linear",
+      "children": [
+        "IceLand_Props_IndustrialRoadblock_01a"
+      ]
+    },
+    {
+      "id": "WalkwaySystem_Terrace_192",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "WalkwaySystem_Terrace_192_01"
+      ]
+    },
+    {
+      "id": "Tools_Box_03_26",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Tools_Box_03"
+      ]
+    },
+    {
+      "id": "Tools_Box_03_27",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Tools_Box_03",
+        "Tools_Box_03_"
+      ]
+    },
+    {
+      "id": "Tools_Box_03_28",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Tools_Box_03"
+      ]
+    },
+    {
+      "id": "Government_Office_Box_01_106",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Box_01"
+      ]
+    },
+    {
+      "id": "IceLand_Props_IndustrialRoadblock",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "IceLand_Props_IndustrialRoadblock_01a"
+      ]
+    },
+    {
+      "id": "IceLand_Props_IndustrialRoadblock_01a_18",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "IceLand_Props_IndustrialRoadblock_01a"
+      ]
+    },
+    {
+      "id": "IceLand_Props_IndustrialRoadblock_01a_19",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "IceLand_Props_IndustrialRoadblock_01a"
+      ]
+    },
+    {
+      "id": "Generic_Lighting_Chandelier_11_10",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Generic_Lighting_Chandelier_11"
+      ]
+    },
+    {
+      "id": "Generic_Lighting_Chandelier_11_11",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Generic_Lighting_Chandelier_11"
+      ]
+    },
+    {
+      "id": "Generic_Lighting_Chandelier",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Generic_Lighting_Chandelier_11"
+      ]
+    },
+    {
+      "id": "Commercial_Lighting_OverheadLight",
+      "n": [
+        3,
+        2
+      ],
+      "kind": "grid",
+      "children": [
+        "Commercial_Lighting_OverheadLight_01"
+      ]
+    },
+    {
+      "id": "Commercial_Lighting_OverheadLight_01_37",
+      "n": [
+        3,
+        2
+      ],
+      "kind": "grid",
+      "children": [
+        "Commercial_Lighting_OverheadLight_01"
+      ]
+    },
+    {
+      "id": "Commercial_Lighting_OverheadLight_01_38",
+      "n": [
+        2,
+        3
+      ],
+      "kind": "grid",
+      "children": [
+        "Commercial_Lighting_OverheadLight_01"
+      ]
+    },
+    {
+      "id": "Commercial_Lighting_OverheadLight_01_39",
+      "n": [
+        2,
+        3
+      ],
+      "kind": "grid",
+      "children": [
+        "Commercial_Lighting_OverheadLight_01"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_280",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v5"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_281",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v5"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_282",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v5"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_283",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v5"
+      ]
+    },
+    {
+      "id": "Commercial_Lighting_OverheadLight_01_40",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Commercial_Lighting_OverheadLight_01"
+      ]
+    },
+    {
+      "id": "Commercial_Lighting_OverheadLight_01_41",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Commercial_Lighting_OverheadLight_01"
+      ]
+    },
+    {
+      "id": "Commercial_Lighting_OverheadLight_01_42",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Commercial_Lighting_OverheadLight_01"
+      ]
+    },
+    {
+      "id": "Commercial_Lighting_OverheadLight_01_43",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Commercial_Lighting_OverheadLight_01"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_284",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_285",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_286",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_287",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_288",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_289",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_290",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_291",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_292",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_293",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_294",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_295",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_296",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_297",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_298",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_299",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_300",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_301",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_302",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_303",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Furniture_PaperCups_01",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Furniture_PaperCups_01_C"
+      ]
+    },
+    {
+      "id": "Emissive_Cylinder_01_47",
+      "n": [
+        2,
+        2
+      ],
+      "kind": "grid",
+      "children": [
+        "Emissive_Cylinder_01_v2"
+      ]
+    },
+    {
+      "id": "Emissive_Cylinder_01_48",
+      "n": [
+        2,
+        2
+      ],
+      "kind": "grid",
+      "children": [
+        "Emissive_Cylinder_01_v2"
+      ]
+    },
+    {
+      "id": "Emissive_Cylinder_01_49",
+      "n": [
+        2,
+        2
+      ],
+      "kind": "grid",
+      "children": [
+        "Emissive_Cylinder_01_v2"
+      ]
+    },
+    {
+      "id": "Emissive_Cylinder_01_50",
+      "n": [
+        2,
+        2
+      ],
+      "kind": "grid",
+      "children": [
+        "Emissive_Cylinder_01_v2"
+      ]
+    },
+    {
+      "id": "Emissive_Cylinder_01_51",
+      "n": [
+        2,
+        2
+      ],
+      "kind": "grid",
+      "children": [
+        "Emissive_Cylinder_01_v2"
+      ]
+    },
+    {
+      "id": "Emissive_Cylinder_01_52",
+      "n": [
+        2,
+        2
+      ],
+      "kind": "grid",
+      "children": [
+        "Emissive_Cylinder_01_v2"
+      ]
+    },
+    {
+      "id": "Emissive_Cylinder_01_53",
+      "n": [
+        2,
+        2
+      ],
+      "kind": "grid",
+      "children": [
+        "Emissive_Cylinder_01_v2"
+      ]
+    },
+    {
+      "id": "Emissive_Cylinder_01_54",
+      "n": [
+        2,
+        2
+      ],
+      "kind": "grid",
+      "children": [
+        "Emissive_Cylinder_01_v2"
+      ]
+    },
+    {
+      "id": "Emissive_Cylinder_01_55",
+      "n": [
+        2,
+        2
+      ],
+      "kind": "grid",
+      "children": [
+        "Emissive_Cylinder_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_304",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_305",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v2"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_306",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_307",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_308",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v3"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_309",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v3"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_310",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v3"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_311",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v3"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_312",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v3"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_313",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v3"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_314",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v3"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_315",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v3"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_316",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v6"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_317",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v6"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_318",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v6"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_319",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v6"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_320",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v6"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_321",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v6"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_322",
+      "n": 7,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v4"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_323",
+      "n": 7,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v4"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_324",
+      "n": 7,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v4"
+      ]
+    }
+  ],
+  "mirrors": [],
+  "covered": 396,
+  "placement": {
+    "on": 321,
+    "against": 48,
+    "at": 69,
+    "coord": 1270
+  },
+  "meanFit": 0.101,
+  "dissolved": [
+    "Fence_Metal_01B_13",
+    "Building_Dormitory_02_ExterWall",
+    "Transport_Utility_FlowerBed_03A_44",
+    "WalkwaySystem_Terrace_256"
+  ],
+  "fallback": [
+    "Vehicle_DriverlessVans_02",
+    "Fence_ConcreteWall_01_70",
+    "Branding_Poster_Screen_01",
+    "type_72_3",
+    "Tools_MetalShelf_02_4",
+    "Building_Dormitory_02_ExterWall_01B_3",
+    "Transport_Utility_Guardrail_03_8",
+    "Government_Office_CoffeeMachine_01_13",
+    "Tools_MetalShelf_02_10",
+    "type_72",
+    "Building_Dormitory_02_ExterWall_01B_2",
+    "Building_Dormitory_02_ExterWall_01D_5",
+    "Fence_ConcreteWall_01_56",
+    "Transport_Utility_FlowerBed_03A_23",
+    "Small_Door_15_Frame_19",
+    "Small_Door_15_22",
+    "Building_Dormitory_02_InterWall_04B_4",
+    "Building_Dormitory_02_InterWall_04B_5",
+    "Transport_Utility_Trademark_02_4",
+    "Small_Door_15_Frame_20",
+    "Small_Door_15_23",
+    "Lighting_OverheadLight_01_32",
+    "Lighting_OverheadLight_01_33",
+    "Lighting_OverheadLight_01_208",
+    "Lighting_OverheadLight_01_219",
+    "Furniture_AirConditioning_01_6",
+    "Furniture_AirConditioning_01_3",
+    "Building_Dormitory_02_Ornament_02_5",
+    "Building_Dormitory_02_Ornament_02_6",
+    "Electrical_BigConditioners_01_13",
+    "Building_Dormitory_02_ExterWall_03_3",
+    "Building_Dormitory_02_ExterWall_03_2",
+    "Building_Dormitory_02_ExterWall_03",
+    "WalkwaySystem_Terrace_256_01_2",
+    "WalkwaySystem_Terrace_256_01_7"
+  ],
+  "renamed": 0
+}

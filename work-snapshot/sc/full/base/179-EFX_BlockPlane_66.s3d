@@ -1,0 +1,219 @@
+// 分区 179/233：104 个物体（1 组），x 970…1144，z -294…-168
+
+repeat EFX_BlockPlane_68_2 n=5 step=16.48,0,0.14 at=1109.4,-245.1,-184 pin=origin {
+  EFX_BlockPlane_v13_6 EFX_BlockPlane_v13_6 turn=179.5 ~role="collision" ~fit=1
+}
+repeat EFX_BlockPlane_71_5 n=3 step=15.66,0,-0.1 at=1062,-245.1,-183.8 pin=origin {
+  EFX_BlockPlane_v11_8 EFX_BlockPlane_v11_8 turn=-179.6 ~role="collision" ~fit=1
+}
+repeat EFX_BlockPlane_66 n=4 step=16.4,0,-4.48 at=1118,-245.1,-287.2 pin=origin {
+  EFX_BlockPlane_v14_6 EFX_BlockPlane_v14_6 turn=15.3 ~role="collision" ~fit=1
+}
+box EFX_BlockPlane_49_3 size=4.5,365.7,0 at=1109.6,-245.1,-287.3 turn=-85.9 ~fit=1 ~src="Blocker/BigMeshGroup_54_-36/SM_EFX_BlockPlane@21" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+repeat EFX_BlockPlane_74_4 n=3 step=15.67,0,0.24 at=1070.3,-245.1,-290.1 pin=origin {
+  EFX_BlockPlane_v12_8 EFX_BlockPlane_v12_8 turn=-0.9 ~role="collision" ~fit=1
+}
+Fence_Metal_01B_v3_4 Fence_Metal_01B_46 at=1070,-145.8,-289 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_54_-37/SM_H_Fence_Metal_1024x768_01B@2" ~shape="bounds" ~collidable=1 ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01B_v3_4 Fence_Metal_01B_48 against=Fence_Metal_01B_46[1,0,0] ~fit=0 ~src="BigMeshGroup/BigMeshGroup_54_-37/SM_H_Fence_Metal_1024x768_01B@1" ~shape="bounds" ~collidable=1 ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01B_v3_4 Fence_Metal_01B_44 at=1060.1,-145.8,-184.5 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_54_-36/SM_H_Fence_Metal_1024x768_01B@11" ~shape="bounds" ~collidable=1 ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01B_v3_4 Fence_Metal_01B_47 against=Fence_Metal_01B_44[1,0,0] ~fit=0 ~src="BigMeshGroup/BigMeshGroup_54_-36/SM_H_Fence_Metal_1024x768_01B@12" ~shape="bounds" ~collidable=1 ~trace_flag="CTF_UseComplexAsSimple"
+box BlockWallCube_41_7 size=106,82.6,4.4 at=1116.8,-145.3,-235.7 turn=-90.1 ~fit=1 ~src="Blocker/BigMeshGroup_54_-36/BlockWallCube@1" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"
+Building_AssemblyArea_ExterWall_01B Building_AssemblyArea_ExterWall_01B_2 at=1016.7,-144.4,-287.1 turn=180 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_54_-36/SM_H_Building_FutureTech_AssemblyArea_ExterWall_01B@2" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_Barriers_01_C_6 Transport_Utility_Barriers_01_C_6_2 at=1123.9,-143.4,-226.5 rot=(-0.004,1,0.004,88.2) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_109_-72/SM_H_Transport_Utility_Barriers_01_C@2" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_Barriers_01_C_6 Transport_Utility_Barriers_01_C_2_5 at=1124,-143,-242.8 rot=(-0.004,1,0.004,90.2) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_109_-72/SM_H_Transport_Utility_Barriers_01_C@1" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+RoadFacility_Road_AsphaltRoad_512_01_9 RoadFacility_Road_AsphaltRoad_512_01_8_2 at=1045.9,-142.9,-241.7 turn=-90 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_RoadFacility_Road_AsphaltRoad_512_01@1" ~role="terrain" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Transport_Utility_Barriers_01 Transport_Utility_Barriers_01_9 at=1128.5,-142.1,-233.6 rot=(-0.004,1,0.004,88.2) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Transport_Utility_Barriers_01@2" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_Barriers_01 Transport_Utility_Barriers_01_2_6 at=1128.7,-142.1,-249.9 rot=(-0.004,1,0.004,90.2) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Transport_Utility_Barriers_01@1" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Bucket_02_48 Furniture_Bucket_02_42 at=1134.2,-142,-254.6 turn=156.4 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Furniture_Bucket_02@27" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+hull Terrain_Road_Desert_Decal_Sand_09_20 points=[(-13.9,0,18.4); (13.9,0,-6.5); (13.6,0,-8.3); (-2.5,2.7,-7.7); (-4.5,0,-29.3); (-7,0,29.3); (1.7,1.3,-20); (4.2,0,-25.6); (-1.1,2,6.5); (5.8,0,16.2); (-11.2,0,-5.5); (-5.5,1.8,13.7); (-6.6,0,-27.6); (-11.1,0,26.7); (12.6,0,2.3)] at=1140.8,-142,-239 ~fit=0.7 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_I_Terrain_Road_Desert_Decal_Sand_09@18" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Terrain_Road_Desert_Decal_Sand_09 Terrain_Road_Desert_Decal_Sand_09_16 at=1051.1,-142,-261.3 turn=-95.8 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_I_Terrain_Road_Desert_Decal_Sand_09@15" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_Barriers_01_C_6 Transport_Utility_Barriers_01_C_3_3 at=1126.3,-142,-233.6 rot=(-0.004,1,0.004,88.2) ~fit=0 ~src="SmallMeshGroup/SmallMeshGroup_54_-36/SM_H_Transport_Utility_Barriers_01_C@2" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_ParkingPole_01_4 Transport_Utility_ParkingPole_01_2_4 at=1103.9,-141.9,-241.8 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Transport_Utility_ParkingPole_01@2" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Vehicle_DriverlessVans_04_v2 Vehicle_DriverlessVans_04_6_2 at=975.2,-141.9,-251.7 rot=(-0.003,-1,0.003,62.3) ~fit=0.7 ~src="BigMeshGroup/BigMeshGroup_54_-36/SM_H_FutureTech_Vehicle_DriverlessVans_04" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+group Terrain_Road_Desert_Decal_Sand_06_2_10 at=1082.2,-141.9,-194.1 ~fit=0.7 ~src="BigMeshGroup/BigMeshGroup_54_-36/SM_I_Terrain_Road_Desert_Decal_Sand_06@1" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  hull hull points=[(-9.1,0,3.8); (9.1,3.1,1.6); (5.1,0,-2.8); (8.4,4.4,3.8); (7.7,0,-3.8)] at=-8.9,0,6.2
+  hull hull_2 points=[(-9.6,0,2.4); (9.6,2,-6.7); (-6.8,0,0.1); (9.6,13.6,10.1); (9.6,0,-10.1); (-9,4.4,10.1); (-0.1,6.8,10.1)] at=8.4,0,0
+}
+hull Terrain_Road_Desert_Decal_Sand_01_3_10 points=[(-8.7,0,-10.4); (8.7,0,2.1); (6.9,0,-4.1); (-2.4,1.8,-2.5); (-0.7,0,-11.1); (3.7,0,11.1); (-7.1,0,-0.1); (3.6,1.5,3.2); (6.9,0,8.9)] at=982.4,-141.9,-245.9 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_I_Terrain_Road_Desert_Decal_Sand_01" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Terrain_Road_Desert_Decal_Sand_09 Terrain_Road_Desert_Decal_Sand_09_18 at=1105.6,-141.9,-259.8 turn=-95.8 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_I_Terrain_Road_Desert_Decal_Sand_09@14" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+group Building_BigDoor_03_4 at=1108.6,-141.9,-235 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_54_-36/SM_H_Building_FutureTech_BigDoor_03" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  group group8 at=0,0,-48.9 turn=-90 {
+    box wall size=15.7,37.5,0.4 at=1.8,0,-0.1 turn=90
+    box wall_2 size=15.7,37.5,0.4 at=-1.8,0,0.1 turn=-90
+    box wall_3 size=3.6,37.5,0.4 at=-1.3,0,9.4 turn=-73
+    box wall_4 size=3.6,37.5,0.4 at=1.4,0,9.2 turn=73
+    box wall_5 size=3.6,37.5,0.4 at=-1.4,0,-9.2 turn=-106.7
+    box wall_6 size=3.6,37.5,0.4 at=1.3,0,-9.4 turn=106.7
+    box wall_7 size=2.1,37.5,0.4 at=0,0,-10.8 turn=180
+    box wall_8 size=2.1,37.5,0.4 at=0,0,10.8
+  }
+  group group2 at=2.7,0,-38 {
+    box wall size=17.9,32.9,0.4 at=0.7,0,0 turn=90
+    box wall_2 size=1.8,32.9,0.4 at=0,0,8.7
+  }
+  group group3 at=-2.7,0,-38 turn=180 {
+    box wall size=17.9,32.9,0.4 at=0.7,0,0 turn=90
+    box wall_2 size=1.8,32.9,0.4 at=0,0,-8.7 turn=180
+  }
+  group group5 at=2.9,0,-37.8 {
+    box wall size=18.2,9.6,0.4 at=0.9,0,0 turn=90
+    box wall_2 size=2.1,9.6,0.4 at=0,0,8.9
+    box slab size=0.4,0.4,18.2 at=0.9,9.3,0
+    box slab_2 size=1.8,0.4,0.4 at=-0.2,9.3,9
+  }
+  group group6 at=-2.9,0,-37.8 {
+    box wall size=18.2,9.6,0.4 at=-0.9,0,0 turn=-90
+    box wall_2 size=2.1,9.6,0.4 at=0,0,8.9
+    box slab size=0.4,0.4,18.2 at=-0.9,9.3,0
+    box slab_2 size=1.8,0.4,0.4 at=0.2,9.3,9
+  }
+  group group7 at=0,0,42.3 {
+    box wall size=18.6,12.9,0.4 at=0.1,0,-8.9 turn=180
+    box wall_2 size=18.6,12.9,0.4 at=-0.1,0,8.9
+    box wall_3 size=18.6,12.9,0.4 at=9.2,0,-0.2 turn=90
+    box wall_4 size=18.6,12.9,0.4 at=-9.2,0,0.2 turn=-90
+  }
+  box box8 size=1.5,32.9,0.8 at=1.1,0,-28.9 turn=27.9
+  mirror box9 of=box8 across=box1 axis=x
+  box box2 size=1.2,32.9,0.2 at=0,0,-28.7
+  mirror box3 of=box2 across=(0,0,2.063057) axis=(0,0,1)
+  box box10 size=1.5,32.9,0.8 at=1.1,0,33 turn=-28
+  mirror box11 of=box10 across=box1 axis=x
+  group group1 at=0,12.7,42.3 turn=-90 {
+    box wall size=18.6,46.4,0.4 at=8.9,0,0.1 turn=90
+    box wall_2 size=18.6,46.4,0.4 at=-8.9,0,-0.1 turn=-90
+    box wall_3 size=18.6,46.4,0.4 at=0.2,0,9.2
+    box wall_4 size=18.6,46.4,0.4 at=-0.2,0,-9.2 turn=180
+  }
+  box box6 size=6.7,10.7,4.8 at=9.1,26.9,-49
+  group group4 on=group3[-3.1,1,-3.48] turn=-180 {
+    box wall size=80.2,7.5,0.4 at=-3.6,0,0 turn=-90
+    box wall_2 size=80.2,7.5,0.4 at=3.4,0,0 turn=90
+    box slab size=7.5,0.4,80.2 at=0,7,0
+    box slab_2 size=7.5,0.4,80.2 at=0,0,0
+  }
+  box box1 size=24.8,2.7,4.8 on=box6[-2.7,1,0]
+  box box4 size=21.3,0,20.8 at=0,59.3,42.3 turn=8.9
+  box box5 size=17.6,8.5,16.8 on=box4[0,1,0] turn=-98.9
+  box box7 size=6.7,10.7,4.8 at=-9.1,26.9,-49
+}
+group Building_BigDoor_03D at=1108.6,-141.9,-235.8 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Building_FutureTech_BigDoor_03D" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex" {
+  box box18 size=1.2,24.3,1 at=1.2,0,32
+  box box22 size=1,24.3,0.7 at=-1,0,-29.5 turn=-90
+  box box13 size=1,23.2,0.4 at=0.8,0,-29.5 turn=-90
+  box box14 size=1,3.6,0.7 at=-0.9,0,31.9 turn=-90
+  box box5 size=1,23.2,0.4 at=-0.8,0,31.9 turn=-90
+  box box11 size=1,3.8,0.6 at=-10.7,2.2,-49.1 turn=-89.7
+  box box8 size=4.9,0.4,0.2 at=-12.3,2.5,42 rot=(-0.029,-0.999,-0.029,89.9)
+  box box7 size=5.2,0.1,0.2 at=12.3,2.8,42.5 rot=(-0.193,-0.962,-0.194,92.2)
+  box box15 size=1.2,5.9,0.2 at=11.2,3.3,34.6 turn=-48.1
+  box box17 size=0.6,6.3,0.2 at=-10.9,4.4,34.3 turn=-132.2
+  box box21 size=0.6,7.7,0.3 at=10.7,6,-48.8 turn=16.7
+  box box10 size=0.6,7.7,0.3 at=-10.8,6,-50.7 turn=16.7
+  group group1 at=3.8,6.4,-32.5 {
+    plate wall points=[(2.9,-1); (-2.9,-1.2); (-2.9,1.2); (-2.5,-1.1)] h=0.4 at=-0.2,1.2,0 turn=90 tilt=90
+  }
+  box box20 size=5.7,0.4,3.6 at=8.2,7.1,48.7 turn=0.4
+  box box19 size=4.1,0.6,0.1 at=3.9,8.4,-40.3 rot=(-0.006,-1,-0.006,90)
+  box box3 size=12.6,1.7,0 at=-3.7,8.4,-36 turn=-90
+  box box4 size=5.7,2.8,0 at=-3.7,8.6,-44.3 rot=(0.151,-0.977,-0.151,91.3)
+  box box6 size=5.3,0.3,0.1 at=-4,8.6,-32.7 rot=(0.006,-1,0.006,90)
+  box box2 size=5.8,2.8,0 at=3.6,8.6,-44.4 rot=(0.169,-0.971,-0.169,91.7)
+  box box1 size=5.5,1.2,0 at=-3.7,8.9,-32.3 rot=(0.045,-0.998,-0.045,90.1)
+  box box16 size=0.5,4.3,0.1 at=3.8,9.6,-45.9 turn=-115
+  box box12 size=0.5,8,0.1 at=3.8,9.6,-31.8 turn=-65
+  box box9 size=0.5,7.3,0.3 at=10.8,10.4,-50.7 turn=-90
+  group group2 at=-6.1,12.2,32.6 {
+    plate wall points=[(-3.2,0.2); (3.2,0.2); (3.2,-0.2); (3.2,-0.2); (3.2,-0.2); (-3.2,-0.2); (-3.2,-0.2)] h=0.4 at=0,0.2,0.2 turn=-180 tilt=90
+  }
+}
+box Transport_Utility_Barriers_01_D_9 size=15.9,0.5,6.8 at=1127.4,-141.9,-233.6 turn=88.2 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Transport_Utility_Barriers_01_D@2" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_ParkingPole_01_4 Transport_Utility_ParkingPole_01_4_3 at=1100.9,-141.9,-241.7 turn=180 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Transport_Utility_ParkingPole_01@1" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Transport_Utility_Barriers_01_D_2_6 size=15.9,0.5,6.8 at=1127.6,-141.9,-249.9 turn=-89.8 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Transport_Utility_Barriers_01_D@1" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_Barriers_01_C_6 Transport_Utility_Barriers_01_C_4_3 at=1126.5,-141.6,-249.9 rot=(-0.004,1,0.004,90.2) ~fit=0 ~src="SmallMeshGroup/SmallMeshGroup_54_-36/SM_H_Transport_Utility_Barriers_01_C@1" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+hull Terrain_Road_Desert_Decal_Sand_09_19 points=[(-13.5,0,-8.5); (13.5,0,-3.3); (-0.4,2.4,2.4); (-2.1,0,-14.9); (-0.4,0,14.9); (-8.9,0,6.4); (5.8,1.6,-5.8); (9.6,0,-12.2); (-3.5,1.7,5.7); (7,0,7.4); (0.6,1.9,-4.8); (-10.9,0,-12.9); (-3.5,0,13.2)] at=1115.9,-141.6,-277.2 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_I_Terrain_Road_Desert_Decal_Sand_09@17" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+hull Terrain_Road_Desert_Decal_Sand_08_2_6 points=[(-10,0,4.9); (10,0,-0.9); (7.8,0,-7.3); (-0.1,1.9,-3.1); (-1.6,0,-11.5); (-2.6,0,11.5); (-9.3,0,-4.8); (0.5,1.4,6.5); (5.6,0,7.9); (-8.5,0,10.5); (-2.4,1.6,6)] at=1120.9,-141.5,-286 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_I_Terrain_Road_Desert_Decal_Sand_08@3" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+group Terrain_Road_Desert_Decal_Sand_03_2_6 at=1093.4,-141.5,-194.6 ~fit=0.7 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_I_Terrain_Road_Desert_Decal_Sand_03@1" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  hull prop points=[(-4.8,0,2.9); (4.8,0,-2.8); (3.4,6.6,2.2); (4.1,0,-2.9); (-1.9,0,-0.9)] at=2.3,0,-8
+  hull hull_2 points=[(-4.3,0,2.7); (4.3,6.6,-2.9); (4.2,6.7,-2.3); (-2.4,1.5,2.9); (2.9,5.3,2.3); (-3.9,0,-2.2)] at=1.4,0,-2.9
+  hull hull_3 points=[(-5.7,0,-0.4); (5.7,5.3,-3.5); (-1.5,0,-3.2); (4.9,5.9,-0.5); (1.5,2.4,3.5); (-3,0,2.2)] at=-1.4,0,3
+  hull hull_4 points=[(-3.6,0,-2.5); (3.6,5.4,-3.2); (-0.6,2.1,-3.2); (1.9,0.1,3.2)] at=-0.7,0,7.7
+}
+group Terrain_Road_Desert_Decal_Sand_03_3_5 at=1098.6,-141.3,-277.8 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_I_Terrain_Road_Desert_Decal_Sand_03@3" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  hull hull points=[(-5.5,0,1); (5.5,0,-6.7); (-3.4,0,5.7); (5.5,4.4,-0.1); (4.6,0,-6.7); (1.6,2,6.7); (5.5,3.5,5.5); (-2.7,0,-2.7); (5.5,4,-1.5)] at=1.5,0,-6.3
+  hull hull_2 points=[(-7,0,0); (7,3.5,-6.9); (-2.5,0,-4.4); (7,3.9,-3.3); (7,0.1,6.9); (7,2.3,2.8); (-1.9,0,-5.9)] at=0,0,6.1
+}
+Transport_Utility_Guardrail_02_2 Transport_Utility_Guardrail_02_45_6 at=1136.6,-141.3,-234.9 turn=-118.2 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Transport_Utility_Guardrail_02@17" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_Guardrail_02_2 Transport_Utility_Guardrail_02_43_6 at=1104.4,-141.3,-229.9 rot=(0.895,0.383,-0.231,66.5) ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Transport_Utility_Guardrail_02@19" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+hull Terrain_Road_Desert_Decal_Sand_07_6_8 points=[(-30.2,0,0.4); (30.2,0,0.2); (3.4,2.2,1); (-6.4,0.1,-5.7); (1.2,0,5.7); (18.7,1.1,-3.3); (17.1,0.1,-5); (-17.5,1.6,-2.7); (-19.2,0,-5); (-8.4,2,1.7); (-8.5,0.1,5.5); (23,0,-3.6); (20.8,1.4,-0.7); (6.9,0,5.5)] at=1086.9,-141.2,-284.8 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_I_Terrain_Road_Desert_Decal_Sand_07@1" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Industrial_Container_SupplyBox_01_50 Industrial_Container_SupplyBox_01_48_6 at=1134.3,-141.2,-188.3 turn=-100.6 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_54_-36/SM_H_Industrial_Container_SupplyBox_01@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_02_55 Industrial_Container_SupplyBox_02_52_3 at=1143.5,-141.2,-195 turn=-75.2 ~fit=1 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Industrial_Container_SupplyBox_02@24" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Machinery_RFID_01_A_4 Machinery_RFID_01_A_4_3 at=1099.9,-141.2,-210.9 turn=90 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Machinery_RFID_01_A@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+hull Machinery_RFID_01_D points=[(-1.4,0.9,1.6); (1.4,3.5,1.1); (-1.2,0,1.6); (1.3,4.7,1.6); (0.3,1.4,-2); (-0.8,0,2); (1.1,0,2); (0.3,4.2,-1.5); (-1.4,3.2,1.8)] at=1101,-141.2,-205.8 ~fit=0.5 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Machinery_RFID_01_D" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+hull Machinery_RFID_01_B_7 points=[(-2.3,1.4,0.6); (2.3,0.9,-0.1); (2.1,0,-0.2); (-0.4,4.7,-0.2); (1.8,0,-0.7); (0.4,2.3,0.7); (2.3,3.2,0.1); (-1.8,4.2,0.6); (-0.1,0,0.3); (-0.1,0,-0.6); (0.9,4.5,-0.7); (0.9,4.5,0.3); (1.8,0,0.4); (2.3,3.2,-0.4); (-0.5,4.5,-0.6)] at=1100.4,-141.2,-216.5 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Machinery_RFID_01_B" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+group Terrain_Road_Desert_Decal_Sand_03_4_5 at=1106.6,-141.1,-208.1 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_I_Terrain_Road_Desert_Decal_Sand_03@2" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  hull prop points=[(-3.3,0,5.1); (3.3,1.5,5.1); (0.8,0,-1.8); (2.7,0,-5.1); (-1.6,0.6,5.1)] at=-7.9,0,0
+  hull hull_2 points=[(-3.3,0.3,-0.9); (3.3,1.5,5.1); (1.1,0,-1.8); (0.2,1.6,5.1); (-2.7,0,-5.1); (-2,1.5,5.1)] at=-2.6,0,0
+  hull hull_3 points=[(-3.1,0.9,1.2); (3.1,0.4,-1.7); (-2.2,0,-2.5); (2.8,1.9,4); (1.8,0,-4); (-2.1,1.5,4)] at=2.7,0,1.1
+  hull hull_4 points=[(-3,1,0.7); (3,0,3.2); (1.2,0,-0.2); (-2.7,1.9,3.8); (-2.4,0,-3.8); (2.3,0.3,3.8)] at=8.2,0,1.2
+}
+hull Terrain_Road_Desert_Decal_Sand_09_12 points=[(-6.4,0,6.5); (6.4,0,-1.2); (6.2,0,0.1); (1.1,1.7,-1.9); (3.1,0,-8.9); (-5.4,0,8.9); (4.1,0.9,-5.1); (5.7,0,-6.5); (0.3,0,6.6); (-1.9,0,-2.5); (-2.8,1.2,4.3)] at=1001.5,-141.1,-281.2 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_I_Terrain_Road_Desert_Decal_Sand_09@6" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_FlowerBed_03A_8 Transport_Utility_FlowerBed_03A_5_8 at=978.1,-141.1,-264.3 turn=180 ~fit=1 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Transport_Utility_FlowerBed_03A@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Bucket_02_48 Furniture_Bucket_02_38_2 at=1111.6,-141,-252.7 rot=(0.957,-0.205,0.205,92.5) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Furniture_Bucket_02@30" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Bucket_02_48 Furniture_Bucket_02_34_2 at=1107.1,-140.9,-207.7 turn=103.7 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Furniture_Bucket_02@22" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Bucket_02_48 Furniture_Bucket_02_37_2 at=1110.8,-140.9,-263.5 turn=-83.1 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Furniture_Bucket_02@32" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Fence_Metal_01_42 Fence_Metal_01_37_3 at=1059.8,-140.9,-184.3 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_54_-36/SM_H_Fence_Metal_1024x768_01@6" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01_42 Fence_Metal_01_40 at=1087.3,-140.9,-184.3 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_54_-36/SM_H_Fence_Metal_1024x768_01@7" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Bucket_02_48 Furniture_Bucket_02_36_2 at=1110.8,-140.9,-205.1 turn=97.8 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Furniture_Bucket_02@23" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Bucket_02_48 Furniture_Bucket_02_39 at=1113.1,-140.9,-204.8 turn=97.8 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Furniture_Bucket_02@24" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Fence_Metal_01_42 Fence_Metal_01_36_2 against=Fence_Metal_01_37_3[-0.48,0,1] turn=-90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_54_-36/SM_H_Fence_Metal_1024x768_01@10" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_Guardrail_02_2 Transport_Utility_Guardrail_02_46_6 at=1139.6,-140.8,-249.3 turn=-90.5 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Transport_Utility_Guardrail_02@16" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Machinery_RFID_01_A_4 Machinery_RFID_01_A_2_4 at=1102.1,-140.8,-209.6 turn=-89.1 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Machinery_RFID_01_A@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Bucket_02_48 Furniture_Bucket_02_32_2 at=1107.8,-140.8,-256.5 rot=(0.391,-0.651,0.651,137.3) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Furniture_Bucket_02@31" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Bucket_02_48 Furniture_Bucket_02_33_2 at=1108,-140.8,-227.5 rot=(0.747,-0.47,0.47,106.5) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Furniture_Bucket_02@33" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Transport_Utility_Guardrail_02_2 Transport_Utility_Guardrail_02_47_5 at=1140.8,-140.8,-224.9 rot=(0.986,0.121,-0.116,90.1) ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Transport_Utility_Guardrail_02@21" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_Guardrail_02_2 Transport_Utility_Guardrail_02_48_5 at=1141.1,-140.6,-261 rot=(-0.642,-0.539,-0.545,115.1) ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Transport_Utility_Guardrail_02@15" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Medium_Door_02_Frame_4 Medium_Door_02_Frame_3_2 at=1017.1,-140.5,-291.9 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_54_-37/SM_H_Medium_Door_02_Frame@1" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Bucket_02_48 Furniture_Bucket_02_43 at=1136.5,-140.5,-212.2 rot=(0.316,0.762,-0.565,80.6) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Furniture_Bucket_02@19" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Transport_Utility_Guardrail_02_2 Transport_Utility_Guardrail_02_44_6 at=1127.6,-140.5,-271.6 rot=(0.139,0.877,-0.46,150.4) ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Transport_Utility_Guardrail_02@18" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_Guardrail_02_2 Transport_Utility_Guardrail_02_42_6 at=1075.5,-140.4,-276.9 rot=(-0.959,-0.214,-0.186,82) ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Transport_Utility_Guardrail_02@5" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01_42 Fence_Metal_01_39_3 at=1069.7,-140.4,-288.8 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_54_-37/SM_H_Fence_Metal_1024x768_01@2" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01_42 Fence_Metal_01_41 at=1097.1,-140.4,-288.8 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_54_-37/SM_H_Fence_Metal_1024x768_01@1" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_Barriers_01_B Transport_Utility_Barriers_01_B_6 at=1127.4,-140.4,-234 rot=(-0.004,1,0.004,88.2) ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Transport_Utility_Barriers_01_B@2" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_Barriers_01_B Transport_Utility_Barriers_01_B_2_5 at=1127.6,-140.4,-250.3 rot=(-0.004,1,0.004,90.2) ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_Transport_Utility_Barriers_01_B@1" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Bucket_02_48 Furniture_Bucket_02_35_2 at=1105.6,-140.3,-210.5 rot=(0.719,0.492,-0.492,108.6) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Furniture_Bucket_02@29" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Bucket_02_Destroyed_5 Furniture_Bucket_02_Destroyed_2_5 at=1139.3,-140.2,-216.5 rot=(0.815,-0.556,-0.163,116.6) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Furniture_Bucket_02_Destroyed@2" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_PackingBox_01_39 Industrial_Container_PackingBox_01_37_6 at=993.5,-140.2,-294 turn=48.5 ~fit=1 ~src="Room/RoomBuilder_Rocket_WorkShop_02/SM_H_Industrial_Container_PackingBox_01@27" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Transport_Utility_Extinguisher_01_8 size=1.8,3.7,1 at=998.8,-140.2,-293.1 ~fit=0 ~src="Room/RoomBuilder_Rocket_WorkShop_02/SM_H_Transport_Utility_Extinguisher_01@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Medium_Door_02_11 Medium_Door_02_9_3 at=1012.3,-140.2,-291.9 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_54_-37/SM_H_Medium_Door_02@1" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Medium_Door_02_11 Medium_Door_02_10_3 at=1022.7,-140.2,-291.9 turn=180 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_54_-37/SM_H_Medium_Door_02@2" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Bucket_02_48 Furniture_Bucket_02_40 at=1130.2,-140.1,-275.9 rot=(0.972,0.167,-0.167,91.6) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Furniture_Bucket_02@26" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Bucket_02_48 Furniture_Bucket_02_41 at=1130,-140.1,-267.1 rot=(0.438,0.636,-0.636,132.7) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Furniture_Bucket_02@28" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Bucket_02_48 Furniture_Bucket_02_31_2 at=1103.3,-140,-212.4 rot=(0.107,0.703,-0.703,167.7) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Furniture_Bucket_02@21" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+hull Terrain_Road_Desert_Decal_Sand_06_3_10 points=[(-3.2,2.4,-2.7); (3.2,0,-3.5); (0.1,0,0); (-2.4,0,3.5); (-1.2,1.1,-2.9)] at=1114.7,-140,-280.9 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_54_-36/SM_I_Terrain_Road_Desert_Decal_Sand_06@2" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Bucket_02_48 Furniture_Bucket_02_44 at=1140.3,-139.3,-197.4 rot=(0.81,-0.232,0.539,114.1) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Furniture_Bucket_02@20" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Bucket_02_48 Furniture_Bucket_02_45 at=1142.4,-139.3,-213.2 rot=(0.81,-0.232,0.539,114.1) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_H_FutureTech_Furniture_Bucket_02@34" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Transport_Utility_ParkingPole_01B_7 Transport_Utility_ParkingPole_01B_2_5 at=1100.8,-138.9,-241.8 rot=(1,0,0,180) ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_109_-72/SM_H_Transport_Utility_ParkingPole_01B@1" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Transport_Utility_ParkingPole_01B_7 Transport_Utility_ParkingPole_01B_4_5 at=1103.2,-137.5,-249 rot=(1,0,0,180) ~fit=0.9 ~src="SmallMeshGroup/SmallMeshGroup_54_-36/SM_H_Transport_Utility_ParkingPole_01B@2" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Branding_LocationSign_02_D_11_2 size=7.2,1.4,0.1 against=Fence_Metal_01_36_2[0,-0.59,-1] ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_Branding_LocationSign_FutureTech_02_D@4" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Branding_LocationSign_02_D_16 size=7.2,1.4,0.1 at=1087.3,-133.9,-182 turn=-0.1 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_Branding_LocationSign_FutureTech_02_D@16" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Branding_LocationSign_02_D_12_2 size=7.2,1.4,0.1 at=1059.9,-133.9,-181.9 turn=-0.1 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_Branding_LocationSign_FutureTech_02_D@3" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Branding_LocationSign_02_D_15 size=7.2,1.4,0.1 at=1087.3,-133.9,-186.6 turn=-0.6 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_Branding_LocationSign_FutureTech_02_D@10" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Branding_LocationSign_02_D_13 size=7.2,1.4,0.1 at=1060,-133.8,-186.5 turn=-0.2 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_Branding_LocationSign_FutureTech_02_D@9" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_ParkingPole_01B_7 Transport_Utility_ParkingPole_01B_7_2 at=1099.2,-133.8,-229.5 rot=(1,0,0,179.9) ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_109_-72/SM_H_Transport_Utility_ParkingPole_01B@2" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+box Branding_LocationSign_02_D_14 size=7.2,1.4,0.1 against=Fence_Metal_01_39_3[0.01,-0.59,1] ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_Branding_LocationSign_FutureTech_02_D@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Branding_LocationSign_02_D_17 size=7.2,1.4,0.1 at=1097,-133.4,-291 turn=0.1 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-37/SM_Branding_LocationSign_FutureTech_02_D" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_ParkingPole_01B_7 Transport_Utility_ParkingPole_01B_3_5 at=1101.6,-132.4,-236.6 rot=(1,0,0,179.9) ~fit=0.9 ~src="SmallMeshGroup/SmallMeshGroup_54_-36/SM_H_Transport_Utility_ParkingPole_01B@1" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+BlockWallCube_v4_10 BlockWallCube_39_8 at=989.9,-126.3,-293.3 turn=89.9 ~fit=1 ~src="Blocker/BigMeshGroup_54_-37/BlockWallCube@7" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"
+Building_BigDoor_03B Building_BigDoor_03B_5 at=1108.8,-121.2,-234.4 rot=(-0.499,0.709,0.499,109.3) ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_54_-36/SM_H_Building_FutureTech_BigDoor_03B@2" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Branding_LocationSign_02_D_18 size=4.4,22,0.5 at=1097.3,-116.3,-196.7 turn=-90 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_54_-36/SM_Branding_LocationSign_FutureTech_02_D@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Branding_LocationSign_02_D_19 size=4.4,22,0.5 at=1119.6,-116.3,-196.7 turn=-90 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_Branding_LocationSign_FutureTech_02_D@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Building_BigDoor_03B Building_BigDoor_03B_2_2 at=1094.3,-116,-234 rot=(-0.467,-0.751,-0.467,106.2) ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_54_-36/SM_H_Building_FutureTech_BigDoor_03B@1" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Industrial_Lighting_WallLamp_02B_61 Industrial_Lighting_WallLamp_02B_57 at=1101.3,-113.2,-267.2 turn=-89.9 ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_109_-72/SM_H_Industrial_Lighting_WallLamp_02B@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Lighting_WallLamp_02B_61 Industrial_Lighting_WallLamp_02B_59 at=1110.5,-113.2,-267.3 turn=90.1 ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_109_-72/SM_H_Industrial_Lighting_WallLamp_02B@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Lighting_WallLamp_02B_61 Industrial_Lighting_WallLamp_02B_58 at=1103.8,-111.8,-274.4 turn=-89.9 ~fit=0.9 ~src="SmallMeshGroup/SmallMeshGroup_54_-36/SM_H_Industrial_Lighting_WallLamp_02B@7" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Lighting_WallLamp_02B_61 Industrial_Lighting_WallLamp_02B_60 at=1112.9,-111.8,-274.4 turn=90.1 ~fit=0.9 ~src="SmallMeshGroup/SmallMeshGroup_54_-36/SM_H_Industrial_Lighting_WallLamp_02B@8" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Decal_WellLid_11_7 Decal_WellLid_11_6_4 at=970,-104.1,-292.6 turn=180 ~fit=1 ~src="Room/RoomBuilder_Rocket_WorkShop_02/SM_H_Decal_WellLid_11@6" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Branding_LocationSign_02_C_6 Branding_LocationSign_02_C_3_5 at=1119.5,-92.2,-196.2 turn=90 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_54_-36/SM_Branding_LocationSign_FutureTech_02_C" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Branding_LocationSign_02_C_6 Branding_LocationSign_02_C_2_6 at=1097.5,-91.8,-196.2 turn=-90 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_54_-36/SM_Branding_LocationSign_FutureTech_02_C@2" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_BaseStation_03_v2 Furniture_BaseStation_03_6_2 at=1108,-73.1,-192.7 turn=-16.1 ~fit=0.6 ~src="BigMeshGroup/BigMeshGroup_54_-36/SM_H_FutureTech_Furniture_BaseStation_03@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"

@@ -1,0 +1,19 @@
+// 细化到 structure：HLight_01_ExterWall_Damage_02（面积前 90%（16/27 块），16 个部件）
+over HLight_01_ExterWall_Damage_02 : group envelope=-128.5,0,-114,128.5,170,114 {
+  box box9 size=88.8,78.1,3.2 at=121.4,46.1,-56.2 turn=-90 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02#20"
+  box box11 size=66.2,78.1,3.2 at=73,46.1,-109.1 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02#19"
+  box box1 size=136.8,57.1,114.8 at=67,112.7,-44 turn=-90 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02#11"
+  box box6 size=139.8,53.8,118.5 at=67,113.6,-44.4 turn=-90 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02#2"
+  box box3 size=135,36.8,79.4 against=box6[-0.097,-0.22,1] turn=90 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02#3"
+  box box13 size=61.5,35.6,1 at=64.8,116.1,107 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02#7"
+  box box8 size=76.5,36.1,30.4 at=-79.8,116.1,91.8 turn=1.8 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02#0"
+  box box10 size=68,36.9,2.2 at=-7.1,116.2,104.8 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02#5"
+  box box14 size=79.8,36.9,13.2 at=-120.5,116.2,38.6 turn=-90 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02#1"
+  box box2 size=94.2,49.2,90.5 at=79.1,120.5,-65.3 turn=-90 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02#12"
+  box box7 size=92.5,45.6,89.2 at=81.8,121.9,-68 turn=-90 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02#4"
+  box box15 size=74.8,21.9,2 at=123,131.6,60 rot=(-0.007,-0.999,-0.035,88.8) mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02#6"
+  box box5 size=176.5,5.8,136.7 at=-60.5,151.9,-3.9 rot=(0.004,1,-0.004,90) mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02#18"
+  box box12 size=155,5.4,10.8 on=box8 offset=50.6,-0.1,11.1 turn=-2.4 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02#17"
+  box box16 size=73.4,5.2,19.4 at=116.6,152.7,58.2 rot=(0.011,-1,0.024,86.9) mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02#15"
+  box box4 size=157.6,0,123.4 at=75.4,167.2,-45.9 turn=-77.3 mat=whitebox ~src="Landmark/Landmark_26_-18/SM_H_Building_FutureTech_HLight_01_ExterWall_Damage_02#10"
+}

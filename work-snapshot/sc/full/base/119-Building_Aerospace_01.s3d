@@ -1,0 +1,101 @@
+// 分区 119/233：56 个物体（37 组），x 82…614，z -1032…-865
+
+box EFX_BlockPlane_3 size=16.5,365.7,0 at=81.6,-155.6,-965.3 turn=-0.5 ~fit=1 ~src="Blocker/BigMeshGroup_52_-38/SM_EFX_BlockPlane@12" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+hull Nature_Rock_Big_Rock_32_6_2 points=[(-40.5,56.1,10.3); (40.5,52,25.6); (4.5,0,-19.3); (22.6,75.4,5); (4.3,19.5,-34.3); (-17.1,50,34.3); (37.3,19.4,-26.6); (-30.5,60.4,-7.6); (-34.9,30,-6.3); (-21.5,68.8,20.3); (26.4,46.2,-24.4); (-21.3,38.2,30.8); (37.5,25.6,2.1); (-12.1,13.1,-26.2); (37.6,40.3,-20); (23.4,38.3,26.2); (-29.1,55.5,29.3); (-10.2,4.9,-19.2); (-7.4,42.5,-26.3); (38.2,59.4,10.4); (30,46.5,30.8); (34.1,12.9,-23.2); (-27.1,69.3,10.2); (34.7,23,-30.9)] at=441.1,-160.1,-989.2 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-38/SM_Nature_Rock_Big_Rock_32@5" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+EFX_BlockPlane_v13_4 EFX_BlockPlane_49_2 at=98.2,-155.7,-965.1 turn=-0.6 ~fit=1 ~src="Blocker/BigMeshGroup_52_-38/SM_EFX_BlockPlane@13" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v13_4 EFX_BlockPlane_50_4 at=114.8,-155.7,-964.9 turn=-0.6 ~fit=1 ~src="Blocker/BigMeshGroup_52_-38/SM_EFX_BlockPlane@14" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v3_8 EFX_BlockPlane_51_3 at=131.3,-155.7,-964.7 turn=-0.6 ~fit=1 ~src="Blocker/BigMeshGroup_52_-38/SM_EFX_BlockPlane@15" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+repeat EFX_BlockPlane_70 n=14 step=17.36,0,0.01 at=214.6,-155.6,-964.3 pin=origin {
+  EFX_BlockPlane_v15_4 EFX_BlockPlane_v15_4 ~role="collision" ~fit=1
+}
+EFX_BlockPlane_v14_4 EFX_BlockPlane_52_2 at=147.8,-155.6,-964.6 turn=-0.5 ~fit=1 ~src="Blocker/BigMeshGroup_52_-38/SM_EFX_BlockPlane@16" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v14_4 EFX_BlockPlane_53_2 at=164.3,-155.6,-964.5 turn=-0.4 ~fit=1 ~src="Blocker/BigMeshGroup_52_-38/SM_EFX_BlockPlane@17" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v11_6 EFX_BlockPlane_42_2 at=461.8,-155.6,-969.1 turn=20.9 ~fit=1 ~src="Blocker/BigMeshGroup_53_-38/SM_EFX_BlockPlane@27" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v11_6 EFX_BlockPlane_48_2 at=453.2,-155.6,-965.8 turn=20.9 ~fit=1 ~src="Blocker/BigMeshGroup_53_-38/SM_EFX_BlockPlane@26" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+Nature_Rock_Big_Rock_32_13 Nature_Rock_Big_Rock_32_7_2 at=585.9,-150.5,-922.9 rot=(-0.452,0.831,0.323,81.4) ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-38/SM_Nature_Rock_Big_Rock_32@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Nature_Rock_Flat_Rock_04_QL Nature_Rock_Flat_Rock_04_QL_6_2 at=594.2,-148,-977.9 rot=(0.014,-0.999,0.041,63) ~fit=0.3 ~src="BigMeshGroup/BigMeshGroup_53_-38/SM_Nature_Rock_Flat_Rock_04_QL@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+group Nature_Rock_Cliff_18_4 at=573.2,-147.3,-996.1 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-38/SM_Nature_Rock_Cliff_18@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  hull volume points=[(-40.3,19.7,24); (40.3,6.9,-25.7); (-19.1,0,-14.5); (14.8,29.5,25.2); (16.3,21.5,-35.2); (-38.3,24.2,35.2); (31.1,10.5,23.1); (-36.5,1.4,29.1); (35.3,25.4,-20); (3.7,0.8,-32.2); (-7.8,21.2,-25.3); (26,27.4,14.8); (-24,16.2,-7.6); (34.3,24.2,-25.1); (27.4,29,-7.6); (36.6,14.9,0.2); (33.3,27.6,-5.4); (-4,20.6,-29.4); (-10.4,0,-24); (2.2,26.9,29.5); (-37.5,23.1,23.7); (20.3,3,-30.9); (29.5,27.3,-20.1); (-7.3,27.9,31.2)] at=0,0,-23.2
+  hull hull_2 points=[(-35.9,18.4,-20.3); (35.9,8.1,-26.1); (-32.1,0,-15.3); (6.9,31.8,27.4); (-16.6,22.4,-37.3); (11.9,16.1,37.3); (-25.9,25.3,27.5); (-26.5,4.5,22.8); (19.2,28.2,-19.2); (-5.8,31.5,35.1); (15.2,31.6,22.4); (-29.4,0.7,-23.7); (-14.6,11.5,33.7); (10.7,10.5,36); (20.9,11,23.2); (-35.7,16.1,-2.3); (-26.6,28.6,25.3); (-14.7,6,31.2); (27.7,20.3,-24.6); (-33.1,21.7,-20.7); (-23.9,13.9,29.8); (13.1,29.7,28.3); (-32.2,2,-1.3); (-20.5,7.9,30.8)] at=-4.4,1.4,21.2
+}
+hull Nature_Rock_Cliff_13_5 points=[(-56.7,30.2,6.4); (56.7,11.5,-16.1); (-52.3,0,5.3); (44.5,38.9,20.3); (33.1,12.3,-53.8); (37.2,18.2,53.8); (27.6,36.7,-51.4); (-31.4,12.1,36.3); (23.4,36,49.4); (55.3,9.8,40.8); (49,38,-13.3); (46,38.3,37.4); (38.2,8.1,53.5); (-28.8,2,34.7); (50.3,17.4,-35.8); (-27.3,31.9,31.1); (50.8,11.4,-35.3); (31.9,8,-52.6); (-55.8,3.1,7.5); (53.4,16.7,44.5); (-40.1,16,30.7); (37.7,37.9,45); (54.4,25.2,22.6); (52,9.5,46.5)] at=516.8,-147.2,-940.5 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-38/SM_Nature_Rock_Cliff_13" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01_v2_4 Fence_Metal_01_21_3 at=452.7,-145.6,-892.5 rot=(-0.086,0.992,0.086,90.4) ~fit=1 ~src="MidMeshGroup/MidMeshGroup_53_-38/SM_H_Fence_Metal_1024x768_01@4" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01_v2_4 Fence_Metal_01_17_3 at=446.5,-145.3,-951.8 turn=90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-38/SM_H_Fence_Metal_1024x768_01@12" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01_v2_4 Fence_Metal_01_19_2 at=446.5,-145.3,-922.2 turn=90 ~fit=1 ~src="MidMeshGroup/MidMeshGroup_53_-38/SM_H_Fence_Metal_1024x768_01@5" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Terrain_Road_Desert_Decal_Sand_01_v5 Terrain_Road_Desert_Decal_Sand_01_14_4 at=610.1,-141.4,-904 turn=91.3 ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_107_-75/SM_I_Terrain_Road_Desert_Decal_Sand_01@3" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Terrain_Road_Desert_Decal_Sand_01_v7 Terrain_Road_Desert_Decal_Sand_01_18_3 at=610.2,-141.4,-883 rot=(0.004,1,0.005,103.7) ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_107_-75/SM_I_Terrain_Road_Desert_Decal_Sand_01@4" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01E_v2 Fence_Metal_01E_5_2 at=606.9,-141.4,-898.7 turn=-68 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_107_-75/SM_H_Fence_Metal_1024x768_01E@6" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01E_20 Fence_Metal_01E_3_3 at=606.6,-141.2,-906.2 rot=(0.181,-0.958,0.222,63.7) ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_107_-75/SM_H_Fence_Metal_1024x768_01E@5" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01E_20 Fence_Metal_01E_2_3 at=613.3,-141.2,-913.8 rot=(-0.11,-0.994,0.01,90) ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_107_-75/SM_H_Fence_Metal_1024x768_01E@4" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01E_20 Fence_Metal_01E_6_2 at=613.7,-141.1,-890.4 rot=(-0.023,0.994,0.108,104.4) ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_107_-75/SM_H_Fence_Metal_1024x768_01E@1" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Terrain_Road_Desert_Decal_Sand_01_v2_2 Terrain_Road_Desert_Decal_Sand_01_6_7 at=607.7,-141.1,-942.5 rot=(0.064,0.996,0.059,85.5) ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_107_-75/SM_I_Terrain_Road_Desert_Decal_Sand_01@2" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+hull Nature_Rock_Big_Rock_32_8_2 points=[(-24,30.2,5); (24,14.6,-4.7); (1.2,0,-20.5); (-11.5,35.5,1.9); (6.2,13.8,-22.5); (13,8.9,22.5); (16.8,28.9,16.1); (-19.5,12.3,12.7); (22.9,5.6,-14.3); (-14.1,30.6,16.3); (-20.2,19.8,-10.4); (17.8,1.6,2.2); (-21.6,23,16); (-5.2,11.6,-22.4); (18.6,12.7,21.1); (17.8,25.7,0.7); (0.5,25.9,-13.2); (6.4,4.9,16.4); (-6.5,5.3,-21); (-19.6,27.6,-6.6); (-16.6,16.7,18.5); (22.8,9,-15.7); (19.8,2,-14.8); (17.5,8.9,22.3)] at=522.9,-135.4,-912.6 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-38/SM_Nature_Rock_Big_Rock_32@4" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+group Building_Aerospace_01 at=392.3,-132.6,-896 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_53_-38/SM_H_Building_FutureTech_Aerospace_01" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box wall size=117.1,56.4,0.4 at=26.9,4.3,6.2 turn=90
+  box wall_2 size=35.9,27.8,0.4 at=26.9,61.4,46.8 turn=90
+  box wall_3 size=117.1,56.4,0.4 at=-26.9,4.3,6.2 turn=-90
+  box wall_4 size=35.9,27.8,0.4 at=-26.9,61.4,46.8 turn=-90
+  box slab size=55.6,1.9,118.7 at=0,59.9,6.1
+  box wall_5 size=54.4,56.5,0.4 at=0.1,4.3,64.6
+  box wall_6 size=53.9,27.5,0.4 at=-0.2,61.3,64.6
+  box wall_7 size=0.5,26.9,0.4 at=27,61.9,64.6
+  box slab_2 size=8.3,2.1,94.4 at=-16.5,64.3,-18.2
+  box slab_3 size=8.3,2.1,94.4 at=-4.7,64.3,-18.2
+  box slab_4 size=19.5,2.1,94.4 at=12.7,64.3,-18.2
+  box wall_8 size=54.3,56.4,0.4 at=-0.1,4.3,-52.2 turn=180
+  box wall_9 size=7.6,64.3,1.8 at=-16.5,0,-64.2
+  box wall_10 size=7.2,64.3,1.8 at=-4.7,0,-64.2
+  box wall_11 size=18.5,64.3,1.8 at=12.6,0,-64.2
+  box slab_5 size=54.3,0.4,35.7 at=0,88.4,46.9
+  box wall_12 size=54.3,27.1,0.4 at=-0.1,61.6,29.2 turn=180
+  box wall_13 size=117.8,4.4,0.4 at=-27.2,0,6.2 turn=-90
+  box wall_14 size=117.8,4.4,0.4 at=27.2,0,6.2 turn=90
+  box slab_6 size=55.2,0.4,2.2 at=0.2,3.9,-51.6
+  box slab_7 size=0.7,0.4,115.6 at=-27.1,3.9,7.3
+  box slab_8 size=0.7,0.4,115.6 at=27.4,3.9,7.3
+  box slab_9 size=53.7,0.4,2.2 at=0.2,3.9,63.9
+}
+group Building_Aerospace_01_Decal at=388.2,-132.6,-896.2 turn=90 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_53_-38/SM_H_Building_FutureTech_Aerospace_01_Decal" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex" {
+  box wall size=9.4,9.4,0.4 at=38.7,28.7,-23 turn=180
+  box wall_2 size=9.4,9.4,0.4 at=-64.8,19.3,-9.5 turn=-90
+  box wall_3 size=9.4,9.4,0.4 at=-64.8,19.3,18.6 turn=-90
+  box slab size=28.1,0.4,9.4 at=5,3.9,-18.6
+  box wall_4 size=9.4,9.4,1.8 at=64.2,0,-6.8 turn=90
+  box wall_5 size=9.4,9.4,1.8 at=64.2,18.7,-6.8 turn=90
+}
+Nature_Rock_Flat_Rock_04_QL Nature_Rock_Flat_Rock_04_QL_7_2 at=494,-122.5,-971.7 rot=(-0.027,-0.998,0.051,123.5) ~fit=0.3 ~src="BigMeshGroup/BigMeshGroup_53_-38/SM_Nature_Rock_Flat_Rock_04_QL@3" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+repeat Fence_Metal_01_37_2 n=8 step=27.43,0,0 at=239.6,-121.3,-962.5 pin=origin {
+  Fence_Metal_01_9 Fence_Metal_01_9 turn=180 ~fit=1
+}
+Vehicle_DriverlessVans_01_4 Vehicle_DriverlessVans_01_2_4 at=295.5,-108.8,-879.1 rot=(0.082,-0.995,-0.057,88.6) ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_H_FutureTech_Vehicle_DriverlessVans_01@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Electrical_BigConditioners_01_7 Electrical_BigConditioners_01_4_5 at=217,-105.1,-879 rot=(0.287,0.946,0.151,124.5) ~fit=1 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_H_FutureTech_Electrical_BigConditioners_01@1" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_02_43 Industrial_Container_02_8_6 at=335.9,-98.1,-956 rot=(-0.049,0.998,0.049,90.2) ~fit=1 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_H_Industrial_Container_02@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box BlockWallCube_11_9 size=232.7,24.4,6 at=331.5,-85.1,-963 ~fit=1 ~src="Blocker/BigMeshGroup_52_-38/BlockWallCube@11" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"
+Industrial_Container_02_43 Industrial_Container_02_7_7 at=208.7,-84.1,-967.7 rot=(0.326,0.942,-0.08,115.8) ~fit=1 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_H_Industrial_Container_02@1" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box BlockWallCube_13_9 size=173.8,60.4,6 at=447.3,-84.1,-876.8 turn=-89.9 ~fit=1 ~src="Blocker/BigMeshGroup_53_-38/BlockWallCube@9" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"
+box BlockWallCube_12_9 size=132.4,59.1,57.1 at=392.5,-71,-896.6 turn=-89.9 ~fit=1 ~src="Blocker/BigMeshGroup_53_-38/BlockWallCube@15" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"
+Furniture_AirConditioning_01_v2_3 Furniture_AirConditioning_01_2_6 at=406.4,-66.2,-927.3 turn=180 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-38/SM_H_FutureTech_Furniture_AirConditioning_01@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_AirConditioning_01_v2_3 Furniture_AirConditioning_01_3_6 at=406.4,-66.2,-905.4 turn=180 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-38/SM_H_FutureTech_Furniture_AirConditioning_01@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Government_Office_FlowerPot_01_18 Government_Office_FlowerPot_01_18_3 at=161.9,-63.8,-983.6 turn=180 ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_105_-75/SM_H_Government_Office_FlowerPot_01@3" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Resort_Flowerpot_05_7 Resort_Flowerpot_05_2_6 at=184,-63.7,-994.4 turn=-80 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-75/SM_H_FutureTech_Resort_Flowerpot_05@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Industrial_Container_PackingBox_01_43 Industrial_Container_PackingBox_01_3_7 at=211.6,-63.6,-980 rot=(-0.078,0.995,0.065,100.5) ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_105_-75/SM_H_Industrial_Container_PackingBox_01@4" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_PackingBox_01_43 Industrial_Container_PackingBox_01_2_7 at=213.2,-63.5,-980.9 turn=6.3 ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_105_-75/SM_H_Industrial_Container_PackingBox_01@3" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_PackingBox_01_43 Industrial_Container_PackingBox_01_6_7 at=213.6,-63.5,-978.9 ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_105_-75/SM_H_Industrial_Container_PackingBox_01@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Emissive_Cylinder_01_v4_4 Emissive_Cylinder_01_9_4 at=213.2,-63.2,-977 rot=(0,0,-1,100) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-75/SM_Emissive_Cylinder_01@16" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseDefault"
+Industrial_Container_PackingBox_01_43 Industrial_Container_PackingBox_01_43_2 on=Industrial_Container_PackingBox_01_2_7[0.2,1,-0.1] ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_105_-75/SM_H_Industrial_Container_PackingBox_01@6" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_PackingBox_01_43 Industrial_Container_PackingBox_01_4_7 on=Industrial_Container_PackingBox_01_2_7[0.1,1,2] ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_105_-75/SM_H_Industrial_Container_PackingBox_01@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_PackingBox_01_43 Industrial_Container_PackingBox_01_5_7 on=Industrial_Container_PackingBox_01_4_7[-0.1,1,0.1] turn=5.6 ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_105_-75/SM_H_Industrial_Container_PackingBox_01@5" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Emissive_Cylinder_01_v2_6 Emissive_Cylinder_01_7_5 at=211.9,-54.6,-977 rot=(0,0,-1,80) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-75/SM_Emissive_Cylinder_01@14" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseDefault"
+Emissive_Cylinder_01_v3_5 Emissive_Cylinder_01_10_5 at=210.4,-46.4,-977 rot=(0,0,-1,60) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-75/SM_Emissive_Cylinder_01@23" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseDefault"
+repeat Commercial_Lighting_OverheadLight_01_34_2 n=5 step=0,0,14.37 at=164.3,-46.2,-1018.4 pin=origin {
+  cyl prop r=0.6 h=0.2 rot=(-0.193,0,-0.981,4.9) ~role="decor" ~fit=0
+}
+drop Commercial_Lighting_OverheadLight_01_34_2.2
+cyl Commercial_Lighting_OverheadLight_01_2_5 r=0.6 h=0.2 at=164.3,-46.2,-1032.2 rot=(-0.193,0,-0.981,4.9) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-75/SM_M_Commercial_Lighting_OverheadLight_01@9" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+repeat Commercial_Lighting_OverheadLight_2 n=3 step=0,0,58.18 at=164.3,-46.2,-1048.1 pin=origin {
+  cyl prop r=0.6 h=0.2 rot=(-0.193,0,-0.981,4.9) ~role="decor" ~fit=0
+}
+Emissive_Cylinder_01_v3_5 Emissive_Cylinder_01_8_5 at=210,-46,-977 rot=(0,0,-1,30) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-75/SM_Emissive_Cylinder_01@15" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseDefault"
+Emissive_Cylinder_01_28 Emissive_Cylinder_01_6_6 at=190,-45.9,-977 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-75/SM_Emissive_Cylinder_01@13" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseDefault"
+Furniture_Radar_01_5 Furniture_Radar_01_3_2 at=371.4,-44.4,-865.2 turn=170 ~fit=0.6 ~src="BigMeshGroup/BigMeshGroup_53_-38/SM_H_FutureTech_Furniture_Radar_01@3" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+cyl Commercial_Lighting_OverheadLight_01_8_3 r=0.6 h=0.2 at=180.8,-42.5,-989.9 rot=(-0.193,0,-0.981,4.9) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-75/SM_M_Commercial_Lighting_OverheadLight_01@11" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"

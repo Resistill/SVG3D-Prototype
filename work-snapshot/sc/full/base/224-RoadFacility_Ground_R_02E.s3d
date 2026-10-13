@@ -1,0 +1,44 @@
+// 分区 224/233：15 个物体（1 组），x 347…578，z 707…885
+
+group RoadFacility_Ground_R_02E at=578,-185.6,833.8 turn=15.1 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_53_-34/SM_I_RoadFacility_Ground_R_02E" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box wall size=226.6,60.9,0.4 at=184.9,0.1,-57.9 turn=90
+  box wall_2 size=223.1,61.4,0.4 at=-98.6,0,106.9 turn=-30.2
+  box wall_3 size=216.1,60.8,0.4 at=91.4,0,109.1 rot=(-0.003,1,0.001,29.9)
+  box wall_4 size=3.6,60.7,0.4 at=-101.8,0.1,107.3 rot=(0,-1,-0.001,119.7)
+  box wall_5 size=6.4,0.2,0.4 at=-104.3,0.1,111.6 rot=(0,-1,-0.001,119.7)
+  wedge wall_6 size=6.4,62,0.4 at=-104.3,0.3,111.6 rot=(0.001,1,-0.001,60.3)
+  box wall_7 size=3.8,60.7,0.4 at=186.8,0.2,-60.4 turn=180
+  wedge wall_8 size=60.7,6.3,0.4 at=188.8,30.6,-60.4 rot=(0,0,-1,90)
+  box wall_9 size=3.9,60.7,0.4 at=94.4,0.1,109.6 rot=(0,1,0.001,119.6)
+  wedge wall_10 size=60.7,6.2,0.4 at=95.3,30.4,111.3 rot=(0.45,-0.449,-0.772,104.6)
+  box wall_11 size=3.6,60.7,0.4 at=-4.6,0.1,163.1 turn=-90
+  box wall_12 size=6.4,0,0.4 at=-4.6,0.1,168.1 turn=-90
+  wedge wall_13 size=6.4,62.5,0.4 at=-4.6,0.1,168.1 turn=90
+  box wall_14 size=3.9,60.7,0.4 at=186.4,0.2,53.2 rot=(0,1,0.001,149.6)
+  wedge wall_15 size=60.7,6.3,0.4 at=188,30.5,54.3 rot=(0.255,-0.253,-0.933,93.9)
+  box wall_16 size=3.6,60.7,0.4 at=186.9,0.2,-55.7
+  wedge wall_17 size=6.4,62,0.4 at=191.9,0.2,-55.7 turn=-180
+  box wall_18 size=3.6,60.7,0.4 at=90.2,0.1,111.9 turn=-59.7
+  box wall_19 size=6.4,0.2,0.4 at=92.8,0.1,116.2 turn=-59.7
+  wedge wall_20 size=6.4,62,0.4 at=92.8,0.2,116.2 turn=120.3
+  box wall_21 size=3.9,60.7,0.4 at=0,0.1,163.1 turn=90
+  wedge wall_22 size=60.7,6.2,0.4 at=0,30.4,165.1 rot=(0.577,-0.577,-0.577,120)
+  box wall_23 size=3.6,60.7,0.4 at=184,0.2,57.3 turn=-30.2
+  wedge wall_24 size=6.4,62,0.4 at=188.3,0.1,59.9 turn=149.8
+}
+box BlockWallCube_25_12 size=11.9,63.2,10.9 at=360.7,-137.1,710.6 turn=-45.2 ~fit=1 ~src="Blocker/BigMeshGroup_53_-34/BlockWallCube@10" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"
+Furniture_Bucket_02_70 Furniture_Bucket_02_14_6 at=355.1,-119.5,706.6 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_53_-34/SM_H_FutureTech_Furniture_Bucket_02@39" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Bucket_02_70 Furniture_Bucket_02_15_6 at=352.6,-119.5,707.2 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_53_-34/SM_H_FutureTech_Furniture_Bucket_02@40" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Fence_Metal_01_v2_9 Fence_Metal_01_30_4 at=358.2,-119.2,884.8 turn=135 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-34/SM_H_Fence_Metal_1024x768_01@18" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+WalkwaySystem_PaintingRailing_256_01B_v2_7 WalkwaySystem_PaintingRailing_256_01B_15_2 at=351.3,-109,867 turn=135 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_53_-34/SM_I_WalkwaySystem_PaintingRailing_256_01B@14" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+repeat WalkwaySystem_PaintingRailing_256_01_189 n=9 step=6.46,0,6.47 at=RoadFacility_Ground_T_05 offset=-63.56,3.59,47.5 pin=origin {
+  WalkwaySystem_PaintingRailing_256_01_11 WalkwaySystem_PaintingRailing_256_01_11 turn=-135 ~fit=1
+}
+Industrial_Mechanical_MetalSilo_01B Industrial_Mechanical_MetalSilo_01B_6 at=353.1,-108.7,830.8 turn=45 ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_53_-34/SM_H_Industrial_Mechanical_MetalSilo_01B@2" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+PipeLine_Ring_01_114 PipeLine_Ring_01_81_2 at=364.5,-91.1,716.3 rot=(0,1,0,179.9) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_53_-34/SM_H_PipeLine_Ring_01@106" ~role="decor" ~shape="col_convex" ~collidable=1 ~trace_flag="CTF_UseSimpleAndComplex"
+PipeLine_Ring_01_114 PipeLine_Ring_01_79_2 at=363.6,-88.6,713.2 rot=(0,0,1,90) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_53_-34/SM_H_PipeLine_Ring_01@105" ~role="decor" ~shape="col_convex" ~collidable=1 ~trace_flag="CTF_UseSimpleAndComplex"
+PipeLine_Ring_01_114 PipeLine_Ring_01_136 at=366.9,-77.7,795.7 rot=(0,1,0,179.7) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_53_-34/SM_H_PipeLine_Ring_01@108" ~role="decor" ~shape="col_convex" ~collidable=1 ~trace_flag="CTF_UseSimpleAndComplex"
+PipeLine_Ring_01_114 PipeLine_Ring_01_124 at=346.7,-77.7,775.5 rot=(0,1,0,179.7) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_53_-34/SM_H_PipeLine_Ring_01@107" ~role="decor" ~shape="col_convex" ~collidable=1 ~trace_flag="CTF_UseSimpleAndComplex"
+PipeLine_Ring_01_114 PipeLine_Ring_01_76_3 at=364.3,-77.7,710.1 rot=(0,-1,0,179.7) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_53_-34/SM_H_PipeLine_Ring_01@96" ~role="decor" ~shape="col_convex" ~collidable=1 ~trace_flag="CTF_UseSimpleAndComplex"
+PipeLine_Ring_01_114 PipeLine_Ring_01_77_3 at=358.5,-77.7,710.4 rot=(0,-1,0,179.7) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_53_-34/SM_H_PipeLine_Ring_01@97" ~role="decor" ~shape="col_convex" ~collidable=1 ~trace_flag="CTF_UseSimpleAndComplex"
+PipeLine_Ring_01_114 PipeLine_Ring_01_82_2 at=357.9,-77.7,716.5 rot=(0,-1,0,179.7) ~fit=0 ~src="MidMeshGroup/MidMeshGroup_53_-34/SM_H_PipeLine_Ring_01@98" ~role="decor" ~shape="col_convex" ~collidable=1 ~trace_flag="CTF_UseSimpleAndComplex"

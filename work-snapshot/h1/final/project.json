@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "source": "../h1.glb",
+  "sourceHash": "26cc09f612a75ae168df1582f58492c5c2f825cb",
+  "unit": 0.28,
+  "split": "auto",
+  "fidelity": "semantic",
+  "sidecar": {
+    "file": "../../../../SpaceCenter_Rebuild/blockout/layout.csv",
+    "match": [
+      "category",
+      "level",
+      "mesh"
+    ],
+    "position": [
+      "rb_x",
+      "rb_y",
+      "rb_z"
+    ],
+    "fields": [
+      "shape",
+      "collidable",
+      "collision_profile",
+      "trace_flag"
+    ]
+  },
+  "score": {
+    "delta": 0.25,
+    "cRes": 4,
+    "cMesh": 10,
+    "dMax": 2,
+    "samples": 600
+  }
+}

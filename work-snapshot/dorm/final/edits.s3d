@@ -1,0 +1,11 @@
+// 修改层：over / drop / copy / 新物体 / def 扩展。重跑逆向后这里的路径仍然有效（稳定命名）
+import "edits/refine-Building_BigDoor_03.s3d"
+import "edits/refine-Building_Dormitory_01.s3d"
+import "edits/refine-RoadFacility_Ground_D_01.s3d"
+import "edits/refine-Nature_Rock_Big_Rock_30_5.s3d"
+import "edits/refine-Building_Dormitory_02_InterWall_05.s3d"
+import "edits/refine-BS_Bougainvillea_01_B_2.s3d"
+import "edits/refine-Nature_Rock_Big_Rock_30.s3d"
+import "edits/refine-BS_Bougainvillea_01_B_3.s3d"
+import "edits/refine-Building_Dormitory_02_InterWall_04.s3d"
+import "edits/refine-RoadFacility_Ground_D_02.s3d"

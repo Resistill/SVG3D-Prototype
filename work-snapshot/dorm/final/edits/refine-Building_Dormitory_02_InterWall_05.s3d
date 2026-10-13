@@ -1,0 +1,42 @@
+// 细化到 structure：Building_Dormitory_02_InterWall_05（体素 1.417（36 块），36 个部件）
+def Building_Dormitory_02_InterWall_05 : Building_Dormitory_02_InterWall_05 {
+  drop body
+  group body envelope=-26.5,0,-26.5,26.5,15,26.5 {
+    box slab size=41.1,1.4,53.1 at=-5.6,-0.1,0.3
+    box slab_2 size=11.9,1.4,51.7 at=20.9,-0.1,1
+    box wall size=8.5,11.3,1.4 at=-21.9,1.3,-25.6
+    box wall_2 size=28.3,12.8,1.4 at=0.8,1.3,-25.6
+    box wall_3 size=1.4,11.3,39.7 at=-25.5,1.3,-5
+    box wall_4 size=13.4,12.8,1.4 at=20.2,1.3,-24.2
+    box wall_5 size=0.6,12.8,50.3 at=26.6,1.3,1.7
+    box beam size=22.7,4.3,1.4 at=-0.7,1.3,4.2
+    box column size=1.4,12.8,2.8 at=-11.3,1.3,20.5
+    box column_2 size=1.4,12.8,2.8 at=14.2,1.3,20.5
+    box wall_6 size=24.1,13.6,1.4 at=1.5,1.3,21.2
+    box column_3 size=1.4,11.3,2.1 at=-25.5,1.3,25.8
+    box beam_2 size=51,1.4,0.7 at=0.8,1.3,26.5
+    box column_4 size=2.8,9.9,0.7 at=-23.3,2.7,26.5
+    box wall_7 size=19.8,11.3,0.7 at=16.3,2.7,26.5
+    box wall_8 size=5.7,8.5,1.4 at=-9.2,5.5,4.2
+    box wall_9 size=5.7,8.5,1.4 at=7.8,5.5,4.2
+    box wall_10 size=4.3,5.7,1.4 at=-15.5,8.4,-25.6
+    box wall_11 size=11.3,5.7,1.4 at=-0.7,8.4,4.2
+    box block size=1.4,4.3,9.9 at=-25.5,8.4,19.8
+    box beam_3 size=2.8,1.4,51 at=-23.3,11.2,0.6
+    box wall_12 size=28.3,2.8,0.7 at=-7.7,11.2,26.5
+    box beam_4 size=5.7,1.4,52.4 at=-20.5,12.6,-0.1
+    box slab_3 size=31.2,1.4,28.3 at=-2.1,12.6,-10.7
+    box slab_4 size=12.8,1.4,42.5 at=19.9,12.6,-2.2
+    box block_2 size=5.7,1.4,22.7 at=-14.8,12.6,14.8
+    box beam_5 size=2.8,1.4,17 at=12.1,12.6,12
+    box slab_5 size=22.7,1.4,14.2 at=-0.7,12.6,12
+    box beam_6 size=21.3,1.4,1.4 at=0,12.6,19.8
+    box slab_6 size=11.3,1.4,7.1 at=20.6,12.6,22.6
+    box block_3 size=1.4,2.2,4.3 at=-11.3,12.6,24
+    box block_4 size=2.8,1.4,4.3 at=13.5,12.6,24
+    box block_5 size=1.4,1.4,0.7 at=-22.6,12.6,26.5
+    box block_6 size=1.4,0.8,1.4 at=-11.3,14,21.2
+    box block_7 size=1.4,0.8,5 at=12.8,14,24.4
+    box beam_7 size=24.1,0.8,0.7 at=0,14,26.5
+  }
+}

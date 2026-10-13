@@ -1,0 +1,30 @@
+{
+  "dir": "C:\\Workspace\\SVG3D\\work\\panels\\g10\\dorm",
+  "fidelity": "structure",
+  "unit": 0.28,
+  "parts": 2000,
+  "arrays": 95,
+  "mirrors": 1,
+  "meshes": 0,
+  "renamed": 102,
+  "sidecar": {
+    "matched": 2000,
+    "parts": 2000,
+    "match": [
+      "category",
+      "level",
+      "mesh"
+    ],
+    "position": [
+      "rb_x",
+      "rb_y",
+      "rb_z"
+    ],
+    "fields": [
+      "shape",
+      "collidable",
+      "collision_profile",
+      "trace_flag"
+    ]
+  }
+}

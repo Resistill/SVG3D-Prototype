@@ -1,0 +1,58 @@
+// 分区 16/233：14 个物体（4 组），x -779…-639，z -1051…-663
+
+hull Nature_Rock_Flat_Rock_04_QL_4 points=[(-47.8,14.9,-7.5); (47.8,11.1,22); (-18.1,0,-2); (-14.9,19.8,-13.5); (-4.2,8.8,-50.8); (23.2,7.9,50.8); (-36.3,2.4,15.4); (-30.4,1.9,-32.9); (-31.5,16.8,-38.5); (-8.1,16.2,37.1); (27.1,0.4,-16.6); (29.5,15.5,-18.3); (37.3,15.7,43.5); (40.9,6.1,44.7); (-5.1,17.4,-47.5); (-44.5,2.3,2.8); (-3.1,2,-47.1); (17.2,2.3,49.8); (-40.8,6.5,-27); (46.5,10.2,40.9); (46.8,4.8,19.9); (-29.8,8.5,-42.1); (-41.5,15,7.3); (41.4,11.1,-2.6)] at=-779.4,-104,-915 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_50_-38/SM_Nature_Rock_Flat_Rock_04_QL@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+repeat EFX_2 n=9 step=18.12,0,0.01 at=-749.8,-214,-756.8 pin=origin {
+  EFX_BlockPlane_2 EFX_BlockPlane_2 ~role="collision" ~fit=1
+}
+hull Nature_Rock_Big_Rock_36_2 points=[(-56.7,23.9,3.4); (56.7,33.7,-5.5); (-23.4,0,-28.9); (40.2,55.9,17.7); (7.1,6.3,-45.7); (-15.5,16.4,45.7); (44.1,24.4,38.8); (34.3,42.3,-40.8); (-35.6,47.4,31.3); (-32.9,35.8,-30.1); (-49.9,6.6,25); (45.9,11.5,-31.5); (-40.2,12.7,42.9); (-5.5,36.9,-44.7); (-54.7,37.7,7.2); (-50.5,2.9,4.8); (47.2,49,-16.5); (-50.8,44.2,22.7); (47.1,49.2,25.4); (52.4,21,15.5); (-42.7,11.4,-18.5); (36.1,7.1,-40); (54.8,28,21.9); (-38.5,0.2,-18.4)] at=-745.1,-124.6,-939.6 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_50_-38/SM_Nature_Rock_Big_Rock_36" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01_2 Fence_Metal_01_5 at=-639.5,-122.8,-756.7 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_50_-38/SM_H_Fence_Metal_1024x768_01@15" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+hull Nature_Rock_Big_Rock_32_5 points=[(-28.4,18,-5.8); (28.4,17.1,5.4); (15,0,5.4); (-2.2,31.8,-12.3); (4.4,7.3,-26.8); (5.3,16.6,26.8); (-24.4,11.5,13.6); (11.7,27.7,-21); (17.6,28.6,17.1); (-20.4,26.6,11.5); (24.7,6.5,15.8); (27,19.5,18.9); (-26.5,25.8,-7.3); (-15.9,20.2,21.1); (23.2,2.8,5.3); (3.3,2,-13.8); (-14.9,9.6,-14.9); (-3.7,31.3,11.3); (-17.8,13.4,20.9); (-15.7,26.6,-14.9); (17.8,0.2,11.1); (6.7,2.6,-20.3); (26.8,22.7,10.2); (27.5,7.6,11.6)] at=-661.4,-121.4,-828.3 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_50_-38/SM_Nature_Rock_Big_Rock_32@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+repeat Fence_Metal_2 n=6 step=27.43,0,0 at=RoadFacility_Ground_D_11 offset=-27.84,3.57,-94.47 pin=origin {
+  Fence_Metal_01B_2 Fence_Metal_01B_2 ~fit=0
+}
+Nature_Rock_Big_Rock_35 Nature_Rock_Big_Rock_35_3 at=-717.6,-119.6,-896.9 rot=(-0.138,-0.96,0.244,47.2) ~fit=0 ~src="BigMeshGroup/BigMeshGroup_50_-38/SM_Nature_Rock_Big_Rock_35" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+hull Nature_Rock_Flat_Rock_04_QL_5 points=[(-41.1,11,-1.2); (41.1,15,3.4); (-27.9,0,21.6); (-11.7,22.5,-18.7); (-18.5,16.7,-26.7); (8.1,12,26.7); (29.1,4.4,20.3); (-31.5,11.7,20.4); (17.9,18.8,-18.7); (-30.6,20.1,-24.1); (-32.3,10.2,-22.8); (3.7,10.4,-21.7); (29,14.1,20.3); (31.8,13,-9.4); (-36.5,4.9,-4.9); (-40.6,15.9,-5.2); (-17.4,0.1,25); (-35.2,9.5,19.2); (-4.6,22.2,-22.7); (-39.9,6.2,3.8); (-40.9,10.5,-9.3); (36.9,17.4,9.8); (-24.7,9.1,24.8); (33,17.5,-7.7)] at=-641.1,-117.8,-812.5 ~fit=0.1 ~src="BigMeshGroup/BigMeshGroup_50_-38/SM_Nature_Rock_Flat_Rock_04_QL@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01_2 Fence_Metal_01_4 at=-667,-117.1,-756.7 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_50_-38/SM_H_Fence_Metal_1024x768_01@14" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+repeat Fence_Metal_3 n=3 step=27.43,0,0 at=Fence_Metal_2.0.Fence_Metal_01B_2 offset=-0.29,1.89,-0.1 pin=origin {
+  Fence_Metal_01_2 Fence_Metal_01_2 ~fit=1
+}
+group RoadFacility_Ground_D_11_Decal on=RoadFacility_Ground_D_05B[0.754,1,-3] ~fit=0.5 ~src="BigMeshGroup/BigMeshGroup_50_-37/SM_I_RoadFacility_Ground_D_11_Decal" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex" {
+  box beam size=111.6,0,1.3 at=-83.9,0,35.6 turn=-90.1
+  box box_2 size=218.7,0,1.4 at=-9.5,0,-53.3
+  box box_3 size=182.9,0,1.2 at=8.4,0,-20
+  box box_4 size=33.6,0,1.5 at=99.8,0,-36.8 turn=-90
+  box box_5 size=55.8,0,1.3 at=90.2,0.3,31.7
+  box box_6 size=55.7,0,1.3 at=-19.4,0.3,50.1
+  box box_7 size=4.6,0,1.3 at=8.3,0.3,52.1 turn=-90
+  box box_8 size=1.3,0,0.8 at=8.7,0.3,54.5 turn=-90
+  box box_9 size=4.6,0,1.3 at=-47.3,0.3,52.2 turn=-90
+  box box_10 size=1.3,0,0.8 at=-47.6,0.3,54.5 turn=-90
+  box box_11 size=4.6,0,1.3 at=118,0.3,33.8 turn=-90
+  box box_12 size=1.3,0,0.9 at=118.5,0.3,36.1 turn=-90
+  box box_13 size=4.5,0,1.3 at=62.3,0.3,33.8 turn=-90
+  box box_14 size=1.3,0,0.8 at=62,0.3,36.1 turn=-90
+  box box_15 size=58.3,0,1.4 at=-117.2,0,62.3 turn=-90
+  box box_16 size=72.2,0,1.4 at=-117.2,0,-17.2 turn=-90
+  box box_17 size=219.4,0,0.8 at=-9.2,0.4,-87.4
+  box box_18 size=4.3,0,0.7 at=100.2,0.4,-89.2 turn=-89.4
+  box box_19 size=110.4,0,74 at=64.4,0.3,-36.2 turn=-90
+  box box_20 size=123,0,0.7 at=118.5,0.3,-29.9 turn=-90
+  box box_21 size=57.8,0,6.3 at=89.9,0.3,33.4
+  box box_22 size=54.8,0,0.7 at=27.7,0.3,45.7 turn=-90
+  box box_23 size=57.7,0,6.2 at=-19.7,0.3,51.7
+  box box_24 size=12.8,0,0.7 at=8.8,0.3,42.9 turn=-90
+  box box_25 size=74,0,55.6 at=-27.9,0.3,9.4
+  box box_26 size=18.1,0,0.7 at=-73.3,0.3,-18.1
+  box box_27 size=109.9,0,0.7 at=-82,0.3,36.5 turn=-90
+  box box_28 size=1.4,0,1.2 at=-83.4,0,-20 turn=-90
+  box box_29 size=219.4,0,0.7 at=-9.2,0.4,-63.7
+  box box_30 size=219.4,0,0.7 at=-9.2,0.4,-60.1
+  box box_31 size=4.3,0,0.7 at=100.2,0.4,-61.9 turn=-90.1
+  box box_32 size=4.3,0,0.7 at=100.2,0.4,-11.7 turn=-89.4
+  box box_33 size=164.6,0,0.7 at=18.2,0.4,-13.6
+  box box_34 size=164.6,0,0.7 at=18.2,0.4,-9.9
+  box box_35 size=4.3,0,0.7 at=-63.8,0.4,-11.7 turn=-90.7
+}
+box Branding_LocationSign_02_D_7 size=4.1,0.8,0.1 against=Fence_Metal_3.0.Fence_Metal_01_2[-0.01,-0.6,1] ~fit=0 ~src="MidMeshGroup/MidMeshGroup_50_-38/SM_Branding_LocationSign_FutureTech_02_D@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Nature_Rock_Big_Rock_30_5 Nature_Rock_Big_Rock_30_4_2 at=-671.9,-91.2,-884.2 rot=(-0.016,0.998,0.064,28) ~fit=0.1 ~src="BigMeshGroup/BigMeshGroup_50_-38/SM_Nature_Rock_Big_Rock_30@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Nature_Rock_Big_Rock_30_5 Nature_Rock_Big_Rock_30_2_2 at=-700.9,-86.5,-1051.2 ~fit=0.1 ~src="BigMeshGroup/BigMeshGroup_50_-38/SM_Nature_Rock_Big_Rock_30@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"

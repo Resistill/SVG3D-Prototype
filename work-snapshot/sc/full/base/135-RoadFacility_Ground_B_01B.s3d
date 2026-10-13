@@ -1,0 +1,51 @@
+// 分区 135/233：7 个物体（1 组），x 644…791，z -639…-501
+
+group RoadFacility_Ground_B_01B at=711.4,-142.3,-600.3 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_53_-37/SM_I_RoadFacility_Ground_B_01B" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseSimpleAndComplex" {
+  group group2 at=-9.3,-0.4,45.3 ~role="terrain" {
+    plate floor points=[(9.8,-21.4); (9.8,-53.8); (8.5,-59.6); (5.4,-64.6); (0.9,-68.4); (-4.5,-70.6); (-10.2,-71.4); (-3,-70.5); (2.3,-67.8); (7.4,-62.4); (10,-55.4); (10.2,71.4)] h=0.4 at=0,0,0
+  }
+  group group1 at=-9.3,-0.4,-89 ~role="terrain" {
+    plate floor points=[(10.2,-27.8); (8.5,15.9); (0.9,24.7); (-10.2,27.8); (1.1,25); (8.8,16.1)] h=0.4 at=0,0,0
+  }
+  box box5 size=36.6,0,0.3 at=19.4,0,-98.5 turn=-90 ~role="terrain"
+  mirror box7 of=box5 across=(18.358741,0,0) axis=(1,0,0) ~role="terrain"
+  box box8 size=123.8,0,0.3 at=19.4,0,54.9 turn=-90 ~role="terrain"
+  mirror box10 of=box8 across=(18.358741,0,0) axis=(1,0,0) ~role="terrain"
+  box box11 size=73.1,0,0.3 at=18.4,0,-43.6 turn=-90 ~role="terrain"
+  box box6 size=36.6,0,0.3 at=36.1,0,-98.5 turn=-90 ~role="terrain"
+  box box9 size=197,0,0.3 at=36.1,0,18.3 turn=-90 ~role="terrain"
+  box box1 size=34.7,0,0.3 at=-63.5,0,-44.6 ~role="terrain"
+  box box4 size=34.7,0,0.3 at=-63.5,0,-42.4 ~role="terrain"
+  box box2 size=34.7,0,0.3 at=-63.5,0,-61.2 ~role="terrain"
+  box box3 size=34.7,0,0.3 at=-63.5,0,-25.8 ~role="terrain"
+  group group3 at=70.9,0.4,-45.6 ~role="terrain" {
+    subtract floor at=0,0,0 pin=origin {
+      plate body points=[(9.9,-22); (9.9,22); (-9.9,22); (-9.9,-22)] h=0.4 at=0,0,0 pin=origin
+      plate hole points=[(8.5,20.6); (8.5,-20.6); (-8.5,-20.6); (-8.5,20.6)] h=3.2 at=0,-1.4,0 pin=origin
+    }
+  }
+  group group4 at=-67.7,0.4,86 ~role="terrain" {
+    subtract floor at=0,0,0 pin=origin {
+      plate body points=[(-9.5,-15.8); (-9.5,15.8); (9.5,15.8); (9.5,-15.8)] h=0.4 at=0,0,0 pin=origin
+      plate hole points=[(-8.1,-14.4); (-8.1,14.4); (8.1,14.4); (8.1,-14.4)] h=3.2 at=0,-1.4,0 pin=origin
+    }
+  }
+  group group7 at=70.9,0.4,-38.6 ~role="terrain" {
+    plate floor points=[(0,-1.6); (7.1,3.4); (0,-3.4); (-7.1,3.4)] h=0.4 at=0,0,0
+  }
+  group group8 at=70.9,0.4,-52.6 ~role="terrain" {
+    plate floor points=[(-7.1,-1.6); (0,3.4); (7.1,-3.4); (0,1.6); (-7.1,-3.4)] h=0.4 at=0,0,0
+  }
+  group group5 at=-67.7,0.4,91.7 ~role="terrain" {
+    plate floor points=[(6.7,1.5); (0,-3.2); (-6.7,3.2); (0,-1.5); (6.7,3.2)] h=0.4 at=0,0,0
+  }
+  group group6 at=-67.7,0.4,80.3 ~role="terrain" {
+    plate floor points=[(0,3.2); (6.7,-3.2); (0,1.5); (-6.7,-3.2)] h=0.4 at=0,0,0
+  }
+}
+Furniture_Bucket_02_22 Furniture_Bucket_02_4_6 on=RoadFacility_Ground_B_01B offset=75.9,0,-36.3 turn=10 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_53_-37/SM_H_FutureTech_Furniture_Bucket_02@18" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Bucket_02_22 Furniture_Bucket_02_3_6 on=RoadFacility_Ground_B_01B offset=79.5,0,-38.1 turn=-69.6 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_53_-37/SM_H_FutureTech_Furniture_Bucket_02@16" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Bucket_02_22 Furniture_Bucket_02_5_6 on=RoadFacility_Ground_B_01B offset=78.2,0,-36.2 turn=-69.6 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_53_-37/SM_H_FutureTech_Furniture_Bucket_02@17" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Transport_Utility_Guardrail_03_42 Transport_Utility_Guardrail_03_25_2 on=RoadFacility_Ground_B_01B offset=-67,0,98.8 turn=7.5 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Transport_Utility_Guardrail_03@6" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Bucket_02_22 Furniture_Bucket_02_22_3 on=RoadFacility_Ground_B_01B offset=75.1,0,-38.3 turn=-86.5 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_53_-37/SM_H_FutureTech_Furniture_Bucket_02@20" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Bucket_02_22 Furniture_Bucket_02_2_6 on=RoadFacility_Ground_B_01B offset=77.3,0,-38.2 turn=2.8 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_53_-37/SM_H_FutureTech_Furniture_Bucket_02@19" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"

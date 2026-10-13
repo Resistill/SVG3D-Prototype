@@ -1,0 +1,6 @@
+// 细化到 structure：HBlack_01_InterWall_04（面积前 99%（3/5 块），3 个部件）
+over HBlack_01_InterWall_04 : group envelope=-89.5,0,-76.5,89.5,133,76.5 {
+  box box2 size=95.6,70.8,46.7 at=-32.1,0.4,-53.4 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Building_FutureTech_HBlack_01_InterWall_04#4"
+  box box3 size=93.8,68.6,37.9 at=-30.8,1.1,-58.1 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Building_FutureTech_HBlack_01_InterWall_04#3"
+  box box1 size=178.7,130.1,126.2 at=0.1,3.1,12.9 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Building_FutureTech_HBlack_01_InterWall_04#2"
+}

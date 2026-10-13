@@ -1,0 +1,110 @@
+// 分区 195/233：47 个物体（1 组），x 89…216，z -302…-162
+
+group Building_HStairs_01_2 at=216,-133.2,-161.8 turn=-90 ~fit=0.5 ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Building_FutureTech_HStairs_01" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box slab size=124.3,2.9,58.5 at=90.4,47,-98.7
+  box slab_2 size=73.1,2.9,43.9 at=64.8,47,-47.5
+  box slab_3 size=56.1,2.9,153.6 at=73.3,47,51.3
+  wedge slab_4 size=153.6,21.5,2.9 at=45.3,48.4,51.3 rot=(-0.577,0.577,0.577,120)
+  box slab_5 size=29.3,2.8,65.8 at=-153,11.1,-95 rot=(0.001,0,1,11.2)
+  box slab_6 size=175.5,2.8,45.8 at=-52.5,31,-105 rot=(0.001,0,1,11.2)
+  wedge slab_7 size=175.5,16.3,2.8 at=-52.8,32.3,-82.1 rot=(0.069,-0.705,-0.705,172.1)
+  box wall size=168.2,7.3,0.4 at=83.5,8.9,-128 turn=180
+  box wall_2 size=153.6,7.3,0.4 at=76.2,16.3,-128 turn=180
+  box wall_3 size=95.1,7.3,0.4 at=76.2,23.6,-128 turn=180
+  box wall_4 size=36.6,14.6,0.4 at=-48.1,30.9,-128 turn=180
+  box wall_5 size=36.6,14.6,0.4 at=-11.6,38.2,-128 turn=180
+  box wall_6 size=146.3,14.6,0.4 at=79.9,45.5,-128 turn=180
+  box wall_7 size=29.3,7.3,0.4 at=-44.5,45.5,-128 turn=180
+  box wall_8 size=14.6,7.3,0.4 at=-0.6,52.8,-128 turn=180
+  box wall_9 size=73.1,7.3,0.4 at=116.4,60.1,-128 turn=180
+  box wall_10 size=43.9,7.3,0.4 at=36,60.1,-128 turn=180
+  wedge wall_11 size=102.4,24.5,0.4 at=-117.6,24.4,-128
+  wedge wall_12 size=102.4,19.1,0.4 at=-117.6,26.3,-128 rot=(0,0,1,180)
+  box wall_13 size=197.5,21.9,0.5 at=-68.9,0,-124.3
+  box wall_14 size=139,7.3,0.5 at=99.3,7.3,-124.3
+  box wall_15 size=124.3,7.3,0.5 at=92,14.6,-124.3
+  box wall_16 size=292.6,7.3,0.5 at=-14,21.9,-124.3
+  box wall_17 size=204.8,7.3,0.5 at=-36,29.3,-124.3
+  box wall_18 size=175.5,7.3,0.5 at=-14,36.6,-124.3
+  box wall_19 size=212.1,7.3,0.5 at=40.8,43.9,-124.3
+  box wall_20 size=182.9,7.3,0.5 at=62.8,51.2,-124.3
+  box wall_21 size=51.2,7.3,0.5 at=33.5,58.5,-124.3
+  box wall_22 size=80.5,7.3,0.5 at=114,58.5,-124.3
+  box wall_23 size=65.8,14.6,0.4 at=-134.7,0,-79.6
+  box wall_24 size=36.6,7.3,0.4 at=-120.1,14.6,-79.6
+  box ramp size=21.9,2.9,51.2 at=153.4,56.3,-102.3 rot=(0,0,1,68.8)
+  box ramp_2 size=14.6,2.9,7.3 at=152.1,52.9,-73.1 rot=(0,0,1,68.8)
+  box slab_8 size=21.9,0.4,43.9 at=33.8,61.4,98.9
+  box slab_9 size=7.3,0.4,21.9 at=19.2,61.4,117.2
+  box slab_10 size=14.6,0.4,7.3 at=30.2,61.4,124.5
+  box wall_25 size=58.5,7.3,0.4 at=41.9,49.9,94.8 turn=90
+  box wall_26 size=51.2,7.3,0.4 at=41.9,57.2,98.4 turn=90
+  box slab_11 size=21.9,0.4,7.3 at=39.4,64.2,-124.4
+  box slab_12 size=14.6,0.4,7.3 at=86.9,64.2,-124.4
+  box slab_13 size=51.2,0.4,7.3 at=134.4,64.2,-124.4
+  box slab_14 size=7.3,0.4,43.9 at=156.4,64.2,-98.8
+  box wall_27 size=51.2,9.1,0.4 at=-167.5,0,-102.3 turn=-90
+  wedge wall_28 size=51.2,11,0.4 at=-167.5,9.1,-102.3 turn=90
+  box wall_29 size=29.3,7.3,0.4 at=30.2,49.9,123.8
+  box wall_30 size=21.9,7.3,0.4 at=26.5,57.2,123.8
+}
+Customiz_ExperimentalDoor_01_1024_Frame_4 Customiz_ExperimentalDoor_01_1024_Frame_2_4 at=128.6,-108.5,-276.2 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Customiz_ExperimentalDoor_01_1024_Frame@1" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Vehicle_GroundVehicle_01_v2 Vehicle_GroundVehicle_01_4_7 at=115.3,-108.4,-267.2 turn=30 ~fit=0.5 ~src="SmallMeshGroup/SmallMeshGroup_52_-36/SM_H_FutureTech_Vehicle_GroundVehicle_01@4" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Customiz_ExperimentalDoor_01_L_8 Customiz_ExperimentalDoor_01_L_8_2 at=119.6,-108.4,-276.2 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Customiz_ExperimentalDoor_01_L@3" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Customiz_ExperimentalDoor_01_L_8 Customiz_ExperimentalDoor_01_L_2_5 at=126.8,-108.4,-276.8 turn=180 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Customiz_ExperimentalDoor_01_L@5" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Commercial_Lighting_EXIT_01_11 Commercial_Lighting_EXIT_01_2_9 at=149.2,-106.6,-268.5 turn=90 ~fit=1 ~src="MidMeshGroup/MidMeshGroup_52_-36/SM_Commercial_Lighting_EXIT_01@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Decal_WellLid_11_3 Decal_WellLid_11_2_7 at=103.8,-106.6,-266.5 turn=-90 ~fit=1 ~src="MidMeshGroup/MidMeshGroup_52_-36/SM_H_Decal_WellLid_11@2" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Vehicle_GroundVehicle_01_v2 Vehicle_GroundVehicle_01_3_8 at=107,-101.3,-302.1 turn=30 ~fit=0.5 ~src="ProxyOnly/NearPhysicsProxy_104_-72/SM_H_FutureTech_Vehicle_GroundVehicle_01" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Industrial_Lighting_WallLamp_02B_30 Industrial_Lighting_WallLamp_02B_7_10 at=107,-89.7,-285.9 rot=(0,0.993,-0.119,180) ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_52_-36/SM_H_Industrial_Lighting_WallLamp_02B@10" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Lighting_WallLamp_02B_30 Industrial_Lighting_WallLamp_02B_20_6 at=149.9,-89.7,-285.9 rot=(0,0.993,-0.119,180) ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_52_-36/SM_H_Industrial_Lighting_WallLamp_02B@9" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box BlockWallCube_8_13 size=46.9,51.2,19.1 at=128.6,-85.1,-295.5 turn=0.1 ~fit=1 ~src="Blocker/BigMeshGroup_52_-37/BlockWallCube@11" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"
+box Branding_Screen_SpaceCenter_01D size=10.1,58.9,0.1 at=123,-83.6,-285.3 ~fit=0.4 ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_Branding_Screen_SpaceCenter_01D" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex"
+Industrial_Container_SupplyBox_01_43 Industrial_Container_SupplyBox_01_18_10 at=143.5,-66.7,-266.4 turn=-90 ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_H_Industrial_Container_SupplyBox_01@16" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Update_Container_PlasticBox_02_98 Update_Container_PlasticBox_02_35_3 at=137.1,-66.7,-270.9 turn=30 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_H_Update_Container_PlasticBox_02@32" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Lighting_Leuchtstabe_01_12 Industrial_Lighting_Leuchtstabe_01_6_7 at=138.4,-66.6,-265.6 rot=(-0.022,0.996,-0.083,150.1) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_H_Industrial_Lighting_Leuchtstabe_01@6" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Cabinet_16_v2_7 Furniture_Cabinet_16_5_8 at=104.6,-65,-283.6 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_104_-72/SM_H_FutureTech_Furniture_Cabinet_16@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_ConferenceBoard_01_3 Furniture_ConferenceBoard_01_3_2 at=101.8,-64.8,-270.1 turn=-90 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_104_-72/SM_H_FutureTech_Furniture_ConferenceBoard_01" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Chair_05_30 Furniture_Chair_05_3_9 at=102.2,-63.4,-280.6 turn=150 ~fit=0.7 ~src="ProxyOnly/NearPhysicsProxy_104_-72/SM_H_FutureTech_Furniture_Chair_05@4" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Electron_Computer_01_19 Electron_Computer_01_19_4 at=102.3,-61.3,-283.5 turn=30 ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_104_-72/SM_H_FutureTech_Electron_Computer_01_01@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Table_Lamp_01_12 Table_Lamp_01_3_5 at=108.5,-61.3,-284.1 turn=-147.8 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_104_-72/SM_H_FutureTech_Table_Lamp_01" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Office_ComputerMonitors_03_45 Office_ComputerMonitors_03_7_9 at=105.6,-61.3,-284.2 turn=180 ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_104_-72/SM_H_FutureTech_Office_ComputerMonitors_03@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Update_Container_PlasticBox_02_98 Update_Container_PlasticBox_02_43 at=144.6,-59.8,-268.6 turn=-20 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_H_Update_Container_PlasticBox_02@48" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Display_01_v2_9 Furniture_Display_01_3_11 at=106.9,-58.2,-284.1 ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_104_-72/SM_H_FutureTech_Furniture_Display_01@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Lighting_OverheadLight_01_31 Lighting_OverheadLight_01_16_7 at=104.3,-51.1,-268.2 turn=180 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_104_-72/SM_H_FutureTech_Lighting_OverheadLight_01@13" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAsComplex"
+Lighting_OverheadLight_01_31 Lighting_OverheadLight_01_17_7 at=104.3,-51.1,-280.5 turn=180 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_104_-72/SM_H_FutureTech_Lighting_OverheadLight_01@17" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAsComplex"
+WalkwaySystem_PaintingRailing_64xC90_02_6 WalkwaySystem_PaintingRailing_64xC90_02_6_2 at=113.6,-30.6,-273.1 turn=-90 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_I_WalkwaySystem_PaintingRailing_64xC90_02@5" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+WalkwaySystem_PaintingRailing_64xC90_02_6 WalkwaySystem_PaintingRailing_64xC90_02_3_3 at=133.7,-30.6,-272.8 turn=180 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_I_WalkwaySystem_PaintingRailing_64xC90_02@2" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+WalkwaySystem_PaintingRailing_256_01_v2_5 WalkwaySystem_PaintingRailing_256_01_12_3 at=127.9,-30.6,-273.9 turn=90 ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_I_WalkwaySystem_PaintingRailing_256_01@6" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+WalkwaySystem_PaintingRailing_256_01_v3_3 WalkwaySystem_PaintingRailing_256_01_10 at=119,-30.6,-273.9 turn=90 ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_I_WalkwaySystem_PaintingRailing_256_01@24" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Cabinet_16_v2_7 Furniture_Cabinet_16_2_9 at=89.8,-30.3,-268 turn=180 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_H_FutureTech_Furniture_Cabinet_16@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Cabinet_16_v2_7 Furniture_Cabinet_16_4_9 at=100.4,-30.3,-268 turn=180 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_H_FutureTech_Furniture_Cabinet_16@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+group WalkwaySystem_PaintingRailing_210_01A at=110.9,-30.1,-266.4 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_I_WalkwaySystem_PaintingRailing_210_01A" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple" {
+  plate wall points=[(-2.5,-0.3); (2.5,-0.3); (2.5,0.3); (-2.5,0.3)] h=0.4 at=0.2,0.3,0.2 turn=-130.6 tilt=90
+  plate wall_2 points=[(2.5,0.3); (2.5,-0.3); (-2.5,-0.3); (-2.5,0.3)] h=0.4 at=-0.2,0.3,-0.2 turn=49.4 tilt=90
+}
+Update_Container_PlasticBox_02_98 Update_Container_PlasticBox_02_25_5 at=107.4,-30.1,-267.8 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_H_Update_Container_PlasticBox_02@13" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Furniture_Folder_01_A_7 Furniture_Folder_01_A_2_13 at=104.4,-30,-272.5 rot=(0.459,0.459,0.761,105.5) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_H_FutureTech_Furniture_Folder_01_A@3" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Folder_02_10 Furniture_Folder_02_2_13 at=97.6,-29.7,-286.5 rot=(0.545,0.545,0.637,115) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_H_FutureTech_Furniture_Folder_02@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Chair_08_21 Furniture_Chair_08_2_9 at=93.8,-29.1,-271.1 rot=(-0.773,-0.451,-0.446,104) ~fit=0.6 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_H_FutureTech_Furniture_Chair_08@8" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Furniture_Chair_08_21 Furniture_Chair_08_6_6 at=102.2,-28.3,-269.1 ~fit=0.6 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_H_FutureTech_Furniture_Chair_08@7" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Office_ComputerMonitors_03_45 Office_ComputerMonitors_03_3_10 at=88.7,-26.7,-267.4 turn=-30 ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_H_FutureTech_Office_ComputerMonitors_03@12" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Office_ComputerMonitors_03_45 Office_ComputerMonitors_03_5_9 at=98,-26.7,-267.4 turn=-22.8 ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_H_FutureTech_Office_ComputerMonitors_03@13" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Table_Lamp_01_12 Table_Lamp_01_2_5 at=104.4,-26.7,-267.1 turn=141.7 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_H_FutureTech_Table_Lamp_01@3" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+Government_Office_StorageBasket_01_9 Government_Office_StorageBasket_01_9_5 at=102,-26.7,-267.7 rot=(0.015,1,-0.012,92.6) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_M_Government_Office_StorageBasket_01@4" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+wedge Branding_LocationSign_02L_3 size=0.2,2,34.8 at=100.4,-19.7,-269 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_Branding_LocationSign_02L" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+group Branding_LocationSign_02H_6 at=100.6,-14.7,-281.8 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_Branding_LocationSign_02H@5" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box wall size=2.1,7.1,0.7 at=0,0,-3.2 turn=-90
+  box wall_2 size=2.1,7.1,0.7 at=0,0,3.3 turn=-90
+  box wall_3 size=4.3,1.4,0.7 at=0,2.9,0.1 turn=-90
+}
+pipe Branding_LocationSign_02B_4 path=[(100.5,-14.7,-273.5); (100.5,-11,-273.5); (100.4,-7.5,-274.4)] r=0.6 smooth=true ~fit=0 ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_Branding_LocationSign_02B" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+group Furniture_Dome_01_3 at=120.5,0.9,-270.7 ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_52_-36/SM_H_FutureTech_Furniture_Dome_01@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  hull volume points=[(-14.1,14.5,-2.1); (14.1,5.5,1.4); (8.9,0,-4.9); (0,24.1,-0.1); (-3.5,5.5,-14.2); (0,14.5,14.2); (-7.2,0,6.7); (3.7,14.5,-14.1); (7.1,5.5,12.6); (11.8,14.5,8); (13.3,14.5,-5.2); (-11.9,5.5,-8.4); (-11.4,14.5,7.9); (-9.1,14.5,-11); (-5.7,0,-8.7); (9.6,5.5,-11.1); (-6.3,5.5,12.8); (-13.8,5.5,1.8); (-1.5,21.9,-7.9); (3.4,21.9,7); (9,0,4.5); (-7.6,21.9,1.8); (5.4,21.9,-5.9); (1.4,0,10)] at=-0.4,7.4,0
+  hull hull_2 points=[(-0.3,6.8,-0.3); (0.3,6.8,-0.3); (0.3,0,-0.3); (0.3,6.8,0.3)] at=15,0,-15
+  hull hull_3 points=[(-0.3,6.7,0.3); (0.3,6.7,0.3); (-0.3,0,0.3); (0.3,6.7,-0.3)] at=15,0,15
+  hull hull_4 points=[(-0.3,6.7,0.3); (0.3,6.7,0.3); (-0.3,0,0.3); (-0.3,6.7,-0.3)] at=-15,0,15
+  hull hull_5 points=[(-0.3,6.8,-0.3); (0.3,6.8,-0.3); (0.3,0,-0.3); (-0.3,0,0.3)] at=-15,0,-15
+  hull hull_6 points=[(-15.6,1.4,15.6); (15.6,1.4,15.6); (-15.6,0,-15.6); (-15.6,1.4,-15.6); (15.6,1.4,-15.6); (-15.6,0,15.6); (15.6,0,-15.6); (15.6,0,15.6)] at=0,6,0
+}
+Industrial_Lighting_WallLamp_02B_30 Industrial_Lighting_WallLamp_02B_6_10 at=104.2,14.8,-295.7 turn=180 ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_H_Industrial_Lighting_WallLamp_02B@6" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Lighting_WallLamp_02B_30 Industrial_Lighting_WallLamp_02B_18_6 at=146,14.8,-295.7 turn=180 ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_105_-72/SM_H_Industrial_Lighting_WallLamp_02B@4" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"

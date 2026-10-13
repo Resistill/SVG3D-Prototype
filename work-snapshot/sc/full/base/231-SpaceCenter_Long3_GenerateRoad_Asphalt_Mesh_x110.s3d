@@ -1,0 +1,62 @@
+// 分区 231/233：8 个物体（1 组），x 1319…1460，z 817…875
+
+group SpaceCenter_Long3_GenerateRoad_Asphalt_Mesh_x110_y67_17447_HD at=1358.3,-130,816.7 ~fit=0.7 ~src="BigMeshGroup/BigMeshGroup_55_-34/SpaceCenter_Long3_GenerateRoad_Asphalt_Mesh_x110_y67_17447_HD" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseComplexAsSimple" {
+  plate floor points=[(17.9,-1.4); (1.2,-66.1); (9.4,22.6); (7.5,43.7); (1.6,64.2); (7,43.6); (8.8,22.6); (0.9,-67.1); (-2.8,-81.4); (-21.2,-82.5); (-20.5,-49.4); (-13.3,27.1); (-17.7,50.8); (-29.7,80.1); (-24.9,82.5); (-16.9,64.6); (1.4,64.1); (5.6,50.5); (27.2,56.4); (29.7,44.4); (25.9,29.5); (21.6,54.9); (25.7,28.6)] h=0.4 at=9.2,13.7,21.1 turn=-104.61 tilt=7.1
+  plate floor_2 points=[(-25,34.6); (-16.2,-6.9); (-10.9,-6.4); (-9.5,-25.9); (7.5,-32.7); (6.8,-46.9); (29,-48.9); (29.5,-17.4); (26.5,9.8); (-29.5,48.9)] h=0.4 at=-75.2,3.3,-18.4 turn=-124.9 tilt=3.91
+  plate floor_3 points=[(-3.8,19); (9.1,20.9); (2.3,-20.9); (-4.1,-5.5); (-9.1,18.1)] h=0.4 at=110,25.5,33.1 turn=-99.37 tilt=4.01
+  plate floor_4 points=[(-1.1,-43); (6.2,6.9); (6.8,27.3); (3.1,47.8); (-7.7,78.6); (3.8,48); (7.7,22.7); (-4.2,-78.6)] h=0.4 at=8.7,13.2,5.9 turn=-106.34 tilt=6.93
+  plate floor_5 points=[(-3.6,21.8); (-6.4,30.8); (2.6,-0.2); (6.4,-30.8)] h=0.4 at=-73.9,4.6,9.3 turn=-116.95 tilt=4.03
+  plate floor_6 points=[(2,7.1); (1.9,25.9); (-2,-25.9)] h=0.4 at=-81.3,1.9,-42.8 turn=-142.76 tilt=3.53
+  plate floor_7 points=[(0.5,13.4); (0.6,-30.9); (1.6,4.6); (-1.6,30.9)] h=0.4 at=-76,3.5,-13.9 turn=-130.52 tilt=3.94
+  plate floor_8 points=[(-5.6,19.4); (-4.2,11.8); (-2.9,6.1); (-1.5,0.4); (0.2,-5.3); (2,-10.9); (4.1,-16.4); (5.4,-19.5); (5.6,-18.1); (4.8,-16.2); (2.7,-10.7); (0.9,-5.1); (-0.8,0.6); (-2.2,6.3); (-3.5,12); (-4.8,19.5)] h=0.4 at=103.3,25,31.3 turn=-96.11 tilt=4.19
+}
+group SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Macadam_Decal_Mesh_x110_y67_17447_HD at=1318.9,-127.8,820 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_55_-34/SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Macadam_Decal_Mesh_x110_y67_17447_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  box prop size=0.9,0,0.3 at=58.4,13.4,35.4 rot=(-0.169,0.012,0.986,8.2)
+  box box_2 size=9,0,3.7 at=-48.3,0.3,-29.5 rot=(-0.037,-0.997,0.074,43.3)
+  box box_3 size=13.6,0,11.1 at=-53.3,0.5,-17.6 rot=(0.002,-0.999,0.042,90)
+  box box_4 size=11.2,0,8.5 at=-47.9,0.9,-15.6 rot=(-0.621,0.015,0.783,3.6)
+  box box_5 size=11.4,0,9.5 at=-35.7,0.8,-30.8 rot=(-0.738,0.017,0.675,3.8)
+  box box_6 size=13.4,0,9.8 at=-46.9,1.3,-7.6 rot=(-0.63,0.015,0.776,3.6)
+  box box_7 size=11.4,0,3.3 at=-41.9,1.4,-10.1 rot=(-0.029,-0.995,0.092,40)
+  box box_8 size=12.3,0,9.6 at=-24.9,1.9,-19 rot=(-0.665,0.019,0.747,4.4)
+  wedge beam size=14.8,1.2,3.5 at=-20.1,1.9,-13.5 turn=-37.5
+  cyl cyl r=6 h=0 at=-19,2.5,-13.9 rot=(-0.622,0,0.783,4.7)
+  cyl cyl_2 r=5.3 h=0 at=-7.7,4.8,19.5 rot=(-0.308,0,0.951,4.9)
+  box box_9 size=9.3,0,4.2 at=45,11,15.8 rot=(-0.188,0.014,0.982,8.5)
+}
+group SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Decal_Mesh_x110_y67_17447_HD at=1372.4,-126.6,831.8 ~fit=0.6 ~src="BigMeshGroup/BigMeshGroup_55_-34/SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Decal_Mesh_x110_y67_17447_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  hull slab points=[(-12.2,0,1.4); (12.2,1.7,4.6); (-10,0.1,-4.6); (6.3,1.4,4.6)] at=90.4,21.1,19.1
+  hull hull_2 points=[(-40.9,0,-19.2); (40.9,8.6,19.4); (-36.8,0,-23.7); (32.2,7.6,23.7); (2.2,3.9,12.5); (8.6,4.4,8.9)] at=-61.6,0,0
+  hull hull_3 points=[(-3.6,0,12.8); (3.6,0.6,-12.3); (-2.3,0,3.8); (0.1,0.1,-12.8)] at=20.4,13.9,10.9
+}
+group SpaceCenter_Long3_GenerateRoad_JTDecal_Asphalt_BM_Line_Mesh_x110_y67_17447_HD at=1387.7,-123.1,839.3 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_55_-34/SpaceCenter_Long3_GenerateRoad_JTDecal_Asphalt_BM_Line_Mesh_x110_y67_17447_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  plate floor points=[(-1.9,-5.8); (-0.8,6.1); (1.9,5.8); (0.8,-6.1)] h=0.4 at=-58.6,1.2,-12.4 turn=-117.52 tilt=7.14
+  plate floor_2 points=[(-0.9,-6); (1.9,-5.8); (0.9,6); (-1.9,5.8)] h=0.4 at=-69.8,0.6,1 turn=-109.82 tilt=5.76
+  plate floor_3 points=[(0.7,1.7); (0,-1.7); (-0.7,1.4)] h=0.4 at=74.3,18.3,15.8 turn=-101.55 tilt=3.72
+}
+group SpaceCenter_Long3_GenerateRoad_Asphalt_Mesh_x110_y66_17446_HD at=1413.1,-122.1,874.6 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_55_-34/SpaceCenter_Long3_GenerateRoad_Asphalt_Mesh_x110_y66_17446_HD" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseComplexAsSimple" {
+  group group1 at=10.1,-0.3,-8 ~role="terrain" {
+    plate floor points=[(-9.4,-33.2); (4.4,59.2); (6.5,59.7); (10.2,29.3); (9.6,-32.7); (11.8,-59.7); (5.7,-54.2); (5,-47.7); (-11.8,-49.4)] h=0.4 at=-31.3,8.3,-14.7 turn=-98.57 tilt=7.63
+    plate floor_2 points=[(13.8,19.5); (-3.1,21.4); (-19.1,-20.6); (13.2,-16.8); (13.8,-21.4); (19.1,-20.5); (17.9,6.3); (13,13)] h=0.4 at=37.7,16.7,-8.6 turn=-110.89 tilt=4.72
+    plate floor_3 points=[(-1.3,-5.9); (24.8,-17.5); (20.2,0); (18.1,13.5); (12.8,12.8); (12.4,17.5); (-20,15.4); (-24.8,4.5)] h=0.4 at=69.7,18.8,5.4 turn=-113.89 tilt=1.94
+    plate floor_4 points=[(-1,-2.8); (1,-2.1); (-0.9,2.8)] h=0.4 at=-92.8,0.3,-18.2 turn=-90.79 tilt=6.28
+  }
+  hull hull1 points=[(-40.9,0,-6.9); (40.9,11.3,6.2); (40.8,11.3,6.9); (-38.8,0.2,-6.9)] at=-30.6,1.7,-20.2 ~role="terrain"
+  box box1 size=63.7,0.1,4 at=57.4,17.1,-15.9 rot=(0.411,-0.88,0.237,26.8) ~role="terrain"
+  box box2 size=9.6,0,5.6 at=80.8,18.6,-24.3 rot=(-0.08,0.002,0.997,2.3) ~role="terrain"
+}
+group SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Decal_Mesh_x110_y66_17446_HD at=1415.6,-119.1,863.1 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_55_-34/SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Decal_Mesh_x110_y66_17446_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  box box size=29.3,0.3,15.6 at=58.2,15,0.3 rot=(-0.261,0.006,0.965,2.6)
+  box box_2 size=7.9,0,1.7 at=-69,0.5,-6.7 rot=(-0.199,0.013,0.98,7.4)
+  box box_3 size=12.5,0,3.7 at=-25.6,6.6,-1.6 rot=(-0.085,0.994,0.07,81.5)
+}
+group SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Macadam_Decal_Mesh_x110_y66_17446_HD at=1421.7,-114.6,866.2 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_55_-34/SpaceCenter_Long3_GenerateRoad_Asphalt_PCGMesh_Macadam_Decal_Mesh_x110_y66_17446_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  box box size=11.7,0,6.3 at=-40,0.9,-7.6 rot=(-0.171,0.012,0.985,8.2)
+  box box_2 size=12.2,0,4.6 at=-24.5,3.1,-8.3 rot=(-0.172,0.012,0.985,8.1)
+  box box_3 size=11.3,0,8.8 at=28.6,9.2,-2.5 rot=(-0.382,0.015,0.924,5)
+  box box_4 size=13.2,0,6.7 at=39.2,10.3,7.4 rot=(-0.523,0.015,0.852,3.9)
+}
+group SpaceCenter_Long3_GenerateRoad_JTDecal_Asphalt_BM_Line_Mesh_x110_y66_17446_HD at=1459.9,-105.3,865.3 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_55_-34/SpaceCenter_Long3_GenerateRoad_JTDecal_Asphalt_BM_Line_Mesh_x110_y66_17446_HD" ~role="decal" ~shape="bounds" ~collidable=0 ~collision_profile="NoCollision" ~trace_flag="CTF_UseDefault" {
+  plate floor points=[(1.8,5.8); (1,-6); (-1.8,-5.8); (-1,6)] h=0.4 at=-5.8,0.5,6.2 turn=-117.83 tilt=4.54
+  plate floor_2 points=[(2.2,-5.5); (-0.5,-6.1); (-2.2,2.4); (-1.4,5.8); (-0.2,6.1)] h=0.4 at=5.6,0.9,-6.9 turn=-103.83 tilt=3.72
+}

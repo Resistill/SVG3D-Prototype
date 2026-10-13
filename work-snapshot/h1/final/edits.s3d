@@ -1,0 +1,11 @@
+// 修改层：over / drop / copy / 新物体 / def 扩展。重跑逆向后这里的路径仍然有效（稳定命名）
+import "edits/refine-HBoss_01_InterWall_03.s3d"
+import "edits/refine-HLight_01_ExterWall_Damage_01.s3d"
+import "edits/refine-HLight_01_ExterWall_Damage_02.s3d"
+import "edits/refine-HLight_01_ExterWall_01.s3d"
+import "edits/refine-HOrange_01_ExterWall_01.s3d"
+import "edits/refine-HLight_01_ExterWall_02.s3d"
+import "edits/refine-HLight_01_InterWall_04.s3d"
+import "edits/refine-HBlack_01_InterWall_04.s3d"
+import "edits/refine-HTerrace_01.s3d"
+import "edits/refine-HBlue_01_InterWall_03.s3d"

@@ -1,0 +1,646 @@
+// 材质与类型（def）
+
+material whitebox color=#e1e1e5 metal=0 rough=1 default=true
+// 类型：源模型里同一个网格被多处使用（引擎的享元）
+def Industrial_Container_SupplyBox_01 {
+  box body size=11,7,8  // 39 个实例
+}
+def Industrial_Container_02 {
+  box body size=22,9,9 turn=-90  // 6 个实例
+}
+def WalkwaySystem_Terrace_192_01 {
+  box body size=7,3,0 turn=-90  // 6 个实例
+}
+def HBlack_01_InterWall_01 {
+  box body size=107,42,65  // 2 个实例
+}
+def HLight_01_ExterWall_04 {
+  box body size=111,34,96 turn=-90  // 2 个实例
+}
+def Customiz_ExperimentalDoor_01_1024_Frame {
+  box body size=37,18,2  // 8 个实例
+}
+def Customiz_ExperimentalDoor_01_L {
+  box body size=18,18,1  // 16 个实例
+}
+def HOrange_01_ExterWall_01 {
+  box body size=246,129,213 turn=-90  // 2 个实例
+}
+def HStairs_05 {
+  box body size=124,29,121  // 2 个实例
+}
+def Furniture_Ladder_01_B {
+  box body size=3,8,2 at=0,0,0 rot=(-0.08,-0.997,-0.01,89)  // 4 个实例
+}
+def Government_Office_Cable_01 {
+  box body size=7,5,2  // 4 个实例
+}
+def WalkwaySystem_Terrace_128_01 {
+  box body size=10,3,0 at=0,3,-1 rot=(0.278,0.919,0.278,95)  // 5 个实例
+}
+def WalkwaySystem_Terrace_256_01 {
+  box body size=9,3,0 turn=-90  // 7 个实例
+}
+def WalkwaySystem_Terrace_256_01_v2 {
+  box body size=8,3,0 turn=-90  // 4 个实例
+}
+def HTerrace_01 {
+  box body size=184,16,139  // 2 个实例
+}
+def WalkwaySystem_Terrace_256_01_v3 {
+  box body size=9,3,0 turn=-90  // 6 个实例
+}
+def Industrial_Container_02_v2 {
+  box body size=22,9,9 turn=-90  // 4 个实例
+}
+def WalkwaySystem_Terrace_256_01_v4 {
+  box body size=9,3,0 turn=-90  // 5 个实例
+}
+def WalkwaySystem_Terrace_256_01_v5 {
+  box body size=10,3,0 turn=-90  // 2 个实例
+}
+def HStairs_04_InterWall_01 {
+  box body size=165,16,37 turn=-89  // 2 个实例
+}
+def HStairs_04_ExterWall_01 {
+  box body size=167,18,38 turn=-90  // 2 个实例
+}
+def HStairs_03_ExterWall_01B {
+  box body size=14,48,0 at=0,0,7 rot=(-1,0,0,17)  // 2 个实例
+}
+def HStairs_03_ExterWall_01 {
+  box body size=58,83,16 turn=-90  // 2 个实例
+}
+def HStairs_03_ExterWall_01C {
+  box body size=14,67,1  // 2 个实例
+}
+def HBoss_01_InterWall_01D {
+  box body size=12,19,0  // 5 个实例
+}
+def RoadFacility_Ground_01B {
+  box body size=134,1,101 turn=-90  // 2 个实例
+}
+def Industrial_Container_SupplyBox_02B {
+  box body size=5,5,4 turn=-1  // 22 个实例
+}
+def Medium_Door_02 {
+  box body size=5,9,1  // 2 个实例
+}
+def HStairs_01C {
+  box body size=57,20,0 turn=-90  // 2 个实例
+}
+def Update_Container_PlasticBox_02 {
+  box body size=4,3,3 turn=-90  // 8 个实例
+}
+def Industrial_Container_SupplyBox_02 {
+  box body size=5,5,4  // 35 个实例
+}
+def Decal_WellLid_11 {
+  box body size=5,3,0  // 2 个实例
+}
+def Resort_ReminderBoard_01 {
+  box body size=2,3,1 at=0,0,0 rot=(0.162,-0.973,-0.162,91)  // 14 个实例
+}
+def Tools_Box_03 {
+  box body size=2,2,2  // 22 个实例
+}
+def Industrial_Lighting_WallLamp_02B {
+  box body size=4,1,1  // 31 个实例
+}
+def Generic_Lighting_WallLamp_05 {
+  box body size=1,0,0  // 17 个实例
+}
+def Generic_Lighting_WallLamp_05_v2 {
+  box body size=3,1,1  // 2 个实例
+}
+def Generic_Lighting_Chandelier_01 {
+  box body size=7,0,1  // 3 个实例
+}
+def Generic_Lighting_Spotlight_04 {
+  box body size=2,1,1 at=0,0,0 rot=(1,-0.003,0.018,20)  // 4 个实例
+}
+def Vehicle_GroundVehicle_02 {
+  box body size=5,8,3 turn=-90  // 4 个实例
+}
+def Branding_LocationSign_02_B {
+  box body size=12,4,0  // 3 个实例
+}
+def Transport_Utility_Guardrail_03 {
+  box body size=9,5,1 turn=-90  // 2 个实例
+}
+def Vehicle_GroundVehicle_01 {
+  box body size=7,4,7 turn=-90  // 4 个实例
+}
+def WalkwaySystem_Terrace_256_01_v6 {
+  box body size=9,3,0 turn=-90  // 7 个实例
+}
+def Tools_Box_01 {
+  box body size=6,4,4  // 14 个实例
+}
+def Government_Office_CoffeeMachine_01 {
+  box body size=6,9,4  // 8 个实例
+}
+def IndustrialRailingPlate_01B {
+  box body size=7,4,1 at=0,0,0  // 2 个实例
+}
+def Furniture_Utility_Dustbin_01_B {
+  box body size=5,4,1 at=0,0,0 rot=(1,0,0.001,0)  // 4 个实例
+}
+def Commercial_Lighting_EXIT_01 {
+  box body size=1,0,0  // 8 个实例
+}
+def Generic_Lighting_WallLamp_05_v3 {
+  box body size=1,0,0  // 6 个实例
+}
+def Generic_Lighting_WallLamp_07 {
+  box body size=1,0,0  // 4 个实例
+}
+def Decal_WellLid_11_v2 {
+  box body size=5,5,0  // 2 个实例
+}
+def Resort_MopBucket_01 {
+  box body size=2,4,2 at=0,1,1 rot=(-0.236,0.929,-0.285,91)  // 2 个实例
+}
+def Industrial_Lighting_Spotlight_01E {
+  box body size=4,1,1  // 14 个实例
+}
+def Government_Office_ServerParts_07 {
+  box body size=2,1,1  // 6 个实例
+}
+def Lighting_DecorativeLamp_02_C {
+  box body size=5,1,0  // 5 个实例
+}
+def Lighting_DecorativeLamp_02_C_v2 {
+  box body size=10,1,0  // 4 个实例
+}
+def Lighting_OverheadLight_01 {
+  box body size=1,0,1  // 33 个实例
+}
+def Generic_Lighting_TableLamp_04 {
+  cone body r=0 r2=0 h=2  // 2 个实例
+}
+def Emissive_Cylinder_01 {
+  cyl body r=0 h=5 axis=x at=0,0,0  // 5 个实例
+}
+def Lighting_DecorativeLamp_02_E {
+  box body size=10,1,0  // 4 个实例
+}
+def Furniture_Folder_01_B {
+  box body size=1,1,0 turn=-90  // 19 个实例
+}
+def Electron_Computer_01 {
+  box body size=2,1,1  // 24 个实例
+}
+def Government_Office_ServerParts_02 {
+  box body size=2,0,2 turn=-90  // 7 个实例
+}
+def Government_Office_StorageBasket_01 {
+  box body size=2,1,1 turn=-90  // 5 个实例
+}
+def Furniture_Folder_01_D {
+  box body size=1,1,0 turn=-90  // 13 个实例
+}
+def Government_Office_ServerParts_03 {
+  box body size=2,1,1  // 2 个实例
+}
+def Furniture_Folder_01_A {
+  box body size=1,1,0 turn=-90  // 21 个实例
+}
+def Industrial_Container_PackingBox_01 {
+  box body size=2,1,1 turn=-90  // 35 个实例
+}
+def Government_Office_ServerParts_06 {
+  box body size=2,0,2 turn=-90  // 2 个实例
+}
+def Industrial_Container_PackingBox_01B {
+  box body size=5,3,4 turn=-90  // 3 个实例
+}
+def Industrial_Container_PackingBox_01C {
+  box body size=10,7,8 turn=-90  // 4 个实例
+}
+def Update_Container_PlasticBox_02_v2 {
+  box body size=5,3,3 turn=-90  // 35 个实例
+}
+def Government_Office_Table_03 {
+  box body size=6,2,4  // 3 个实例
+}
+def Government_Office_ServerComponents_10 {
+  box body size=4,5,3  // 2 个实例
+}
+def Government_Office_FlowerPot_01 {
+  box body size=1,3,1  // 5 个实例
+}
+def Electron_Computer_01_03 {
+  box body size=2,1,1 at=0,0,0 rot=(-1,0,0,30)  // 5 个实例
+}
+def Office_ComputerMonitors_03 {
+  box body size=3,2,1  // 28 个实例
+}
+def Government_Office_Safe_02A {
+  box body size=2,2,2  // 12 个实例
+}
+def Government_Office_Safe_01A {
+  wedge body size=1,1,2 turn=90  // 36 个实例
+}
+def Government_Office_Safe_01B {
+  box body size=2,1,0 turn=-90  // 28 个实例
+}
+def Government_Office_Safe_02B {
+  box body size=2,2,0 turn=-90  // 5 个实例
+}
+def Commercial_Furniture_SafeBox_06 {
+  box body size=2,1,1 turn=-1  // 2 个实例
+}
+def Furniture_Folder_01_C {
+  box body size=1,1,0 turn=-90  // 16 个实例
+}
+def Furniture_Folder_02 {
+  box body size=1,1,1 turn=-90  // 7 个实例
+}
+def Office_SpaceSuit_03 {
+  cone body r=2 r2=1 h=6 at=0,0,0 rot=(0.969,0.003,-0.248,1)  // 2 个实例
+}
+def Industrial_Electrical_Lift_01 {
+  box body size=13,10,5  // 2 个实例
+}
+def Lighting_DecorativeLamp_02_E_v2 {
+  box body size=7,3,0  // 3 个实例
+}
+def Lighting_DecorativeLamp_02_C_v3 {
+  box body size=8,1,0  // 2 个实例
+}
+def Lighting_OverheadLight_01_v2 {
+  box body size=0,0,0  // 4 个实例
+}
+def Lighting_OverheadLight_01_v3 {
+  box body size=1,0,1  // 17 个实例
+}
+def Lighting_DecorativeLamp_02_C_v4 {
+  box body size=15,0,0  // 3 个实例
+}
+def Lighting_OverheadLight_01_v4 {
+  box body size=0,0,0  // 5 个实例
+}
+def Furniture_PaperCups_01_C {
+  cyl body r=0 h=1  // 4 个实例
+}
+def Furniture_Flowerpot_01 {
+  box body size=2,3,2  // 9 个实例
+}
+def Furniture_Chair_08 {
+  box body size=2,4,2  // 30 个实例
+}
+def Furniture_Utility_Dustbin_01_A {
+  box body size=2,4,1  // 6 个实例
+}
+def Government_Office_BoxLid_01 {
+  box body size=3,0,2 turn=-90  // 16 个实例
+}
+def Government_Office_Box_01 {
+  box body size=2,2,2 turn=-90  // 37 个实例
+}
+def Furniture_Dispenser_01 {
+  box body size=2,7,2 turn=-90  // 5 个实例
+}
+def Furniture_Chair_05 {
+  cone body r=1 r2=1 h=5 at=0,0,0 rot=(-0.786,0,0.618,12)  // 10 个实例
+}
+def Residential_Bedroom_Cushion_01_04 {
+  box body size=2,1,2 turn=1  // 2 个实例
+}
+def Furniture_Flowerpot_01_v2 {
+  box body size=1,3,1  // 18 个实例
+}
+def HOrange_01_InterWall_07F {
+  box body size=7,13,0 turn=-90  // 2 个实例
+}
+def Furniture_Cabinet_16 {
+  box body size=10,4,3  // 19 个实例
+}
+def Government_Office_Sofa_02 {
+  box body size=5,4,4  // 3 个实例
+}
+def Small_Door_11 {
+  box body size=5,9,1  // 4 个实例
+}
+def Generic_Lighting_WallLamp_05_v4 {
+  box body size=1,0,0 at=0,0,0 rot=(-1,0,0,45)  // 18 个实例
+}
+def Generic_Lighting_WallLamp_05_v5 {
+  box body size=1,0,0  // 39 个实例
+}
+def Generic_Lighting_WallLamp_02 {
+  wedge body size=0,1,1 at=0,0,0 rot=(0.022,1,-0.001,90)  // 9 个实例
+}
+def Transport_Airplane_Lighting_04 {
+  box body size=2,0,1  // 6 个实例
+}
+def Generic_Lighting_Spotlight_02 {
+  box body size=1,1,0 at=0,0,0 rot=(0.018,-0.005,-1,30)  // 7 个实例
+}
+def Industrial_Tools_Cloth_02 {
+  box body size=2,4,1 at=0,0,0 rot=(0.042,-0.999,-0.012,27)  // 2 个实例
+}
+def Electron_Computer_02_01 {
+  box body size=2,2,1 turn=-90  // 19 个实例
+}
+def Government_Office_OfficeTable_08 {
+  box body size=1,2,1 turn=-90  // 7 个实例
+}
+def Machinery_Medical_01 {
+  box body size=2,5,2 turn=-90  // 3 个实例
+}
+def IceLand_Props_IndustrialExtinguisher_01a {
+  box body size=3,4,1 turn=-90  // 6 个实例
+}
+def Government_Office_ServerParts_07_v2 {
+  box body size=2,1,2  // 3 个实例
+}
+def HOrange_01_InterWall_10C {
+  box body size=4,11,0  // 4 个实例
+}
+def Government_Utility_FireBox_03 {
+  box body size=3,3,1  // 9 个实例
+}
+def Road_FlowerBed_04_01 {
+  box body size=13,2,2 turn=-90  // 3 个实例
+}
+def Machinery_RFID_01_B {
+  box body size=5,5,1 turn=-90  // 2 个实例
+}
+def Machinery_RFID_01_A {
+  box body size=5,5,1 turn=-90  // 2 个实例
+}
+def Furniture_Speakers_01_B {
+  box body size=4,2,2  // 2 个实例
+}
+def Industrial_Prop_Light_02 {
+  box body size=1,0,0 at=0,0,0 rot=(1,0,0,12)  // 4 个实例
+}
+def IceLand_Lighting_StreetLamp_07b {
+  box body size=2,2,1 at=0,0,0 rot=(1,-0.009,-0.003,35)  // 7 个实例
+}
+def Lighting_DecorativeLamp_02_E_v3 {
+  box body size=9,5,0  // 2 个实例
+}
+def Lighting_DecorativeLamp_02_E_v4 {
+  box body size=8,5,0  // 2 个实例
+}
+def Lighting_DecorativeLamp_02_E_v5 {
+  box body size=8,5,0  // 3 个实例
+}
+def Lighting_DecorativeLamp_02_C_v5 {
+  box body size=29,1,0  // 4 个实例
+}
+def Lighting_DecorativeLamp_02_C_v6 {
+  box body size=2,0,0  // 11 个实例
+}
+def Lighting_OverheadLight_01_v5 {
+  box body size=0,0,0  // 2 个实例
+}
+def Lighting_OverheadLight_01_v6 {
+  box body size=0,0,0  // 6 个实例
+}
+def Lighting_OverheadLight_01_v7 {
+  box body size=1,0,1  // 3 个实例
+}
+def Lighting_DecorativeLamp_02_E_v6 {
+  box body size=10,5,0  // 2 个实例
+}
+def Industrial_Lighting_Leuchtstabe_01 {
+  cone body r=0 r2=0 h=2 axis=x turn=-90  // 11 个实例
+}
+def Lighting_DecorativeLamp_02_C_v7 {
+  box body size=5,1,0  // 2 个实例
+}
+def Lighting_DecorativeLamp_02_C_v8 {
+  box body size=9,1,0  // 8 个实例
+}
+def Lighting_DecorativeLamp_02_E_v7 {
+  box body size=9,5,1  // 2 个实例
+}
+def Lighting_DecorativeLamp_02_E_v8 {
+  box body size=10,5,0  // 3 个实例
+}
+def Lighting_DecorativeLamp_02_E_v9 {
+  box body size=9,5,1  // 2 个实例
+}
+def Tools_MetalShelf_04 {
+  box body size=14,12,6  // 4 个实例
+}
+def Tools_MetalShelf_02 {
+  box body size=14,12,5  // 3 个实例
+}
+def Branding_LocationSign_02J {
+  wedge body size=0,1,9 turn=-90  // 2 个实例
+}
+def HOrange_01_InterDoor_01 {
+  box body size=9,18,1  // 8 个实例
+}
+def Furniture_ConferenceBoard_01b {
+  box body size=7,4,0  // 2 个实例
+}
+def Government_Office_Carts_01 {
+  box body size=4,5,3  // 3 个实例
+}
+def Furniture_Display_01 {
+  box body size=13,6,2 at=0,0,-1 rot=(1,0,0,15)  // 7 个实例
+}
+def Furniture_Display_01_v2 {
+  box body size=12,7,2 at=0,0,-1 rot=(1,0,0,15)  // 3 个实例
+}
+def Furniture_Display_01_v3 {
+  box body size=15,7,2 at=0,0,-1 rot=(1,0,0,15)  // 3 个实例
+}
+def Update_Container_PlasticBox_02_v3 {
+  box body size=5,3,3 turn=-90  // 2 个实例
+}
+def Government_Hospital_MedicalScreen_02 {
+  box body size=5,12,1 at=0,0,0 rot=(0.629,0.748,0.213,1)  // 10 个实例
+}
+def Furniture_Cabinet_06 {
+  box body size=8,9,2  // 2 个实例
+}
+def Machinery_Cabinet_03 {
+  box body size=3,10,2 at=0,0,0 turn=-90  // 49 个实例
+}
+def Machinery_Cabinet_03_v2 {
+  box body size=3,10,2 turn=-90  // 2 个实例
+}
+def Furniture_ToolTable_01 {
+  box body size=4,4,3  // 4 个实例
+}
+def Office_Instrument_02C {
+  cone body r=2 r2=2 h=10 axis=x at=0,0,0 rot=(0.012,-1,0,179)  // 3 个实例
+}
+def HOrange_01_InterWall_01F {
+  wedge body size=0,3,8 at=0,0,0 rot=(0.005,1,-0.005,90)  // 3 个实例
+}
+def HOrange_01_InterWall_07E {
+  box body size=10,13,0 turn=-90  // 3 个实例
+}
+def HOrange_01_InterWall_02C {
+  box body size=13,12,0  // 4 个实例
+}
+def BS_Military_Hospital_Box_01 {
+  box body size=1,1,1  // 3 个实例
+}
+def Branding_Office_doorplate_RoomUnit_27 {
+  box body size=4,0,0  // 2 个实例
+}
+def Branding_Office_doorplate_RoomUnit_05 {
+  box body size=3,0,0  // 2 个实例
+}
+def HOrange_01_InterWall_02E {
+  box body size=4,3,0  // 3 个实例
+}
+def Branding_Office_doorplate_RoomUnit_11 {
+  box body size=11,1,0  // 2 个实例
+}
+def Branding_Office_doorplate_RoomUnit_07 {
+  box body size=4,0,0  // 2 个实例
+}
+def Branding_Office_doorplate_RoomUnit_04 {
+  box body size=2,0,0  // 2 个实例
+}
+def Branding_Office_doorplate_RoomUnit_01 {
+  box body size=3,0,0  // 2 个实例
+}
+def Branding_Office_doorplate_RoomUnit_10 {
+  box body size=2,0,0  // 2 个实例
+}
+def Branding_Office_doorplate_RoomUnit_06 {
+  box body size=2,0,0  // 2 个实例
+}
+def Government_Office_TableMoveable_01 {
+  box body size=4,3,3  // 2 个实例
+}
+def HOrange_01_InterWall_01C {
+  box body size=12,8,0 at=0,1,0 rot=(0,0,-1,5)  // 2 个实例
+}
+def HOrange_01_InterWall_02E_v2 {
+  box body size=4,3,0  // 2 个实例
+}
+def Furniture_Chair_09_02 {
+  wedge body size=2,4,2 turn=90  // 14 个实例
+}
+def Industrial_Tools_Cabinet_01E {
+  box body size=6,4,3  // 3 个实例
+}
+def Government_Office_ServerParts_02_v2 {
+  box body size=2,0,2 at=0,0,0 turn=-90  // 2 个实例
+}
+def BS_Military_Hospital_Box_02 {
+  box body size=2,1,1  // 8 个实例
+}
+def Government_Office_ServerParts_04 {
+  box body size=2,0,1 turn=-90  // 2 个实例
+}
+def Government_Office_ServerParts_04_v2 {
+  box body size=2,0,2 turn=-90  // 5 个实例
+}
+def IceLand_Props_IndustrialExtinguisher_01c {
+  box body size=1,2,1 turn=-68  // 13 个实例
+}
+def Electron_Computer_01_02 {
+  box body size=2,0,1  // 2 个实例
+}
+def Government_Office_Newspaper_06 {
+  box body size=2,1,1 turn=-92  // 3 个实例
+}
+def BS_Military_Shop_ArmorPlate_01 {
+  box body size=1,0,1  // 4 个实例
+}
+def Industrial_Container_PackingBox_01_v2 {
+  box body size=3,1,2 turn=-90  // 3 个实例
+}
+def Machinery_Cabinet_02 {
+  box body size=7,11,6 turn=-90  // 5 个实例
+}
+def Furniture_Cabinet_16_v2 {
+  box body size=10,4,4  // 8 个实例
+}
+def Lighting_DecorativeLamp_02_C_v9 {
+  box body size=8,0,0  // 2 个实例
+}
+def Industrial_Tools_Oxygenbottle_01 {
+  box body size=2,8,1 turn=23  // 2 个实例
+}
+def Small_Door_11_Frame {
+  box body size=7,10,2  // 3 个实例
+}
+def Generic_Lighting_WallLamp_07_v2 {
+  box body size=6,1,1  // 2 个实例
+}
+def Generic_Lighting_WallLamp_05_v6 {
+  box body size=3,1,1  // 3 个实例
+}
+def PipeLine_92x48x256_01 {
+  box body size=18,4,7 turn=-90  // 4 个实例
+}
+def Update_Container_PlasticBox_02_v4 {
+  box body size=3,2,2 turn=-90  // 4 个实例
+}
+def Industrial_Tools_DvingShoes_01 {
+  box body size=4,1,2 turn=-82  // 3 个实例
+}
+def Government_Office_FileCabinet_03 {
+  box body size=20,9,3 at=0,0,0 turn=-90  // 4 个实例
+}
+def Government_Office_FileCabinet_02B {
+  box body size=5,8,0 turn=-90  // 7 个实例
+}
+def Government_Office_FileCabinet_03B {
+  box body size=8,8,0 turn=-90  // 5 个实例
+}
+def Industrial_Tools_OxygenCylinder_01 {
+  box body size=2,3,1 turn=15  // 5 个实例
+}
+def Lighting_DecorativeLamp_02_E_v10 {
+  box body size=16,7,0  // 2 个实例
+}
+def Lighting_DecorativeLamp_02_E_v11 {
+  box body size=6,3,0  // 7 个实例
+}
+def Lighting_DecorativeLamp_02_E_v12 {
+  box body size=10,5,0  // 4 个实例
+}
+def Resort_Flowerpot_05 {
+  box body size=1,2,1  // 3 个实例
+}
+def Branding_Office_doorplate_RoomUnit_03 {
+  box body size=3,0,0  // 3 个实例
+}
+def Industrial_Tools_Lifebuoy_01 {
+  cyl body r=1 h=1 axis=x turn=90  // 3 个实例
+}
+def Government_Office_Cabinet_07 {
+  box body size=9,13,3  // 2 个实例
+}
+def Lighting_OverheadLight_01_v8 {
+  box body size=1,0,1  // 16 个实例
+}
+def IceLand_Nature_Rock_Medium_BeachRock_01e {
+  cone body r=1 r2=1 h=3 axis=x at=0,0,0 rot=(0.118,0.986,0.118,91)  // 2 个实例
+}
+def IceLand_Nature_Rock_Medium_BeachRock_01c {
+  wedge body size=3,2,2 turn=101  // 4 个实例
+}
+def Lighting_DecorativeLamp_02_C_v10 {
+  box body size=22,1,0  // 2 个实例
+}
+def Lighting_OverheadLight_01_v9 {
+  box body size=1,0,1  // 18 个实例
+}
+def WalkwaySystem_PaintingStairs_128_02 {
+  span body from=0,1,4 to=0,5,-3 steps=8 section=6,0  // 7 个实例
+}
+def WalkwaySystem_PaintingStairs_128_02_v2 {
+  span body from=0,1,4 to=0,5,-3 steps=8 section=6,0  // 2 个实例
+}
+def WalkwaySystem_PaintingStairs_128_02_v3 {
+  span body from=0,1,4 to=0,5,-3 steps=8 section=5,0  // 2 个实例
+}
+def WalkwaySystem_PaintingStairs_128_02_v4 {
+  span body from=0,1,4 to=0,5,-3 steps=8 section=6,0  // 3 个实例
+}

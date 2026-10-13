@@ -1,0 +1,118 @@
+// 分区 124/233：9 个物体（1 组），x 208…343，z -743…-682
+
+group RoadFacility_Ground_C_02D at=342.8,-130.1,-740.4 ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_52_-37/SM_I_RoadFacility_Ground_C_02D" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  plate slope points=[(-1.5,5.7); (-11.5,4.5); (-9.2,-1.4); (-2.2,-5.7); (2.8,-2); (6.5,-3.3); (11.5,-0.9); (7.5,3.6)] h=0.4 at=9.2,4.5,-6.4 turn=-51.57 tilt=27.54
+  plate slope_2 points=[(1.9,-3.9); (-6.9,-6.8); (-3.7,6.8); (0.8,6.1); (6.9,-1)] h=0.4 at=2.8,3.6,11.2 turn=173.09 tilt=27.07
+  plate slope_3 points=[(-5,0.6); (-1,7.5); (5,5.5); (4.5,-2.7); (0.9,-6.7); (-3.2,-7.5)] h=0.4 at=-8.3,5.5,-14.8 turn=27.97 tilt=28.78
+  plate slope_4 points=[(-7.5,5.3); (-2,0.4); (-3.4,-5.3); (7.5,-4.9); (1.4,4.6)] h=0.4 at=-15.7,6.4,-10.6 turn=53.32 tilt=38.41
+  plate floor points=[(0.2,2.6); (-8,0); (-3.2,-5); (8,1.8); (4.6,5)] h=0.4 at=2.3,0.8,-1.2 turn=-38.92 tilt=8.91
+  plate slope_5 points=[(-8.9,-0.3); (0.5,-5.3); (8.9,-5); (4.9,-0.5); (6.5,5.3); (3.3,5); (0.6,-0.7)] h=0.4 at=-13.3,6.5,14.3 turn=139.17 tilt=37.01
+  plate slope_6 points=[(2.2,-4); (-4.3,-4.1); (-5.7,0.6); (2.6,4.1); (5.7,0.6)] h=0.4 at=-0.8,7.3,20.2 turn=-175.78 tilt=33.27
+  plate floor_2 points=[(4,-0.5); (-0.1,4.8); (-4.3,0.9); (-4.7,-3.7); (4.7,-4.8)] h=0.4 at=-7.5,4.9,14.4 turn=134.6 tilt=15.55
+  plate slope_7 points=[(2.3,4.1); (-8,4.5); (3.1,-4.5); (8,-1.5); (1.9,1.5)] h=0.4 at=10.4,2.9,2.2 turn=-76.93 tilt=27.03
+  plate slope_8 points=[(-4.8,3.2); (-9,-1.2); (-5.5,-2.7); (-1.3,-0.6); (3.7,-3.2); (9,0.7); (1.3,0.5)] h=0.4 at=-18.6,5.4,2.6 turn=99.93 tilt=55.27
+  plate floor_3 points=[(-4.8,3.6); (1.7,3.8); (4.8,-3.8); (-3.9,-1.7)] h=0.4 at=-12.7,2.6,-3.6 turn=45.05 tilt=11.59
+  plate slope_9 points=[(-2.4,-2.9); (3.9,-4.9); (2.6,3.3); (-2.2,4.9); (-1.1,-0.8); (-3.9,2.6)] h=0.4 at=-6.1,2.8,8.4 turn=173.09 tilt=27.07
+  plate slope_10 points=[(6.4,4.2); (-3.6,1); (-6.4,-4.2); (3.6,-0.7)] h=0.4 at=18.6,7.8,-4.7 turn=-76.93 tilt=27.03
+  plate slope_11 points=[(-0.2,4.5); (-4.6,-0.5); (-0.1,-4.5); (4.6,0.4)] h=0.4 at=0.2,5,-16.5 turn=-19.84 tilt=26.67
+  plate slope_12 points=[(-3.6,4.7); (-4.7,-1.9); (2.1,-4.7); (4.7,-2.1)] h=0.4 at=9.1,6.9,-17.4 turn=-19.84 tilt=26.67
+  plate slope_13 points=[(7.9,-1.9); (7.4,2.9); (-7.9,-2.9)] h=0.4 at=19.5,7.4,3.6 turn=-99.82 tilt=56.11
+  plate slope_14 points=[(1.9,-4.2); (3.1,1.4); (0.4,4.7); (-3.1,-4.7)] h=0.4 at=15.1,5.2,12.7 turn=-122.26 tilt=47.11
+  plate slope_15 points=[(-6.7,1.1); (-1.1,-2.7); (6.7,-3.2); (-1.9,3.2)] h=0.4 at=-16.5,3.3,0.2 turn=88.84 tilt=31.41
+  plate floor_4 points=[(-4.8,2.5); (-0.2,4.6); (4.8,1); (3.6,-4.6)] h=0.4 at=-2.4,1.8,3.9 turn=134.6 tilt=15.55
+  plate floor_5 points=[(-2.4,-0.1); (2.6,2.7); (6.3,1.5); (4.3,-1.5); (-6.3,-2.7)] h=0.4 at=-8.1,1.7,2.3 turn=82.73 tilt=25.4
+  plate floor_6 points=[(3.7,-2.9); (-5.9,1.6); (0.4,2.9); (5.9,-1.6)] h=0.4 at=-11,2.5,3.6 turn=-125.92 tilt=14.25
+  plate slope_16 points=[(-2.6,1.6); (7.5,-1.6); (-7.5,-1.4)] h=0.4 at=-9.4,8.2,19.9 turn=153.32 tilt=54.56
+  plate slope_17 points=[(5.6,2); (3.3,-2); (-5.6,-1.2); (-1.3,2)] h=0.4 at=-4.4,8.4,-20.6 turn=11.93 tilt=53.22
+  plate floor_7 points=[(-5.6,1.9); (2.9,3.2); (5.6,-0.5); (3.5,-3.2); (2.4,0.3)] h=0.4 at=-4.3,1.1,-1.7 turn=134.6 tilt=15.55
+  plate slope_18 points=[(-4.5,-1.9); (4.5,-1.7); (3,1.9)] h=0.4 at=-22,8.6,-2.1 turn=88 tilt=36.57
+  plate slope_19 points=[(-0.6,-3.2); (-3.3,0.6); (0.6,3.2); (3.3,-0.2)] h=0.4 at=-20.9,7.6,5.4 turn=108.39 tilt=30.32
+  plate floor_8 points=[(-2.5,-1.1); (-0.2,4.2); (2.5,-0.7); (-0.8,-4.2)] h=0.4 at=-2,5.1,14.7 turn=-146.48 tilt=11.24
+  plate slope_20 points=[(-0.9,-1.8); (-3,1.6); (-0.8,3); (3,-0.4); (2.6,-3)] h=0.4 at=8.8,2.6,7.6 turn=-129.75 tilt=28.18
+  plate slope_21 points=[(3,0.6); (-3,3.2); (-2.5,-3.2)] h=0.4 at=12.3,5.8,-14.6 turn=-76.93 tilt=27.03
+  plate slope_22 points=[(4.4,0.4); (-0.6,-2); (-4.4,-0.4); (-2.3,2)] h=0.4 at=-1.5,2,-7.8 turn=-3.6 tilt=37.12
+  plate slope_23 points=[(-2.3,3.2); (-1.8,-1.5); (2.3,-3.2); (1.6,1.6)] h=0.4 at=6.3,8.2,20.6 turn=173.09 tilt=27.07
+  plate slope_24 points=[(-2.6,-2.4); (2.7,-1.6); (1,2.4); (-2.7,1.1)] h=0.4 at=18.7,8.2,-13.8 turn=-59.45 tilt=43.05
+  plate slope_25 points=[(2,0.5); (-2.7,-3.6); (-1.7,2); (2.7,3.6)] h=0.4 at=-8,2.1,-7.9 turn=27.97 tilt=28.78
+  plate floor_9 points=[(3.3,-1.6); (-7.2,0.1); (7.2,1.6)] h=0.4 at=19.4,8.8,9 turn=-102.22 tilt=20.82
+  plate slope_26 points=[(-1.7,0.4); (5.4,-1.7); (-4.3,-1.7); (-5.4,1.7)] h=0.4 at=7,8.1,-20.5 turn=-10.72 tilt=48.97
+  plate floor_10 points=[(0.5,-0.8); (-2.2,-3.9); (-1.4,3); (2.2,3.9)] h=0.4 at=-5.7,9.2,-21.3 turn=-102.75 tilt=3.84
+  plate slope_27 points=[(1.4,-2.7); (3,2.7); (-3,1.2)] h=0.4 at=14.2,6.1,-8.8 turn=-76.93 tilt=27.03
+  plate floor_11 points=[(3.2,-3.1); (-2.4,3.1); (-3.2,-1.3)] h=0.4 at=7.9,5.9,-13.2 turn=-67.79 tilt=6.59
+  plate slope_28 points=[(-3.1,-2.6); (-0.5,2.6); (3.1,-1.4)] h=0.4 at=13,6.3,16.4 turn=-145.55 tilt=51.3
+  plate floor_12 points=[(-5.4,-0.3); (2.3,-1); (5.4,1)] h=0.4 at=-17.9,9.3,-14.8 turn=57.41 tilt=7.29
+  plate slope_29 points=[(4.8,-2.5); (1.2,2.5); (-4.8,-0.6)] h=0.4 at=-20.4,7.5,-5.5 turn=84.38 tilt=58.51
+  plate floor_13 points=[(2.4,3.9); (-2.4,-3.9); (1.7,-2.8)] h=0.4 at=4.8,6,16.1 turn=-146.48 tilt=11.24
+  plate slope_30 points=[(3.2,2.6); (-3.2,0.6); (-1,-2.6)] h=0.4 at=4.2,6.3,-18.4 turn=-51.57 tilt=27.54
+  plate floor_14 points=[(-0.7,-4.6); (1.5,0.8); (-1.5,4.6)] h=0.4 at=-1.5,2.4,7.7 turn=134.6 tilt=15.55
+  plate slope_31 points=[(2,-3.2); (-3.3,3.2); (3.3,1.2)] h=0.4 at=-9.9,3.6,8.7 turn=-152.17 tilt=33.69
+  plate slope_32 points=[(2.6,2.5); (-2.6,0); (1.3,-2.5)] h=0.4 at=17.1,5.9,5 turn=-76.93 tilt=27.03
+  plate slope_33 points=[(-2.3,1.1); (5.3,-1.1); (-5.3,-1.1)] h=0.4 at=9.4,8.2,20.7 turn=-145.55 tilt=51.3
+  plate floor_15 points=[(4,-1.5); (-1.4,1.5); (-4,-1.3)] h=0.4 at=-3.2,0.2,-0.4 turn=-38.92 tilt=8.91
+  plate floor_16 points=[(-2.9,1.8); (2.1,-2); (2.9,2)] h=0.4 at=14.5,6.9,-13.5 turn=7.38 tilt=15.98
+  plate floor_17 points=[(3.7,3.8); (-3.7,-3.8); (0.2,-2.8)] h=0.4 at=20.4,8.6,-6.6 turn=-49.2 tilt=10.06
+  plate floor_18 points=[(2.8,-2); (1.9,2); (-2.8,-1.5)] h=0.4 at=14.8,6,-6.1 turn=-115.83 tilt=22.42
+  plate floor_19 points=[(-2.5,2.7); (2.5,-0.8); (-0.9,-2.7)] h=0.4 at=15.4,6.6,-10.1 turn=-67.79 tilt=6.59
+  plate floor_20 points=[(-4.9,2); (4.9,-2); (-0.8,-1.7)] h=0.4 at=16.7,6,-2.9 turn=65.21 tilt=21.11
+  plate slope_34 points=[(1,1.7); (1.9,-1.7); (-1.8,-1.1); (-1.9,1.6)] h=0.4 at=16.6,8.6,-17.3 turn=-42.36 tilt=40.05
+  plate slope_35 points=[(0.6,3.1); (1.8,-3.1); (-1.8,-0.8)] h=0.4 at=-12.4,5,11.7 turn=-171.98 tilt=41.49
+  plate slope_36 points=[(-1.5,-3.1); (1.5,2); (-1.5,3.1)] h=0.4 at=-18.7,7.4,-9.4 turn=30.71 tilt=43.2
+  plate slope_37 points=[(-1.5,-2.4); (2.1,0.2); (-2.1,2.4)] h=0.4 at=-22.5,8.1,9 turn=139.17 tilt=37.01
+  plate slope_38 points=[(1.8,1.8); (-1.8,2.9); (0.1,-2.9)] h=0.4 at=-20.2,8.1,10.5 turn=108.39 tilt=30.32
+  plate floor_21 points=[(-2.5,2.7); (-0.9,-2.7); (2.5,-2.5)] h=0.4 at=0.5,2.4,-9.8 turn=82.46 tilt=21.85
+  plate slope_39 points=[(1.5,-4.3); (-0.2,4.3); (-1.5,0.2)] h=0.4 at=10.9,4.8,14.5 turn=173.09 tilt=27.07
+  plate floor_22 points=[(2.4,2.9); (-2.4,-1.7); (0.2,-2.9)] h=0.4 at=13.7,6.6,-14.7 turn=-67.79 tilt=6.59
+  plate slope_40 points=[(-2.5,-3.8); (1.6,3.8); (2.5,1.3)] h=0.4 at=9.8,4.5,14.1 turn=127 tilt=35.14
+  plate slope_41 points=[(3.3,2.2); (-2.7,0.7); (-3.3,-2.2)] h=0.4 at=-9.2,3.5,-10.3 turn=-3.6 tilt=37.12
+  plate slope_42 points=[(-1.7,2.1); (-2.2,-2.1); (2.2,1.9)] h=0.4 at=19.1,7.9,-9.9 turn=-100.75 tilt=42.43
+  plate floor_23 points=[(-1.3,-1.7); (1.3,-3.6); (-0.1,3.6)] h=0.4 at=-17.1,4.6,-5.4 turn=11.54 tilt=22.93
+  plate slope_43 points=[(2.1,-2.2); (-1.7,2.2); (-2.1,-1.7)] h=0.4 at=-21,8.4,-7.7 turn=53.32 tilt=38.41
+  plate slope_44 points=[(-4,0.2); (-0.9,1.5); (4,-1.5)] h=0.4 at=-10.1,2.3,-5.9 turn=102.84 tilt=39.74
+  plate floor_24 points=[(2.3,2.7); (-2.3,-2.7); (0.9,-2.3)] h=0.4 at=-13.5,2.3,5.8 turn=141.04 tilt=11.92
+  plate slope_45 points=[(3.7,-1.1); (-3.7,-0.9); (0,1.1)] h=0.4 at=11.8,9.1,20.1 turn=-149.49 tilt=28.46
+  plate floor_25 points=[(-2.7,2.8); (2.7,-0.9); (1.7,-2.8)] h=0.4 at=-3.7,4.4,-15.6 turn=82.46 tilt=21.85
+  plate slope_46 points=[(2.3,1.5); (-2.3,-2.4); (-0.2,2.4)] h=0.4 at=17.7,5.9,8.2 turn=-87.28 tilt=37.12
+  plate slope_47 points=[(3.2,1.1); (-3.2,1.1); (1.2,-1.1)] h=0.4 at=-0.6,1.6,5.8 turn=164.76 tilt=50.64
+  plate floor_26 points=[(-1,2.5); (1.6,-2.5); (-1.6,-1.7)] h=0.4 at=-20,6.8,1.8 turn=56.62 tilt=23.53
+  plate floor_27 points=[(0.9,-1.9); (-2.5,-1.7); (2.5,1.9)] h=0.4 at=-3.5,2.5,-10.4 turn=-102.37 tilt=19.5
+  plate floor_28 points=[(-2.8,1.9); (2.8,-1.9); (0.8,1.9)] h=0.4 at=2.8,6.1,16.7 turn=-83.05 tilt=18.6
+  plate slope_48 points=[(-0.3,0.3); (-1.3,-2.3); (1.3,-2.7); (0.5,2.7)] h=0.4 at=13.8,3.7,9.8 turn=-76.93 tilt=27.03
+  plate slope_49 points=[(2.1,-2.2); (-2.1,-0.8); (-1.7,2.2)] h=0.4 at=-3.9,2,6.6 turn=-151.12 tilt=35.64
+  plate slope_50 points=[(0.8,1); (3.9,-0.5); (-3.9,-1)] h=0.4 at=17.4,9,15.6 turn=-122.26 tilt=47.11
+  plate slope_51 points=[(-2.2,1); (-3.4,-0.9); (3.4,-1)] h=0.4 at=-2,6,-19.5 turn=10.46 tilt=64.11
+  plate slope_52 points=[(3.6,1.2); (0.7,-1.2); (-3.6,-0.6)] h=0.4 at=21.7,8.8,-4.7 turn=-100.09 tilt=39.03
+  plate slope_53 points=[(-2.3,-0.5); (2.1,-1.3); (2.3,1.3)] h=0.4 at=-23.1,8.7,4.5 turn=87.68 tilt=55.48
+  plate slope_54 points=[(-0.4,2.8); (-1.2,-2.8); (1.2,0.5)] h=0.4 at=19.1,6.2,0.9 turn=-51.57 tilt=27.54
+  plate floor_29 points=[(-3.4,-1.4); (3.4,1.1); (-0.2,1.4)] h=0.4 at=-11.2,9,-21 turn=57.41 tilt=7.29
+  plate slope_55 points=[(3.1,1); (-3.1,0.2); (0,-1)] h=0.4 at=13.7,8.6,17.6 turn=-152.22 tilt=72.69
+  plate slope_56 points=[(4.8,-0.6); (-2.2,-0.7); (-4.8,0.7)] h=0.4 at=7.9,8.8,-21.8 turn=-19.84 tilt=26.67
+  plate slope_57 points=[(1.9,-1.4); (-1.9,2.4); (0.3,-2.4)] h=0.4 at=10.7,5.8,16.9 turn=-172.54 tilt=42.13
+  plate floor_30 points=[(-1.3,-2.7); (0.3,2.7); (1.3,0.1)] h=0.4 at=14.5,4.5,7.2 turn=-30.68 tilt=24.94
+  plate floor_31 points=[(-1.3,-1.9); (1.3,-1.2); (-0.8,1.9)] h=0.4 at=14.4,4.9,2.8 turn=-116.5 tilt=22.19
+  plate floor_32 points=[(-1.7,1.5); (1.7,-1.5); (-0.6,-1.4)] h=0.4 at=-23.4,9.4,4.5 turn=54.1 tilt=16.7
+  plate slope_58 points=[(-2.9,-1.6); (2.9,1.6); (0.4,-1.4)] h=0.4 at=11.4,2.7,7.2 turn=150.88 tilt=31.3
+  plate floor_33 points=[(-0.4,2.2); (1.4,-2.2); (-1.4,-0.4)] h=0.4 at=18.2,6.4,3.7 turn=-116.5 tilt=22.19
+  plate floor_34 points=[(2.8,-0.5); (0.1,-1.3); (-2.8,1.3)] h=0.4 at=15.6,5.1,5 turn=65.21 tilt=21.11
+  plate slope_59 points=[(-0.7,1.9); (-2.1,0.5); (2.1,-1.9)] h=0.4 at=9.1,7.6,19.9 turn=-153.92 tilt=28.71
+  plate slope_60 points=[(-0.8,1.3); (1.9,-0.8); (-1.9,-1.3)] h=0.4 at=10.5,3,9.8 turn=76.31 tilt=35.38
+  plate slope_61 points=[(-1.7,-1.5); (1.7,-1); (0.5,1.5)] h=0.4 at=14,8.3,-19.3 turn=-10.72 tilt=48.97
+  plate slope_62 points=[(-1.3,1.3); (1.9,0.9); (-1.9,-1.3)] h=0.4 at=-22.4,8.7,0.7 turn=66.56 tilt=58.33
+  plate floor_35 points=[(1.7,-1.2); (-1.7,-1.2); (0.7,1.2)] h=0.4 at=11.5,2.9,9.5 turn=-30.68 tilt=24.94
+  plate slope_63 points=[(-0.8,1.7); (-1.1,-1.7); (1.1,-1.3)] h=0.4 at=1.9,8.1,-21.8 turn=11.93 tilt=53.22
+  plate slope_64 points=[(1.3,1.6); (-1.3,0); (0.3,-1.6)] h=0.4 at=0.3,8,-21.7 turn=-10.72 tilt=48.97
+  plate floor_36 points=[(1,-1.4); (-0.5,1.7); (-1,-1.7)] h=0.4 at=15.1,8.8,17.1 turn=152.03 tilt=23.49
+  plate floor_37 points=[(-1.1,1.8); (1.1,-1.8); (-0.9,-1.2)] h=0.4 at=13.3,9,18.9 turn=-52.58 tilt=15.13
+  plate floor_38 points=[(-1.1,-1.9); (-1.3,0); (1.3,1.9)] h=0.4 at=5.7,9,22.6 turn=67.49 tilt=16.45
+  plate floor_39 points=[(-1,1.3); (2,-1.3); (-2,0.9)] h=0.4 at=-22.9,9.3,8.9 turn=-107.12 tilt=18.24
+}
+group Terrain_Road_Desert_Decal_Sand_03_4_3 at=305,-120.4,-742.6 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_52_-37/SM_I_Terrain_Road_Desert_Decal_Sand_03@11" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  hull hull points=[(-2,1.4,7.7); (2,0,0.1); (0.7,0,5); (-1.9,1.6,3.7); (-1.7,0,-7.7)] at=0.1,0,-6.9
+  hull hull_2 points=[(-1.6,0,7.5); (1.6,0,-1.1); (1.1,0,-6.3); (-1.5,1.8,0.1); (-0.2,0.8,-7.5); (-1.4,0,7.5)] at=-0.5,0,7.1
+}
+Industrial_Container_02_v2_6 Industrial_Container_02_36 on=RoadFacility_Ground_C_02C offset=-29,-0.4,37.6 turn=-162.8 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_52_-37/SM_H_Industrial_Container_02@17" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_01_53 Industrial_Container_SupplyBox_01_40_6 on=RoadFacility_Ground_C_02C offset=-14.3,-0.4,61.5 turn=90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_52_-37/SM_H_Industrial_Container_SupplyBox_01@18" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+hull Terrain_Road_Desert_Decal_Sand_06_12_4 points=[(-4.9,0,-7.2); (4.9,0,7.4); (0,0,-0.6); (4.5,3.7,-7.4); (4.6,1.7,-2.8)] on=RoadFacility_Ground_C_02C offset=-24.5,-0.4,53.6 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_52_-37/SM_I_Terrain_Road_Desert_Decal_Sand_06@21" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_SoundproofWall_02B_5 Fence_SoundproofWall_02B_4_3 on=RoadFacility_Ground_C_02C offset=-19.8,-0.4,65 ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_52_-37/SM_H_Fence_SoundproofWall_02B@3" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_02B_50 Industrial_Container_SupplyBox_02B_34_4 on=RoadFacility_Ground_C_02C offset=-14.7,-0.3,52.8 turn=-70 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_52_-37/SM_H_Industrial_Container_SupplyBox_02B@26" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_02_v2_6 Industrial_Container_02_33 on=RoadFacility_Ground_C_02C offset=-29.1,-0.3,12.8 turn=177.2 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_52_-37/SM_H_Industrial_Container_02@18" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Government_Office_CoffeeMachine_01_14 Government_Office_CoffeeMachine_01_6_7 at=207.6,-73.5,-741.6 ~fit=0.9 ~src="ProxyOnly/NearPhysicsProxy_104_-75/SM_H_Government_Office_CoffeeMachine_01@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"

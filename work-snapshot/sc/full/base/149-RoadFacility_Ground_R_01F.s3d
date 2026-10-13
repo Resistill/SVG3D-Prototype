@@ -1,0 +1,47 @@
+// 分区 149/233：34 个物体（1 组），x 603…609，z -505…-251
+
+box EFX_BlockPlane_77_2 size=18.3,365.7,0 at=607.9,-214,-359.3 turn=-89.8 ~fit=1 ~src="Blocker/BigMeshGroup_53_-37/SM_EFX_BlockPlane@17" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+box EFX_BlockPlane_47_2 size=18.2,365.7,0 at=608.2,-214,-468.9 turn=-90.2 ~fit=1 ~src="Blocker/BigMeshGroup_53_-37/SM_EFX_BlockPlane@23" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+box EFX_BlockPlane_79_3 size=17.9,365.7,0 at=608.3,-214,-323.4 turn=-89.1 ~fit=1 ~src="Blocker/BigMeshGroup_53_-37/SM_EFX_BlockPlane@15" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v8_8 EFX_BlockPlane_36_3 at=608.3,-214,-505.3 turn=-90.1 ~fit=1 ~src="Blocker/BigMeshGroup_53_-37/SM_EFX_BlockPlane@42" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v8_8 EFX_BlockPlane_40_4 at=608.3,-214,-487.1 turn=-90.2 ~fit=1 ~src="Blocker/BigMeshGroup_53_-37/SM_EFX_BlockPlane@25" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v14_5 EFX_BlockPlane_73_3 at=608,-214,-432.4 turn=-90.2 ~fit=1 ~src="Blocker/BigMeshGroup_53_-37/SM_EFX_BlockPlane@21" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v14_5 EFX_BlockPlane_76_2 at=607.9,-214,-377.6 turn=-90 ~fit=1 ~src="Blocker/BigMeshGroup_53_-37/SM_EFX_BlockPlane@18" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v11_7 EFX_BlockPlane_53_3 at=608.1,-214,-450.7 turn=-90.3 ~fit=1 ~src="Blocker/BigMeshGroup_53_-37/SM_EFX_BlockPlane@22" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v11_7 EFX_BlockPlane_74_3 at=608,-214,-414.1 turn=-90.2 ~fit=1 ~src="Blocker/BigMeshGroup_53_-37/SM_EFX_BlockPlane@20" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v11_7 EFX_BlockPlane_75_2 at=607.9,-214,-395.9 turn=-90.1 ~fit=1 ~src="Blocker/BigMeshGroup_53_-37/SM_EFX_BlockPlane@19" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v4_9 EFX_BlockPlane_78_3 at=608.1,-214,-341.3 turn=-89.3 ~fit=1 ~src="Blocker/BigMeshGroup_53_-37/SM_EFX_BlockPlane@16" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+group RoadFacility_Ground_R_01F at=602.8,-207.7,-336.6 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_I_RoadFacility_Ground_R_01F" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box wall size=351.2,36.9,0 at=0.6,24.5,-1.6 turn=-90
+  box box_2 size=7.9,61.1,5.1 at=-3.1,0.4,173.4 rot=(0.039,-0.752,-0.657,9)
+  box box_3 size=7.9,61.1,5.1 at=-3.5,0.4,57.1 rot=(0,0,-1,5.9)
+  box box_4 size=7.9,61.1,5.1 at=-3.5,0.4,-60.1 rot=(0,0,-1,5.9)
+}
+box Fence_Metal_01B_5_2 size=29.3,6,13.7 at=608.3,-146.2,-498.5 turn=-90 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_Metal_1024x768_01B@1" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01B_8 Fence_Metal_01B_6_2 against=Fence_Metal_01B_5_2[1,0,0] turn=-180 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_Metal_1024x768_01B@3" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01B_8 Fence_Metal_01B_7_2 against=Fence_Metal_01B_6_2[-1,0,0] ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_Metal_1024x768_01B@4" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01B_8 Fence_Metal_01B_22_2 against=Fence_Metal_01B_7_2[-1,0,0] ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_Metal_1024x768_01B@5" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01B_8 Fence_Metal_01B_24_2 against=Fence_Metal_01B_22_2[-1,0,0] ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_Metal_1024x768_01B@6" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01B_8 Fence_Metal_01B_26_2 at=608.3,-146.1,-360.4 turn=90 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_Metal_1024x768_01B@7" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01B_8 Fence_Metal_01B_28 against=Fence_Metal_01B_26_2[-1,0,0] ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_Metal_1024x768_01B@8" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01_28 Fence_Metal_01_23_2 at=608.3,-141.4,-387.8 turn=90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_Metal_1024x768_01@2" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Fence_Metal_01_7_6 size=30.1,37.2,4.5 at=608.3,-140.9,-501.3 turn=-90 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_Metal_1024x768_01@5" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01D_v2 Fence_Metal_01D_4_2 at=608.3,-140.8,-360.3 rot=(0.017,1,-0.017,90) ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_Metal_1024x768_01D@1" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01_28 Fence_Metal_01_9_6 at=608.3,-140.8,-442.6 turn=90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_Metal_1024x768_01@4" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01_28 Fence_Metal_01_21_4 at=608.3,-140.8,-415.2 turn=90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_Metal_1024x768_01@3" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01_28 Fence_Metal_01_26_4 at=608.3,-140.8,-332.9 turn=90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_Metal_1024x768_01@1" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Fence_Metal_01_8_6 size=29.8,37.2,4.5 at=608.3,-140.4,-471.2 turn=-90 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_Metal_1024x768_01@6" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+group Fence_Metal_01I at=608.3,-139.6,-380 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_Metal_1024x768_01I" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex" {
+  box wall size=10,15.7,0.4 at=2.1,4.1,-0.6 turn=90
+  box wall_2 size=8.6,15.7,0.4 at=-2.1,4.1,0.3 turn=-90
+  box wall_3 size=1.4,20,3 at=0,0,4.9 turn=-90
+}
+box EFX_BlockPlane_20_4 size=19.3,365.8,0 at=608.5,-214,-305.8 rot=(0.001,-1,-0.001,89.5) ~fit=1 ~src="Blocker/BigMeshGroup_53_-37/SM_EFX_BlockPlane@14" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v7_9 EFX_BlockPlane_25_6 at=608.7,-214,-251 turn=-90.1 ~fit=1 ~src="Blocker/BigMeshGroup_53_-36/SM_EFX_BlockPlane@3" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v3_11 EFX_BlockPlane_24_7 at=608.7,-214,-269.1 turn=-89.9 ~fit=1 ~src="Blocker/BigMeshGroup_53_-36/SM_EFX_BlockPlane@2" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v6_10 EFX_BlockPlane_22_6 at=608.6,-214,-287.1 turn=-89.8 ~fit=1 ~src="Blocker/BigMeshGroup_53_-36/SM_EFX_BlockPlane@1" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+repeat Fence_Metal_01B_50 n=5 step=0,0,27.43 at=608.3,-146.1,-305.6 pin=origin {
+  Fence_Metal_01B_v3_4 Fence_Metal_01B_v3_4 turn=90 ~fit=0
+}
+Fence_Metal_01_42 Fence_Metal_01_29_2 at=608.3,-141.4,-305.5 turn=90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_Metal_1024x768_01@7" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_Metal_01_42 Fence_Metal_01_28_3 at=608.3,-140.8,-278.1 turn=90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-36/SM_H_Fence_Metal_1024x768_01@7" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"

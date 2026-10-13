@@ -1,0 +1,10 @@
+// 分区 221/233：8 个物体（8 组），x 102…148，z 725…831
+
+EFX_BlockPlane_v5_12 EFX_BlockPlane_36_4 at=131,-240.2,725.2 turn=-119 ~fit=1 ~src="Blocker/BigMeshGroup_52_-34/SM_EFX_BlockPlane@33" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+EFX_BlockPlane_v5_12 EFX_BlockPlane_46_3 at=117.4,-240.2,753.5 turn=-113.2 ~fit=1 ~src="Blocker/BigMeshGroup_52_-34/SM_EFX_BlockPlane@55" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+box EFX_BlockPlane_40_5 size=15.7,365.7,0 at=123.8,-240.2,739.2 turn=-115.2 ~fit=1 ~src="Blocker/BigMeshGroup_52_-34/SM_EFX_BlockPlane@44" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+box EFX_BlockPlane_60_5 size=16.4,365.7,0 at=102.4,-240.2,798.7 turn=-106.3 ~fit=1 ~src="Blocker/BigMeshGroup_52_-34/SM_EFX_BlockPlane@25" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+box EFX_BlockPlane_56_4 size=15.9,365.7,0 at=106.9,-240.2,783.3 turn=-106.4 ~fit=1 ~src="Blocker/BigMeshGroup_52_-34/SM_EFX_BlockPlane@77" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+box EFX_BlockPlane_51_4 size=15.8,365.7,0 at=111.7,-240.2,768.2 turn=-109.1 ~fit=1 ~src="Blocker/BigMeshGroup_52_-34/SM_EFX_BlockPlane@66" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+box EFX_BlockPlane_64 size=18.3,365.7,0 at=147.9,-238.4,813.2 turn=-106.4 ~fit=1 ~src="Blocker/BigMeshGroup_52_-34/SM_EFX_BlockPlane@38" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"
+box EFX_BlockPlane_70_3 size=18.3,365.7,0 at=142.7,-238.4,830.7 turn=-106.6 ~fit=1 ~src="Blocker/BigMeshGroup_52_-34/SM_EFX_BlockPlane@37" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="IgnoreBullets" ~trace_flag="CTF_UseDefault"

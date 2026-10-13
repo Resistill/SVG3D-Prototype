@@ -1,0 +1,46 @@
+// 分区 90/233：1 个物体（1 组），x -305…-305，z 247…247
+
+group RoadFacility_Ground_11B at=-304.7,-120.2,246.6 turn=-38.2 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_51_-35/SM_I_RoadFacility_Ground_H_11B" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseComplexAsSimple" {
+  box slab size=7.3,0.4,7.3 at=98.8,0,-73.1
+  box slab_2 size=7.3,0.4,7.3 at=157.3,0,-58.4
+  box slab_3 size=7.3,0.4,7.3 at=-98.7,0,-51.1
+  box slab_4 size=7.3,0.4,7.3 at=128,0,-36.6
+  box slab_5 size=7.3,0.4,7.3 at=47.6,0,-29.2
+  box slab_6 size=7.3,0.4,7.3 at=113.4,0,-22
+  box slab_7 size=7.3,0.4,7.3 at=186.6,0,-22
+  box slab_8 size=7.3,0.4,7.3 at=-149.9,0,-14.5
+  box slab_9 size=7.3,0.4,7.3 at=193.9,0,-14.5
+  box slab_10 size=7.3,0.4,7.3 at=91.5,0,-7.3
+  box slab_11 size=7.3,0.4,7.3 at=157.3,0,-7.3
+  box slab_12 size=7.3,0.4,7.3 at=186.6,0,-7.3
+  box slab_13 size=7.3,0.4,7.3 at=201.1,0,-7.3
+  box slab_14 size=7.3,0.4,7.3 at=40.3,0,0
+  box slab_15 size=7.3,0.4,7.3 at=-128,0,7.3
+  box slab_16 size=7.3,0.4,7.3 at=-84.1,0,7.3
+  box slab_17 size=7.3,0.4,7.3 at=-69.4,0,7.3
+  box slab_18 size=7.3,0.4,7.3 at=76.8,0,7.3
+  box slab_19 size=7.3,0.4,7.3 at=135.4,0,7.3
+  box slab_20 size=7.3,0.4,7.3 at=150,0,7.3
+  box slab_21 size=7.3,0.4,7.3 at=-201.1,0,14.7
+  box slab_22 size=7.3,0.4,7.3 at=-76.8,0,14.7
+  box slab_23 size=14.6,0.4,7.3 at=58.6,0,14.7
+  box slab_24 size=7.3,0.4,7.3 at=120.7,0,22
+  box slab_25 size=7.3,0.4,7.3 at=135.4,0,22
+  box slab_26 size=7.3,0.4,7.3 at=-179.2,0,36.7
+  box slab_27 size=7.3,0.4,7.3 at=-164.5,0,36.7
+  box slab_28 size=7.3,0.4,7.3 at=98.8,0,36.7
+  box slab_29 size=7.3,0.4,7.3 at=-135.4,0,43.9
+  box slab_30 size=7.3,0.4,7.3 at=-113.3,0,43.9
+  box slab_31 size=7.3,0.4,7.3 at=-149.9,0,51.3
+  box slab_32 size=7.3,0.4,7.3 at=-69.4,0,51.3
+  box slab_33 size=7.3,0.4,7.3 at=98.8,0,51.3
+  box slab_34 size=14.6,0.4,7.3 at=-7.3,0,58.6
+  box slab_35 size=7.3,0.4,7.3 at=18.3,0,58.6
+  box slab_36 size=7.3,0.4,7.3 at=69.5,0,58.6
+  box slab_37 size=7.3,0.4,7.3 at=3.7,0,65.9
+  box slab_38 size=7.3,0.4,7.3 at=25.6,0,65.9
+  box slab_39 size=7.3,0.4,7.3 at=54.9,0,65.9
+  box slab_40 size=7.3,0.4,7.3 at=-10.9,0,73.2
+  box slab_41 size=7.3,0.4,7.3 at=18.3,0,73.2
+  box slab_42 size=7.3,0.4,7.3 at=33,0,73.2
+}

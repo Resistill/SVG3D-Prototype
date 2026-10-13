@@ -1,0 +1,10 @@
+// 细化到 structure：HLight_01_ExterWall_02（面积前 90%（7/14 块），7 个部件）
+over HLight_01_ExterWall_02 : group envelope=-126.5,0,-110,126.5,170,110 {
+  box box6 size=90.6,78,5.2 at=-121.2,46.3,53 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_51_-36/SM_H_Building_FutureTech_HLight_01_ExterWall_02#5"
+  box box7 size=68,78,5.2 at=-74.7,46.3,104.1 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_51_-36/SM_H_Building_FutureTech_HLight_01_ExterWall_02#4"
+  box box3 size=136.8,57.1,114.8 at=-67.9,112.7,39.9 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_51_-36/SM_H_Building_FutureTech_HLight_01_ExterWall_02#6"
+  box box4 size=139.7,53.8,118.6 at=-67.9,113.6,40.3 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_51_-36/SM_H_Building_FutureTech_HLight_01_ExterWall_02#12"
+  box box1 size=246.2,38,192.8 at=1.2,114.8,-11.6 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_51_-36/SM_H_Building_FutureTech_HLight_01_ExterWall_02#9"
+  box box2 size=250.2,41,196.7 at=1.2,116.1,-11.6 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_51_-36/SM_H_Building_FutureTech_HLight_01_ExterWall_02#11"
+  box box5 size=92.4,45.4,89.1 at=-82.6,122,64 turn=-90 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_51_-36/SM_H_Building_FutureTech_HLight_01_ExterWall_02#13"
+}

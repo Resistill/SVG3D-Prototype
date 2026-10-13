@@ -1,0 +1,291 @@
+// 分区 162/233：23 个物体（7 组），x 794…1051，z -726…-498
+
+Terrain_Road_Desert_Decal_Sand_08_v2 Terrain_Road_Desert_Decal_Sand_08_10_2 at=793.6,-137.5,-718.7 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_53_-37/SM_I_Terrain_Road_Desert_Decal_Sand_08@10" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+WalkwaySystem_PaintingStairs_256_01_v3 WalkwaySystem_PaintingStairs_256_01_6 at=1041.4,-162.5,-500.2 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_108_-73/SM_I_WalkwaySystem_PaintingStairs_256_01@10" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+WalkwaySystem_PaintingStairs_256_01_v3 WalkwaySystem_PaintingStairs_256_01_7 at=1049.3,-162.5,-500.2 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_108_-73/SM_I_WalkwaySystem_PaintingStairs_256_01@11" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_02_59 Industrial_Container_SupplyBox_02_38_4 at=1027.3,-154.7,-528.4 ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_108_-73/SM_H_Industrial_Container_SupplyBox_02@3" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_02B_35 Industrial_Container_SupplyBox_02B_25_10 at=1051,-154.6,-523.8 turn=90 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_108_-73/SM_H_Industrial_Container_SupplyBox_02B@9" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Prop_Light_02_48 Industrial_Prop_Light_02_91 at=1029.2,-152.3,-540.5 turn=180 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_108_-73/SM_H_Industrial_Prop_Light_02@55" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+WalkwaySystem_PaintingRailing_64xC90_01_24 WalkwaySystem_PaintingRailing_64xC90_01_19_2 at=1030.6,-143.6,-519.8 turn=90 ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_108_-73/SM_I_WalkwaySystem_PaintingRailing_64xC90_01@2" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+WalkwaySystem_PaintingRailing_256_01_v3 WalkwaySystem_PaintingRailing_256_01_42 at=1031.4,-143.6,-533.7 turn=180 ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_108_-73/SM_I_WalkwaySystem_PaintingRailing_256_01@18" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+WalkwaySystem_PaintingRailing_192_01B_v5_2 WalkwaySystem_PaintingRailing_192_01B_27_3 at=1031.4,-143.6,-524.7 turn=180 ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_108_-73/SM_I_WalkwaySystem_PaintingRailing_192_01B@2" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseComplexAsSimple"
+IndustrialRailingPlate_01B_25 IndustrialRailingPlate_01B_11_3 at=1032,-143,-532.3 turn=90 ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_108_-73/SM_H_FutureTech_IndustrialRailingPlate_01B@10" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+IndustrialRailingPlate_01D_17 IndustrialRailingPlate_01D_9_3 at=1032,-143,-524.6 turn=90 ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_108_-73/SM_H_FutureTech_IndustrialRailingPlate_01D@5" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Prop_Light_02_48 Industrial_Prop_Light_02_108 at=1031.1,-143,-519.6 rot=(-0.577,0.577,0.577,120) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_108_-73/SM_H_Industrial_Prop_Light_02@27" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Prop_Light_02_48 Industrial_Prop_Light_02_94 at=1031.1,-142.9,-537.9 rot=(-0.577,0.577,0.577,120) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_108_-73/SM_H_Industrial_Prop_Light_02@29" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Prop_Light_02_48 Industrial_Prop_Light_02_103 at=1031.1,-142.9,-528.6 rot=(-0.577,0.577,0.577,120) ~fit=0 ~src="ProxyOnly/NearPhysicsProxy_108_-73/SM_H_Industrial_Prop_Light_02@28" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+box BlockWallCube_19_10 size=40.6,57.5,3.7 at=1043.4,-142.7,-725.9 turn=-0.1 ~fit=1 ~src="Blocker/BigMeshGroup_54_-37/BlockWallCube@24" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"
+group Building_PrintArea_InterWall_01 at=918.5,-142.5,-639.2 ~fit=0.7 ~src="BigMeshGroup/BigMeshGroup_54_-37/SM_H_Building_FutureTech_PrintArea_InterWall_01" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box slab size=228.6,0.4,182.9 at=0,0,-1.4
+  box slab_2 size=225.7,0.4,2.9 at=-1.4,0,91.5
+  subtract slab_3 at=-0.4,9.4,-0.8 {
+    box body size=205.7,0.4,177.1
+    box hole size=37.1,1.1,140 at=64.3,-0.4,-18.6
+    box hole_2 size=20,1.1,157.1 at=-64.3,-0.4,10
+    box hole_3 size=40,1.1,42.9 at=0,-0.4,-4.3
+  }
+  box slab_4 size=148.6,0.4,28.6 at=-29,60.7,-75.1
+  box slab_5 size=31.4,0.4,148.6 at=-87.6,60.7,13.5
+  box slab_6 size=2.9,0.4,148.6 at=43.9,60.7,13.5
+  box slab_7 size=25.7,0.4,40 at=89.6,60.7,67.8
+  box slab_8 size=114.3,0.4,37.1 at=-14.7,60.7,69.2
+  box slab_9 size=31.4,0.4,37.1 at=61,60.7,69.2
+  box slab_10 size=114.3,0.4,114.3 at=-15.3,69.6,-3.6
+  subtract wall at=-0.8,1.7,88.5 turn=180 {
+    box body size=205.7,60,0.4
+    box hole_4 size=151.4,8.6,1.1 at=-27.1,0,0
+    box hole_5 size=8.6,8.6,1.1 at=-95.7,8.6,0
+    box hole_6 size=22.9,8.6,1.1 at=91.4,0,0
+    box hole_7 size=25.7,28.6,1.1 at=64.3,5.7,0
+    box hole_8 size=8.6,8.6,1.1 at=-55.7,28.6,0
+  }
+  box wall_2 size=177.1,51.4,0.4 at=-103.5,9.7,-0.2 turn=90
+  box wall_3 size=177.1,42.9,0.4 at=102.2,9.7,-0.8 turn=-90
+  box wall_4 size=40,8.6,0.4 at=102.2,52.6,67.8 turn=-90
+  subtract wall_5 at=-0.4,9.7,-89.5 {
+    box body size=205.7,51.4,0.4
+    box hole_9 size=5.7,8.6,1.1 at=-37.1,0,0
+    box hole_10 size=51.4,25.7,1.1
+    box hole_11 size=5.7,8.6,1.1 at=37.1,0,0
+    box hole_12 size=40,51.4,1.1 at=62.9,0,0
+    box hole_13 size=20,8.6,1.1 at=92.9,42.9,0
+    box hole_14 size=5.7,8.6,1.1 at=88.6,0,0
+    box hole_15 size=5.7,8.6,1.1 at=88.6,20,0
+  }
+  box slab_11 size=20,0.4,157.1 at=-64.5,6.2,7.5
+  box slab_12 size=17.1,0.4,2.9 at=-65.9,6.2,87.5
+  box slab_13 size=2.9,0.4,162.9 at=87.4,29.9,-10.1
+  box slab_14 size=2.9,0.4,160 at=84.5,29.9,-8.6
+  box slab_15 size=5.7,0.4,157.1 at=91.7,29.9,-10.1
+  box slab_16 size=8.6,0.4,51.4 at=78.8,29.9,45.6
+  box slab_17 size=31.4,0.4,20 at=58.8,29.9,61.4
+  box slab_18 size=2.9,0.4,2.9 at=90.3,29.9,69.9
+  box slab_19 size=17.1,0.4,17.1 at=51.7,29.9,79.9
+  box wall_6 size=114.3,8.6,0.4 at=-15.3,60.7,-60.8
+  box wall_7 size=114.3,8.6,0.4 at=-14.8,60.7,51.8 turn=180
+  box wall_8 size=114.3,8.6,0.4 at=42.2,60.7,-3.6 turn=-90
+  box wall_9 size=114.3,8.6,0.4 at=-72.5,60.7,-5.4 turn=90
+}
+group RoadFacility_Ground_B_05 at=963.2,-141.9,-593.8 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_54_-37/SM_I_RoadFacility_Ground_B_05" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box platform size=146.3,0,59.8 at=-22.7,1.1,64.4
+  box box_2 size=210.3,0,36.6 at=77.5,0,0 turn=-90
+  box box_3 size=146.3,0.7,0.7 at=-22.7,1,76.2
+  box box_4 size=146.3,0.7,0.7 at=-22.7,1,53
+}
+group Building_PrintArea_ExterWall_01 at=918.5,-141.4,-640.4 rot=(0.001,1,-0.001,90) ~fit=0.2 ~src="BigMeshGroup/BigMeshGroup_54_-37/SM_H_Building_FutureTech_PrintArea_ExterWall_01" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box slab size=190.2,0.4,102.4 at=1,71.1,-58.6 rot=(-1,0,-0.002,10.8)
+  box slab_2 size=190.2,0.4,102.4 at=1,71.3,56.8 rot=(1,0,-0.002,10.6)
+  box wall size=14.6,51.2,0.4 at=90.7,8.4,100 turn=90
+  box wall_2 size=58.5,51.2,0.4 at=90.7,8.4,56.1 turn=90
+  box wall_3 size=80.5,51.2,0.4 at=90.7,8.4,-64.6 turn=90
+  box wall_4 size=7.3,14.6,0.4 at=90.7,15.7,89 turn=90
+  box wall_5 size=7.3,36.6,0.4 at=90.7,23,-108.5 turn=90
+  box wall_6 size=7.3,21.9,0.4 at=90.7,37.7,89 turn=90
+  box wall_7 size=51.2,21.9,0.4 at=90.7,37.7,1.2 turn=90
+  box wall_8 size=11,21.9,0.4 at=90.7,59.6,0 turn=90
+  wedge wall_9 size=21.9,120.7,0.4 at=90.7,70.6,-5.5 rot=(-0.577,0.577,-0.577,120)
+  wedge wall_10 size=21.9,120.7,0.4 at=90.7,70.6,5.5 rot=(0.577,-0.577,-0.577,120)
+  box wall_11 size=182.9,58.5,0.4 at=-2.6,8.8,105.7
+  box wall_12 size=7.3,36.6,0.4 at=92.5,23.4,105.7
+  box wall_13 size=139,58.5,0.4 at=24.6,8.4,-107.1 turn=180
+  box wall_14 size=7.3,51.2,0.4 at=-92.4,8.4,-107.1 turn=180
+  box wall_15 size=43.9,7.3,0.4 at=-66.8,15.7,-107.1 turn=180
+  box wall_16 size=7.3,43.9,0.4 at=-85.1,23,-107.1 turn=180
+  box wall_17 size=36.6,14.6,0.4 at=-63.2,52.3,-107.1 turn=180
+  box wall_18 size=21.9,43.9,0.4 at=-92.4,22.6,-98.1 turn=-90
+  box wall_19 size=29.3,36.6,0.4 at=-92.4,22.6,95.7 turn=-90
+  box wall_20 size=51.2,21.9,0.4 at=-92.4,44.5,55.5 turn=-90
+  box wall_21 size=21.9,7.3,0.4 at=-92.4,59.2,92.1 turn=-90
+  box wall_22 size=43.9,7.3,0.4 at=-92.4,66.5,51.8 turn=-90
+  box wall_23 size=117,24.6,0.4 at=-92.4,44.5,-28.6 turn=-90
+  wedge wall_24 size=117,15.7,0.4 at=-92.4,69.2,-28.6 turn=-90
+  box wall_25 size=14.6,14.6,0.4 at=-90.2,0,-112.4 turn=-90
+  box wall_26 size=29.3,21.9,0.4 at=-90.2,7.3,-90.5 turn=-90
+  box wall_27 size=146.3,21.9,0.4 at=-90.2,7.3,19.2 turn=-90
+  box wall_28 size=7.3,14.6,0.4 at=-90.2,7.3,103.4 turn=-90
+  box wall_29 size=7.3,43.9,0.4 at=-90.2,14.6,-108.8 turn=-90
+  box wall_30 size=7.3,14.6,0.4 at=-90.2,14.6,96 turn=-90
+  box wall_31 size=14.6,14.6,0.4 at=-90.2,29.3,-83.2 turn=-90
+  box wall_32 size=102.4,14.6,0.4 at=-90.2,29.3,-2.7 turn=-90
+  box wall_33 size=36.6,14.6,0.4 at=-90.2,29.3,74.1 turn=-90
+  box wall_34 size=21.9,7.3,0.4 at=-90.2,36.6,-64.9 turn=-90
+  box wall_35 size=7.3,7.3,0.4 at=-90.2,36.6,52.2 turn=-90
+  box slab_3 size=190.2,0.4,14.6 at=1,80.7,-1
+  box wall_36 size=43.9,51.2,0.4 at=-65.3,18.2,-113.5 turn=180
+  box slab_4 size=7.3,0.4,21.9 at=-89,22.8,-98
+  box slab_5 size=21.9,0.4,7.3 at=-30.5,22.8,-105.3
+  box slab_6 size=21.9,0.4,7.3 at=20.7,22.8,-105.3
+  box slab_7 size=21.9,0.4,7.3 at=79.2,22.8,-105.3
+  box slab_8 size=7.3,0.4,21.9 at=-89,22.8,99.5
+  box slab_9 size=43.9,0.4,7.3 at=-63.4,22.8,106.8
+  box slab_10 size=21.9,0.4,7.3 at=-1.2,22.8,106.8
+  box slab_11 size=51.2,0.4,7.3 at=64.6,22.8,106.8
+  box wall_37 size=14.6,14.6,0.4 at=-43,0,-112.2 turn=90
+  box wall_38 size=7.3,43.9,0.4 at=-43,14.6,-108.5 turn=90
+  box wall_39 size=7.3,36.6,0.4 at=-43,21.9,103.6 turn=90
+  box slab_12 size=7.3,0.4,168.2 at=-89,43.9,-3.2
+  box ramp size=43.9,0.4,14.6 at=-65.3,14.7,-115.5 rot=(-1,0,0,57.7)
+}
+group Building_PrintArea_ExterWall_01D at=912.6,-139.8,-640.2 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_54_-37/SM_H_Building_FutureTech_PrintArea_ExterWall_01D" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex" {
+  box wall size=2.9,5.7,0.4 at=101.3,21.7,-91.6 turn=180
+  box wall_2 size=2.9,5.7,0.4 at=-61.5,21.7,-91.6 turn=180
+  box wall_3 size=2.9,5.7,0.4 at=-75.8,21.7,-91.6 turn=180
+  box wall_4 size=2.9,5.7,0.4 at=72.8,27.4,-91.6 turn=180
+  box wall_5 size=2.9,22.9,0.4 at=-75.8,30.2,-91.6 turn=180
+  box wall_6 size=2.9,8.6,0.4 at=101.3,41.7,-91.6 turn=180
+  box wall_7 size=2.9,2.9,0.4 at=87,44.5,-91.6 turn=180
+  box wall_8 size=2.9,28.6,0.4 at=41.3,44.5,-91.6 turn=180
+  box wall_9 size=2.9,5.7,0.4 at=-18.7,47.4,-91.6 turn=180
+  box wall_10 size=2.9,2.9,0.4 at=87,50.2,-91.6 turn=180
+  box wall_11 size=2.9,2.9,0.4 at=-30.1,50.2,-91.6 turn=180
+  box wall_12 size=11.4,2.9,0.4 at=-57.2,53.1,-91.6 turn=180
+  box wall_13 size=2.9,14.3,0.4 at=55.6,55.9,-91.6 turn=180
+  box wall_14 size=2.9,11.4,0.4 at=-61.5,55.9,-91.6 turn=180
+  box wall_15 size=2.9,2.9,0.4 at=87,58.8,-91.6 turn=180
+  box wall_16 size=2.9,11.4,0.4 at=27,61.7,-91.6 turn=180
+  box wall_17 size=2.9,2.9,0.4 at=-47.2,61.7,-91.6 turn=180
+  box wall_18 size=2.9,5.7,0.4 at=-18.7,70.2,-91.6 turn=180
+  box wall_19 size=2.9,8.6,0.4 at=-90.4,21.2,92.4
+  box wall_20 size=2.9,5.7,0.4 at=101,21.2,92.4
+  box wall_21 size=2.9,5.7,0.4 at=112.4,35.5,92.4
+  box wall_22 size=2.9,11.4,0.4 at=101,41.2,92.4
+  box wall_23 size=2.9,2.9,0.4 at=12.4,44.1,92.4
+  box wall_24 size=2.9,8.6,0.4 at=72.4,44.1,92.4
+  box wall_25 size=2.9,5.7,0.4 at=-19,46.9,92.4
+  box wall_26 size=2.9,5.7,0.4 at=-90.4,49.8,92.4
+  box wall_27 size=2.9,22.9,0.4 at=-1.9,55.5,92.4
+  box wall_28 size=2.9,2.9,0.4 at=43.9,55.5,92.4
+  box wall_29 size=2.9,8.6,0.4 at=86.7,55.5,92.4
+  box wall_30 size=2.9,8.6,0.4 at=-61.9,58.4,92.4
+  box wall_31 size=2.9,11.4,0.4 at=-103,23,-24.8 turn=-90
+  box wall_32 size=2.9,14.3,0.4 at=-103,23,32.4 turn=-90
+  box wall_33 size=2.9,2.9,0.4 at=-103,34.5,-76.2 turn=-90
+  box wall_34 size=2.9,2.9,0.4 at=-103,37.3,29.5 turn=-90
+  box wall_35 size=2.9,14.3,0.4 at=-103,40.2,-76.2 turn=-90
+  box wall_36 size=2.9,14.3,0.4 at=-103,40.2,-21.9 turn=-90
+  box wall_37 size=2.9,8.6,0.4 at=-103,45.9,32.4 turn=-90
+  box wall_38 size=11.4,2.9,0.4 at=-107.7,18.2,62.9 turn=-90
+  box wall_39 size=2.9,25.7,0.4 at=-107.7,26.7,87.2 turn=-90
+  box wall_40 size=14.3,2.9,0.4 at=-107.7,55.3,50.1 turn=-90
+  box ramp size=2.9,0.4,8.6 at=-107.9,15.9,47.6 rot=(0,0,1,57.5)
+  box ramp_2 size=2.9,0.4,8.6 at=-107.9,15.9,73.3 rot=(0,0,1,57.5)
+  box wall_41 size=5.7,2.9,0.4 at=-113.7,0,80.3 turn=-90
+  box wall_42 size=2.9,2.9,0.4 at=-113.7,0,87.4 turn=-90
+  box wall_43 size=8.6,2.9,0.4 at=-100.8,7,-77 turn=-90
+  box wall_44 size=8.6,2.9,0.4 at=-100.8,7,-22.8 turn=-90
+  box wall_45 size=8.6,2.9,0.4 at=-100.8,7,23 turn=-90
+  box wall_46 size=2.9,8.6,0.4 at=113.1,35.8,-91.2 turn=90
+}
+group Building_PrintArea_ExterWall_01B at=912.4,-135.9,-637.8 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_54_-37/SM_H_Building_FutureTech_PrintArea_ExterWall_01B" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box wall size=4.6,13.7,0.4 at=-100.1,3.1,88.1
+  box wall_2 size=4.6,36.6,0.4 at=-13.2,3.1,88.1
+  box wall_3 size=4.6,36.6,0.4 at=37.1,3.1,88.1
+  box wall_4 size=4.6,36.6,0.4 at=50.8,3.1,88.1
+  box wall_5 size=18.3,4.6,0.4 at=-24.6,16.8,88.1
+  box wall_6 size=36.6,4.6,0.4 at=11.9,16.8,88.1
+  box wall_7 size=9.1,4.6,0.4 at=43.9,16.8,88.1
+  box wall_8 size=36.6,4.6,0.4 at=71.4,16.8,88.1
+  box wall_9 size=4.6,4.6,0.4 at=-31.5,21.4,88.1
+  box wall_10 size=4.6,9.1,0.4 at=-8.6,26,88.1
+  box wall_11 size=4.6,4.6,0.4 at=32.5,26,88.1
+  box wall_12 size=4.6,4.6,0.4 at=27.9,30.5,88.1
+  box wall_13 size=9.1,4.6,0.4 at=43.9,30.5,88.1
+  box wall_14 size=4.6,4.6,0.4 at=69.1,30.5,88.1
+  box wall_15 size=4.6,41.1,0.4 at=-81.6,3,89.1
+  box wall_16 size=4.6,41.1,0.4 at=0.7,3,89.1
+  box wall_17 size=4.6,41.1,0.4 at=92.1,3,89.1
+  box wall_18 size=77.7,4.6,0.4 at=-40.5,39.6,89.1
+  box wall_19 size=86.9,4.6,0.4 at=46.4,39.6,89.1
+  box wall_20 size=4.6,13.7,0.4 at=104.1,3,-92.3 turn=180
+  box wall_21 size=4.6,45.7,0.4 at=35.6,3,-92.3 turn=180
+  box wall_22 size=4.6,22.9,0.4 at=-46.7,3,-92.3 turn=180
+  box wall_23 size=4.6,13.7,0.4 at=-65,3,-92.3 turn=180
+  box wall_24 size=4.6,13.7,0.4 at=-83.3,3,-92.3 turn=180
+  box wall_25 size=64,4.6,0.4 at=1.3,35,-92.3 turn=180
+  box wall_26 size=4.6,50.3,0.4 at=112.4,3,8 turn=90
+  box wall_27 size=4.6,22.9,0.4 at=112.4,3,-1.2 turn=90
+  box wall_28 size=4.6,50.3,0.4 at=112.4,3,-46.9 turn=90
+  box wall_29 size=4.6,22.9,0.4 at=112.4,3,-78.9 turn=90
+  box wall_30 size=4.6,50.3,0.4 at=-102,3,-35.6 turn=-90
+  box wall_31 size=4.6,50.3,0.4 at=-102,3,-12.8 turn=-90
+  box wall_32 size=9.1,4.6,0.4 at=-105.2,0,41.4 turn=180
+  box wall_33 size=4.6,45.7,0.4 at=-102.9,9.1,41.4 turn=180
+  box wall_34 size=9.1,4.6,0.4 at=-108,0,84.2
+  box wall_35 size=4.6,41.1,0.4 at=-101.2,13.7,84.2
+  box slab size=4.6,0.4,41.1 at=-100.6,49.7,61.4
+  box slab_2 size=18.3,0.4,4.6 at=-91.7,18.5,90.2
+}
+IndustrialRailingPlate_01B_25 IndustrialRailingPlate_01B_19_2 at=1037.9,-134,-497.6 turn=90 ~fit=1 ~src="ProxyOnly/NearPhysicsProxy_108_-73/SM_H_FutureTech_IndustrialRailingPlate_01B@7" ~shape="bounds" ~collidable=1 ~collision_profile="PhysXProxy" ~trace_flag="CTF_UseSimpleAndComplex"
+group Building_PrintArea_InterWall_01I at=918,-133.5,-639.8 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_54_-37/SM_H_Building_FutureTech_PrintArea_InterWall_01I" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex" {
+  box slab size=35.1,0.4,11.7 at=-61.9,0,-83
+  box slab_2 size=23.4,0.4,163.8 at=-79.4,0,4.8
+  box slab_3 size=35.1,0.4,11.7 at=-38.5,0,-71.3
+  box slab_4 size=11.7,0.4,105.3 at=-38.5,0,-12.8
+  box slab_5 size=11.7,0.4,140.4 at=31.7,0,4.8
+  box slab_6 size=11.7,0.4,11.7 at=-3.4,0,-47.9
+  box slab_7 size=23.4,0.4,11.7 at=49.3,0,-36.2
+  box slab_8 size=58.5,0.4,11.7 at=-3.4,0,-24.5
+  box slab_9 size=11.7,0.4,46.8 at=-26.8,0,4.8
+  box slab_10 size=11.7,0.4,46.8 at=20,0,4.8
+  box slab_11 size=35.1,0.4,11.7 at=-3.4,0,22.3
+  box slab_12 size=11.7,0.4,46.8 at=-15.1,0,63.3
+  box slab_13 size=11.7,0.4,11.7 at=43.4,0,45.7
+  box slab_14 size=11.7,0.4,11.7 at=90.3,0,45.7
+  box slab_15 size=11.7,0.4,11.7 at=-26.8,0,57.4
+  box slab_16 size=23.4,0.4,11.7 at=2.5,0,57.4
+  box slab_17 size=11.7,0.4,11.7 at=55.1,0,57.4
+  box slab_18 size=11.7,0.4,23.4 at=78.4,0,63.3
+  box slab_19 size=23.4,0.4,11.7 at=-32.6,0,80.8
+  box slab_20 size=11.7,0.4,11.7 at=20,0,80.8
+  box wall size=11.7,11.7,0.4 at=3.2,9.5,89 turn=180
+  box wall_2 size=11.7,11.7,0.4 at=-31.9,9.5,89 turn=180
+  box wall_3 size=11.7,11.7,0.4 at=-90.6,9.5,89 turn=180
+  box wall_4 size=23.4,23.4,0.4 at=79.2,32.9,89 turn=180
+  box wall_5 size=11.7,23.4,0.4 at=26.6,32.9,89 turn=180
+  box wall_6 size=23.4,23.4,0.4 at=-14.4,32.9,89 turn=180
+  box wall_7 size=11.7,11.7,0.4 at=96.8,44.6,89 turn=180
+  box wall_8 size=35.1,11.7,0.4 at=50,44.6,89 turn=180
+  box wall_9 size=23.4,11.7,0.4 at=9,44.6,89 turn=180
+  box wall_10 size=70.2,11.7,0.4 at=-61.2,44.6,89 turn=180
+  box wall_11 size=70.2,11.7,0.4 at=-67.7,10.6,-89
+  box wall_12 size=11.7,11.7,0.4 at=31.8,10.6,-89
+  box wall_13 size=11.7,11.7,0.4 at=90.3,10.6,-89
+  box wall_14 size=23.4,11.7,0.4 at=-91.1,22.3,-89
+  box wall_15 size=11.7,11.7,0.4 at=-50.1,22.3,-89
+  box wall_16 size=11.7,11.7,0.4 at=-73.6,34,-89
+  box wall_17 size=11.7,11.7,0.4 at=90.3,34,-89
+  box wall_18 size=175.5,11.7,0.4 at=102.7,36.6,-1 turn=-90
+}
+group Building_PrintArea_InterWall_01C at=918.2,-132.7,-639.7 turn=-180 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_54_-37/SM_H_Building_FutureTech_PrintArea_InterWall_01C" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box slab size=7.3,0.4,109.7 at=13.4,59.3,4.3
+  box slab_2 size=7.3,0.4,109.7 at=71.9,59.3,4.3
+  box slab_3 size=51.2,0.4,7.3 at=-15.9,59.3,55.5
+  box slab_4 size=51.2,0.4,7.3 at=42.6,59.3,55.5
+  box slab_5 size=204.8,0.4,7.3 at=-0.1,48.4,-85.4
+  box slab_6 size=7.3,0.4,175.5 at=98.7,48.4,6
+  box slab_7 size=109.7,0.4,7.3 at=18.2,48.4,2.4
+  box slab_8 size=139,0.4,7.3 at=25.5,48.4,90.1
+  box wall size=7.3,51.2,0.4 at=100.8,0,-85.6 turn=-90
+  box wall_2 size=7.3,51.2,0.4 at=100.8,0,-71 turn=-90
+  box wall_3 size=7.3,51.2,0.4 at=100.8,0,-27.1 turn=-90
+  box wall_4 size=7.3,51.2,0.4 at=100.8,0,9.5 turn=-90
+  box wall_5 size=7.3,51.2,0.4 at=100.8,0,53.4 turn=-90
+  box wall_6 size=7.3,43.9,0.4 at=100.8,0,90 turn=-90
+  box wall_7 size=7.3,14.6,0.4 at=100.8,36.6,-78.3 turn=-90
+  box wall_8 size=36.6,14.6,0.4 at=100.8,36.6,-49 turn=-90
+  box wall_9 size=29.3,14.6,0.4 at=100.8,36.6,-8.8 turn=-90
+  box wall_10 size=36.6,14.6,0.4 at=100.8,36.6,31.4 turn=-90
+  box wall_11 size=29.3,14.6,0.4 at=100.8,36.6,71.7 turn=-90
+  box wall_12 size=14.6,7.3,0.4 at=-95.2,14.7,-86.9
+  box wall_13 size=14.6,7.3,0.4 at=-7.4,14.7,-86.9
+  box wall_14 size=14.6,7.3,0.4 at=36.5,14.7,-86.9
+  box wall_15 size=14.6,7.3,0.4 at=95,14.7,-86.9
+  box wall_16 size=204.8,7.3,0.4 at=-0.1,36.6,-86.9
+  box wall_17 size=197.5,7.3,0.4 at=-3.7,43.9,-86.9
+  box wall_18 size=7.3,51.2,0.4 at=98.8,0,87.1 turn=180
+  box wall_19 size=7.3,51.2,0.4 at=40.3,0,87.1 turn=180
+  box wall_20 size=7.3,51.2,0.4 at=-40.1,0,87.1 turn=180
+  box wall_21 size=51.2,14.6,0.4 at=69.6,36.6,87.1 turn=180
+  box wall_22 size=73.1,14.6,0.4 at=0.1,36.6,87.1 turn=180
+  box wall_23 size=7.3,43.9,0.4 at=-101.9,0,-90 turn=90
+}

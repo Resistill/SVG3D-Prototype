@@ -1,0 +1,333 @@
+// 分区 123/233：22 个物体（1 组），x 226…331，z -858…-747
+
+group RoadFacility_Ground_C_02C at=323.6,-141.9,-747.3 ~fit=0.7 ~src="MidMeshGroup/MidMeshGroup_52_-38/SM_I_RoadFacility_Ground_C_02C" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex" {
+  box box102 size=23.9,6.6,0 at=110.9,0.1,85.7 ~role="terrain"
+  box box130 size=6.4,0.4,1.2 at=122.7,0.1,86.3 rot=(0,0,-1,2.2) ~role="terrain"
+  group group11 at=126.9,0.5,67 ~role="terrain" {
+    plate wall points=[(-2.5,1.1); (2.5,-2); (1.7,2)] h=0.4 at=0.3,4.4,2 tilt=90
+    plate wall_2 points=[(-2.6,-1.1); (-2.9,1.1); (2.9,1.1); (-0.8,0.4); (2.1,-1.1)] h=0.4 at=-0.1,1.1,1.9 turn=1.02 tilt=89.24
+    plate wall_3 points=[(-1.7,-1.9); (1.7,1.9); (-1.7,1.4)] h=0.4 at=2.6,4.3,0.5 turn=90 tilt=90
+    plate wall_4 points=[(-1,-0.9); (-1.3,0.9); (1.3,0.9)] h=0.4 at=2.6,1,-1.1 turn=90 tilt=90
+  }
+  box box69 size=5.2,1.4,0 at=125.4,0.5,69.3 ~role="terrain"
+  group group12 at=104.2,0.7,69.1 ~role="terrain" {
+    plate wall points=[(-24.6,-7.6); (-8.1,0.8); (6.3,0.9); (19.7,7.6); (24.6,7.6); (6.4,0); (-8.1,0)] h=0.4 at=0,7.6,-0.2 tilt=90
+  }
+  box box68 size=5.4,4.2,0 against=box102[0.42,-0.1,-1] ~role="terrain"
+  box box101 size=16.3,0.4,0.4 at=121.9,1.1,77.6 turn=-90 ~role="terrain"
+  box box144 size=16.4,0,1.2 at=122.3,1.1,77.5 turn=-90 ~role="terrain"
+  box box175 size=16.4,0,1.2 at=121.1,1.7,77.5 turn=-90.1 ~role="terrain"
+  box box174 size=16.4,0,1.2 at=119.9,2.3,77.5 turn=-90.1 ~role="terrain"
+  box box150 size=16.4,0,1.2 at=118.7,2.9,77.5 turn=-89.9 ~role="terrain"
+  box box160 size=16.4,0,1.2 at=117.5,3.5,77.5 turn=-90 ~role="terrain"
+  box box172 size=16.4,0,1.2 at=116.3,4.1,77.5 turn=-90.1 ~role="terrain"
+  box box173 size=16.4,0,1.2 at=115.1,4.7,77.5 turn=-90.1 ~role="terrain"
+  box box143 size=16.4,0,1.3 at=113.9,5.3,77.5 turn=-90.2 ~role="terrain"
+  box box165 size=16.4,0,1.2 at=112.7,5.9,77.5 turn=-89.8 ~role="terrain"
+  box box157 size=16.4,0,1.2 at=111.5,6.5,77.5 turn=-90.2 ~role="terrain"
+  box box62 size=10.8,5.7,0 against=box102[-0.02,0.2,-1] ~role="terrain"
+  box box56 size=4.1,1.9,0 at=121.9,1.5,69.3 rot=(0,0,-1,25.4) ~role="terrain"
+  box box98 size=16.8,0.3,0.6 on=box157[-0.03,1,0.5] turn=0.2 ~role="terrain"
+  box box122 size=16.8,0.4,0.5 on=box143[-0.03,1,0.6] turn=0.2 ~role="terrain"
+  box box95 size=16.8,0.4,0.5 on=box172[-0.03,1,0.5] turn=0.1 ~role="terrain"
+  box box99 size=16.8,0.3,0.6 on=box150[-0.03,1,0.5] turn=-0.1 ~role="terrain"
+  box box123 size=16.8,0.4,0.6 on=box175[-0.03,1,0.5] turn=0.1 ~role="terrain"
+  box box96 size=16.8,0.4,0.5 on=box173[-0.03,1,0.5] turn=0.1 ~role="terrain"
+  box box100 size=16.8,0.5,0.5 on=box160[-0.03,1,0.5] ~role="terrain"
+  box box121 size=16.8,0.4,0.6 on=box174[-0.03,1,0.5] turn=0.1 ~role="terrain"
+  group group9 at=128.4,4.7,68.4 ~role="terrain" {
+    plate wall points=[(1.3,-2.3); (-1.3,-1.1); (-0.5,2); (1.3,2.3); (-0.1,1.4)] h=0.4 at=-0.1,2.3,0.4 tilt=90
+    plate wall_2 points=[(-0.8,-2.3); (0.8,2.1); (-0.8,2.3)] h=0.4 at=1,2.3,-0.1 turn=90 tilt=90
+  }
+  box box73 size=4,2.7,0 at=113.7,4.8,69.3 ~role="terrain"
+  box box97 size=16.8,0.3,0.4 on=box165[-0.03,1,0.7] turn=-0.2 ~role="terrain"
+  box box65 size=5.3,0.6,0.4 at=105.2,6.4,85.5 ~role="terrain"
+  box box50 size=4.1,0.3,0.3 at=108.8,6.8,85.6 ~role="terrain"
+  box box105 size=15.8,0.1,1.4 at=103,7,70 ~role="terrain"
+  box box111 size=15.8,0.4,0.6 on=box105[-0.95,1,10.1] turn=-90 ~role="terrain"
+  box box153 size=20.3,0,20.2 on=box105[0,1,10.4] turn=22 ~role="terrain"
+  box box57 size=11.8,6,0.1 at=91.4,7.3,69.4 ~role="terrain"
+  box box127 size=16.8,0.5,0.6 at=94.3,7.7,77.3 turn=-90 ~role="terrain"
+  box box77 size=2,4.6,0 at=100.4,7.7,69.3 ~role="terrain"
+  box box151 size=16.4,0,1.2 at=94.6,7.7,77.5 turn=-90 ~role="terrain"
+  box box171 size=16.4,0,1.2 at=93.5,8.3,77.5 turn=-89.8 ~role="terrain"
+  box box178 size=16.4,0,1.3 at=92.3,8.9,77.5 turn=-89.6 ~role="terrain"
+  box box177 size=16.4,0,1.3 at=91.1,9.5,77.5 turn=-89.7 ~role="terrain"
+  box box168 size=16.4,0,1.2 at=89.9,10.1,77.5 turn=-89.9 ~role="terrain"
+  box box176 size=16.4,0,1.2 at=88.7,10.7,77.5 turn=-90.1 ~role="terrain"
+  box box162 size=16.4,0,1.2 at=87.6,11.3,77.5 turn=-90.1 ~role="terrain"
+  box box159 size=16.4,0,1.2 at=86.4,11.9,77.5 turn=-90 ~role="terrain"
+  box box161 size=16.4,0,1.2 at=85.2,12.5,77.5 turn=-89.9 ~role="terrain"
+  box box167 size=16.4,0,1.2 at=84,13.1,77.5 turn=-90.2 ~role="terrain"
+  box box147 size=16.4,0,1.2 at=82.9,13.7,77.5 turn=-90.2 ~role="terrain"
+  box box169 size=16.4,0,1.3 at=81.7,14.3,77.5 turn=-89.7 ~role="terrain"
+  box box166 size=16.4,0,1.2 at=80.5,14.9,77.5 turn=-90.1 ~role="terrain"
+  box box128 size=16.8,0.4,0.6 on=box171[-0.03,1,0.5] turn=-0.2 ~role="terrain"
+  group group10 at=129.2,8.8,69.2 ~role="terrain" {
+    plate wall points=[(-0.4,0.5); (0.4,-2.7); (0.4,2.7)] h=0.4 at=0,2.7,-0.2 tilt=90
+  }
+  box box88 size=16.8,0.5,0.6 on=box161[-0.03,1,0.5] turn=-0.1 ~role="terrain"
+  box box116 size=16.8,0.4,0.6 on=box162[-0.03,1,0.5] turn=0.1 ~role="terrain"
+  box box126 size=16.8,0.4,0.6 on=box168[-0.03,1,0.5] turn=-0.1 ~role="terrain"
+  box box129 size=16.8,0.4,0.5 on=box178[-0.03,1,0.5] turn=-0.4 ~role="terrain"
+  box box125 size=16.5,0.4,0.4 on=box177[-0.01,1,0.6] turn=-0.3 ~role="terrain"
+  box box63 size=4.4,2.5,0 at=81.7,9.6,85.8 ~role="terrain"
+  box box137 size=16.5,0.4,0.4 on=box176[-0.01,1,0.6] turn=0.1 ~role="terrain"
+  box box80 size=2,4.4,0 at=71.6,10.8,85.7 ~role="terrain"
+  box box72 size=6.8,3.7,0 at=72.8,11.6,85.7 ~role="terrain"
+  box box117 size=16.3,0.5,0.6 on=box159[0.01,1,0.5] ~role="terrain"
+  box box118 size=16.8,0.4,0.6 on=box167[-0.03,1,0.5] turn=0.2 ~role="terrain"
+  box box78 size=2,4.6,0 at=116.9,13.3,69.3 ~role="terrain"
+  box box89 size=16.8,0.4,0.4 on=box147[-0.03,1,0.6] turn=0.3 ~role="terrain"
+  box box75 size=3.8,3.9,0 at=113.6,14.1,69.3 ~role="terrain"
+  box box113 size=3.9,1.2,0 at=65.2,14.1,85.7 ~role="terrain"
+  box box114 size=16.8,0.4,0.4 on=box169[-0.03,1,0.6] turn=-0.3 ~role="terrain"
+  box box76 size=5.2,0.8,0.4 at=67.9,14.5,85.5 ~role="terrain"
+  box box115 size=16.5,0.4,0.6 on=box166[-0.01,1,0.5] turn=0.1 ~role="terrain"
+  box box81 size=27.8,6.3,0 at=49.4,14.9,85.7 ~role="terrain"
+  box box51 size=3.8,0.3,0.4 at=65.1,15,85.5 rot=(1,0,0,13.5) ~role="terrain"
+  wedge wedge3 size=0.4,0.7,16.8 at=63.4,15.2,77.3 turn=-179.9 ~role="terrain"
+  box box79 size=2,4.6,0 at=86.3,15.5,69.3 ~role="terrain"
+  box box152 size=20,0,19.1 at=71.6,15.5,77 turn=14.6 ~role="terrain"
+  box box70 size=6.1,2.1,0 at=65,15.7,69.3 ~role="terrain"
+  box box140 size=13.1,6.4,0 at=57.7,15.9,69.3 ~role="terrain"
+  box box91 size=16.8,0.4,0.4 at=52.6,20.9,77.3 turn=-90 ~role="terrain"
+  box box94 size=16.8,0.3,0.6 at=55.1,19.7,77.3 turn=-90 ~role="terrain"
+  box box120 size=16.8,0.4,0.6 at=57.5,18.5,77.3 turn=-90 ~role="terrain"
+  box box119 size=16.8,0.4,0.6 at=59.9,17.3,77.3 turn=-90 ~role="terrain"
+  box box139 size=16.8,0.4,0.4 at=62.2,16.1,77.3 turn=-90 ~role="terrain"
+  box box149 size=16.4,0,1.2 at=51.9,21.5,77.5 turn=-89.8 ~role="terrain"
+  box box163 size=16.4,0,1.3 at=53,20.9,77.5 turn=-89.8 ~role="terrain"
+  box box148 size=16.4,0,1.2 at=54.2,20.3,77.5 turn=-89.9 ~role="terrain"
+  box box145 size=16.4,0,1.3 at=55.4,19.7,77.5 turn=-89.7 ~role="terrain"
+  box box141 size=16.4,0,1.2 at=56.6,19.1,77.5 turn=-89.8 ~role="terrain"
+  box box142 size=16.4,0,1.2 at=57.8,18.5,77.5 turn=-90 ~role="terrain"
+  box box170 size=16.4,0,1.2 at=59,17.9,77.5 turn=-89.9 ~role="terrain"
+  box box164 size=16.4,0,1.2 at=60.2,17.3,77.5 turn=-90 ~role="terrain"
+  box box158 size=16.4,0,1.3 at=61.4,16.7,77.5 turn=-90.3 ~role="terrain"
+  box box146 size=16.4,0,1.2 at=62.6,16.1,77.5 turn=-90.1 ~role="terrain"
+  box box92 size=16.8,0.4,0.6 on=box149[-0.03,1,0.5] turn=-0.2 ~role="terrain"
+  box box90 size=16.8,0.4,0.5 on=box148[-0.03,1,0.6] turn=-0.1 ~role="terrain"
+  box box93 size=16.8,0.4,0.6 on=box141[-0.03,1,0.5] turn=-0.2 ~role="terrain"
+  box box138 size=16.8,0.4,0.6 on=box170[-0.03,1,0.5] turn=-0.1 ~role="terrain"
+  box box124 size=16.8,0.4,0.6 on=box158[-0.03,1,0.5] turn=0.3 ~role="terrain"
+  box box74 size=3.8,3.9,0 at=123.7,17.7,69.3 ~role="terrain"
+  box box64 size=7.7,2.7,0 against=box81[-0.15,0.4,-1] ~role="terrain"
+  box box71 size=5.9,4,0 against=box140[-0.26,0.3,-1] ~role="terrain"
+  box box58 size=4.5,1.4,0 at=118.1,19.7,69.3 ~role="terrain"
+  box box61 size=9.5,1.4,0 at=37.9,20.2,85.7 ~role="terrain"
+  box box67 size=5.3,0.4,0 against=box74[0.5,0.6,-1] ~role="terrain"
+  box box131 size=7.9,0.3,1.2 at=37.6,20.8,86.3 rot=(0,0,-1,5.1) ~role="terrain"
+  box box2 size=21.4,0.2,10.9 at=126.8,20.8,64.8 turn=50.1 ~role="terrain"
+  box box1 size=15.8,0.2,0.3 at=129.9,20.8,-32.5 turn=-90 ~role="terrain"
+  box box7 size=14.3,0.2,0.3 at=129.9,20.8,-17.3 turn=-90 ~role="terrain"
+  box box6 size=15.6,0.2,0.3 at=129.9,20.8,-2.1 turn=-90 ~role="terrain"
+  box box5 size=15.7,0.2,0.3 at=129.9,20.8,13.7 turn=-90 ~role="terrain"
+  box box4 size=15.7,0.2,0.3 at=129.9,20.8,29.6 turn=-90 ~role="terrain"
+  box box3 size=15.7,0.2,0.3 at=129.9,20.8,45.5 turn=-90 ~role="terrain"
+  box box9 size=16.2,0.2,0.3 at=93.3,20.8,69.5 ~role="terrain"
+  mirror box10 of=box9 across=(85.153902,0,0.00004) axis=(1,0,0) ~role="terrain"
+  box box8 size=14.1,0.2,0.3 at=108.7,20.8,69.5 ~role="terrain"
+  group group18 at=-103.4,20.9,-50.1 ~role="terrain" {
+    plate floor points=[(-27.5,-35.6); (11.8,-35.4); (18.1,-33.1); (23.7,-27.4); (26.2,-18.5); (25.4,23.6); (16.9,33.5); (0.7,36.7); (12,36.5); (18.8,34); (24.8,27.9); (27.5,19.7); (27.5,-19.9); (24.8,-28.1); (18.8,-34.2); (12,-36.7)] h=0.4 at=0,0,0
+  }
+  group group8 at=-27.5,20.9,41.2 ~role="terrain" {
+    plate floor points=[(-11.9,22.4); (-12.2,-45.9); (-11.7,31.7); (-8.7,38.3); (-3.4,43.2); (3.4,45.7); (12.2,45.9); (0.7,44.7); (-6.6,40.2); (-11,33)] h=0.4 at=0,0,0
+  }
+  group group7 at=-103.4,20.9,-50.1 ~role="terrain" {
+    plate floor points=[(-27.5,-36.6); (11.9,-36.4); (18.6,-34); (24.6,-28); (27.2,-18.5); (27.2,18.3); (25.9,25.2); (21.9,31.1); (16,35.1); (0.6,36.8); (12,36.6); (18.8,34.1); (24.9,28); (27.5,19.7); (27.5,-19.9); (24.9,-28.2); (18.8,-34.3); (12,-36.8)] h=0.4 at=0,0,0
+  }
+  group group27 at=-79.8,20.9,-35.7 turn=-25.9 ~role="terrain" {
+    box slab size=1.4,0.4,1.4 at=-7.1,0,-23.5
+    box slab_2 size=1.4,0.4,1.4 at=7.2,0,5
+    box slab_3 size=1.4,0.4,2.9 at=7.2,0,10
+    box slab_4 size=1.4,0.4,1.4 at=2.9,0,22.2
+    box slab_5 size=1.4,0.4,1.4 at=1.5,0,23.6
+  }
+  group group21 at=-89,20.9,22.5 ~role="terrain" {
+    plate floor points=[(-5.3,-9.5); (-13.6,-9.1); (-2.4,-8.9); (4.4,-6.4); (10.5,-0.3); (13.6,9.5); (12.2,2.2); (8.1,-3.9); (1.9,-8)] h=0.4 at=0,0,0
+  }
+  group group17 at=-28.3,21,41.1 ~role="terrain" {
+    plate floor points=[(-11.1,22.5); (-11,-45.2); (10.5,-45.6); (-10.1,-44); (-10.1,27.5); (-8.8,34); (-4.1,40.5); (11.1,45.6); (1.4,44.7); (-5.8,40.3); (-10.2,33.1)] h=0.4 at=0,0,0
+  }
+  group group26 at=7.7,21,77.1 ~role="terrain" {
+    plate floor points=[(21.1,7.5); (-20.3,-8); (-21.1,-8); (-21.1,-7.7); (20.6,8); (21.1,8)] h=0.4 at=0,0.4,0 turn=0.77 tilt=2.6
+  }
+  box box15 size=15.8,0.3,0.3 at=130.8,21.1,-32.5 turn=-90 ~role="terrain"
+  box box16 size=15.6,0.3,0.3 at=130.8,21.1,-2.1 turn=-90 ~role="terrain"
+  box box18 size=15.7,0.3,0.3 at=130.8,21.1,13.7 turn=-90 ~role="terrain"
+  box box22 size=15.7,0.3,0.3 at=130.8,21.1,29.6 turn=-90 ~role="terrain"
+  box box17 size=15.7,0.3,0.3 at=130.8,21.1,45.5 turn=-90 ~role="terrain"
+  box box20 size=14.3,0.3,0.3 at=130.8,21.1,-17.3 turn=-90 ~role="terrain"
+  box box24 size=16.7,0.3,0.3 at=130.8,21.1,61.9 turn=-90 ~role="terrain"
+  box box26 size=16.1,0.3,0.3 at=77,21.1,70.3 ~role="terrain"
+  box box30 size=16.2,0.3,0.3 at=93.3,21.1,70.3 ~role="terrain"
+  box box29 size=14.8,0.3,0.3 at=123.4,21.1,70.3 ~role="terrain"
+  box box32 size=14.1,0.3,0.3 at=108.7,21.1,70.3 ~role="terrain"
+  box box136 size=17.3,0.8,0 at=31.4,21.2,77 turn=-90 ~role="terrain"
+  wedge wedge1 size=19,0.8,3.5 at=31.9,21.3,77.4 turn=90 ~role="terrain"
+  group group15 at=-27.9,21.3,34.6 ~role="terrain" {
+    plate wall points=[(-27.8,-0.1); (-27.8,0.1); (23.8,0.1); (25.1,0.1); (26.5,0.1); (27.8,0.1); (27.8,-0.1); (26.5,-0.1); (25.1,-0.1); (23.8,-0.1)] h=0.4 at=-10.1,0.1,10.3 turn=-90 tilt=90
+    plate wall_2 points=[(9.6,-0.1); (-10.1,-0.1); (-10.2,-0.1); (9.6,0.1); (10.2,0.1); (10.2,-0.1)] h=0.4 at=0.3,0.1,-37.7 turn=-180 tilt=90
+    plate wall_3 points=[(5.4,-0.1); (-5,-0.1); (-5.4,-0.1); (-5.4,0.1); (-5,0.1); (5.4,0.1)] h=0.4 at=-10.1,0.1,-31.9 turn=-90 tilt=90
+  }
+  group group16 at=-94.2,21.3,-69.5 ~role="terrain" {
+    plate wall points=[(9.1,0.1); (-7.8,0.1); (-9.1,0.1); (-9.1,-0.1); (-7.8,-0.1); (9.1,-0.1)] h=0.4 at=-8,0.1,-15.8 turn=-180 tilt=90
+    plate wall_2 points=[(-9,0.1); (6.2,0.1); (7.6,0.1); (8.9,0.1); (9,0.1); (9,-0.1); (8.9,-0.1); (7.6,-0.1); (6.2,-0.1); (-9,-0.1)] h=0.4 at=16.7,0.1,7.3 turn=90 tilt=90
+  }
+  wedge wedge2 size=18.9,0.8,2.4 at=-16.2,21.3,77.3 turn=87.5 ~role="terrain"
+  box box54 size=46,0,0.4 at=-39.5,21.3,-54.6 turn=-90 ~role="terrain"
+  box box82 size=33.5,0,0.7 on=group18[-0.31,1,-0.98] ~role="terrain"
+  box box196 size=35.4,0,0.3 at=-59,21.3,-50.9 turn=-90 ~role="terrain"
+  box box197 size=35.4,0,0.3 at=-56.8,21.3,-50.9 turn=-90 ~role="terrain"
+  box box195 size=37,0,0.3 at=-40.2,21.3,-50.1 turn=-90 ~role="terrain"
+  box box180 size=36.7,0,0.3 at=-40.2,21.3,13.6 turn=-90 ~role="terrain"
+  box box132 size=16.8,0.3,0 at=31.9,21.3,77.3 turn=-90 ~role="terrain"
+  box box133 size=19.5,0.3,0 at=41.6,21.3,70.5 ~role="terrain"
+  box box104 size=15.3,0,1.3 at=32.5,21.3,78.1 turn=-89.9 ~role="terrain"
+  box box103 size=15.3,0,0.7 on=box104[0,1,0.4] turn=-0.1 ~role="terrain"
+  box box66 size=3.6,0.7,0.7 at=49.5,21.4,85.4 turn=0.3 ~role="terrain"
+  box box48 size=10.9,0.3,0.4 at=37.3,21.6,85.5 rot=(1,0,0,10.9) ~role="terrain"
+  group group23 at=63.4,21.7,-4.5 ~role="terrain" {
+    plate floor points=[(34.2,-3); (33.6,-73); (33.5,-0.1); (28.7,20); (20.9,32.1); (11.3,40.8); (-28.2,60.9); (-34.2,73); (-26.8,60.5); (8.3,43.5); (19.7,34.3); (30.2,18)] h=0.4 at=0,0,0
+    plate floor_2 points=[(-0.3,35.6); (0.3,36.1); (0.3,-36.1); (-0.3,-36.1)] h=0.4 at=34,0,33
+  }
+  group group22 at=111.1,21.7,-6.5 ~role="terrain" {
+    plate floor points=[(13.6,-41); (13.6,71.1); (-13.6,71.1); (13.1,70.7); (13.1,-71.1)] h=0.4 at=0,0,0
+  }
+  group group4 at=-107.8,21.7,-50.2 ~role="terrain" {
+    plate floor points=[(-23.2,-28.1); (14.2,-27.7); (20.5,-24.4); (22.8,-18.4); (22.3,21.3); (20.5,24.4); (17,27); (5.1,28.1); (15,28); (19.8,25.8); (22.4,22.1); (23.2,18.4); (23.1,-19.1); (20.8,-24.7); (17.8,-27.1); (14.2,-28.1)] h=0.4 at=0,0,0
+  }
+  group group20 at=-27.3,21.7,41 ~role="terrain" {
+    plate floor points=[(-10,-43.7); (-9.6,31.3); (-2.3,41.3); (10,43.7); (-2,40.8); (-9,31.2)] h=0.4 at=0,0,0
+  }
+  group group19 at=-104.6,21.7,-50.2 ~role="terrain" {
+    plate floor points=[(-26.3,-34.5); (12.8,-34.3); (23.3,-27.9); (26.3,-19.7); (26.3,19.7); (24,26.8); (19.7,31.5); (12.8,34.3); (1.9,34.5); (17.3,32.3); (25,23.2); (25.8,-18.4); (22.8,-27.5); (12.7,-33.8)] h=0.4 at=0,0,0
+  }
+  group group2 at=-21.5,21.7,35.1 ~role="terrain" {
+    plate floor points=[(-4,-37.8); (-4,33.8); (-1.7,37.2); (4.2,37.8); (-1.8,37.3); (-4.2,33.8)] h=0.4 at=0,0,0
+  }
+  group group6 at=-24,21.7,37.8 ~role="terrain" {
+    plate floor points=[(-6.5,-40.5); (-6.8,32.3); (-2.3,39.1); (6.8,40.5); (-2,38.7); (-6.4,32.2)] h=0.4 at=0,0,0
+  }
+  group group1 at=-110.4,21.7,-50.2 ~role="terrain" {
+    plate floor points=[(7.8,-22.6); (-20.5,-22.6); (-20.5,-22.8); (16.4,-22.8); (18.1,-22.3); (19.4,-21.2); (20.2,-20.1); (20.5,-18.4); (20.5,18.7); (20.2,20.1); (19.4,21.2); (18.4,22.1); (17.1,22.6); (7.8,22.8); (17.1,22.5); (18.8,21.6); (20.1,19.7); (20.3,18.4); (20.2,-19.4); (19.1,-21.4); (17.1,-22.5)] h=0.4 at=0,0,0
+  }
+  group group14 at=-21.5,21.7,35.1 ~role="terrain" {
+    plate floor points=[(-4.2,-37.8); (-4.1,33.8); (-1.8,37.3); (4.2,37.8); (-1.5,36.8); (-3.5,33.7)] h=0.4 at=0,0,0
+  }
+  group group3 at=-86.4,21.7,-82.5 turn=16.7 ~role="terrain" {
+    box slab size=1.4,0.4,1.4 at=0,0,0
+  }
+  group group13 at=-110.4,21.7,-50.3 ~role="terrain" {
+    plate floor points=[(7.8,-22.1); (-20.5,-22.7); (16.4,-22.7); (19.4,-21.2); (20.5,-18.3); (20.5,18.8); (19.4,21.3); (17.1,22.7); (7.8,22.2); (17,22.1); (19.8,19.3); (19.8,-19.2); (17,-22)] h=0.4 at=0,0,0
+  }
+  group group5 at=-37,21.7,43.5 turn=12.9 ~role="terrain" {
+    box slab size=1.4,0.4,1.4 at=0,0,0
+  }
+  group group28 at=-4.5,21.7,27.2 ~role="terrain" {
+    plate floor points=[(-9.8,32.5); (-9.8,-32.5); (9.8,-32.5); (-9.3,-32)] h=0.4 at=0,0,0
+  }
+  group group24 at=41.7,21.7,-4.5 ~role="terrain" {
+    plate floor points=[(34.2,-42.9); (34.1,-0.6); (29.8,14); (19.2,24.8); (-20.6,45.2); (-29.7,57.1); (-34.2,73.1); (-31.7,60.2); (-23,46.6); (-12.6,39.1); (18.9,24.2); (30.5,11.3); (33.6,-3.3); (33.6,-73.1)] h=0.4 at=0,0,0
+  }
+  group group25 at=29.2,21.7,-23.7 ~role="terrain" {
+    plate floor points=[(-20.6,5.7); (-46.8,5.1); (35.3,5.1); (42.1,2.7); (46.8,-5.7); (43.8,1.9); (37.3,5.5)] h=0.4 at=0,0,0
+  }
+  wedge wedge4 size=17,0,44 at=7.7,21.7,77 rot=(0.022,1,0.022,90) ~role="terrain"
+  box box202 size=31.3,0,0.8 at=-28,21.7,-18.2 rot=(-0.018,0.999,0.036,52.1) ~role="terrain"
+  box box186 size=31.7,0,28.5 at=-27.9,21.7,-18.2 rot=(0.018,-1,0.026,69.7) ~role="terrain"
+  box box49 size=4.9,0.3,0.3 at=45.3,21.8,85.6 ~role="terrain"
+  box box60 size=5.3,0.5,0.4 at=72.7,21.9,70.3 ~role="terrain"
+  box box59 size=5.3,0.5,0.4 at=121.9,21.9,70.3 ~role="terrain"
+  box box44 size=16.8,0.3,0.3 at=31.7,21.9,77.3 turn=-90 ~role="terrain"
+  box box45 size=15.3,0.3,0.3 at=31.5,21.9,78 turn=-90 ~role="terrain"
+  box box106 size=19.5,0.1,1.4 at=41.5,22,71.1 ~role="terrain"
+  box box110 size=9.3,0.2,9.3 at=103.1,22,38 turn=-90 ~role="terrain"
+  box box107 size=9.3,0.2,0 against=box110[0,0,-1] ~role="terrain"
+  box box156 size=43.9,0,0.6 at=-37.1,22.1,-55.6 turn=-90 ~role="terrain"
+  box box52 size=44.1,0,0.2 at=-25.5,22.1,-55.5 turn=-90 ~role="terrain"
+  mirror box55 of=box52 across=(-27.997256,0,-0.000432) axis=(1,0,0.000015) ~role="terrain"
+  box box108 size=12.3,0,12.2 on=group23 offset=39.7,0,42.5 turn=-101.8 ~role="terrain"
+  box box187 size=22.9,0,12.8 at=111.2,22.1,-62.4 turn=2.8 ~role="terrain"
+  box box185 size=22.4,0,11.7 at=111.2,22.1,-48.4 ~role="terrain"
+  box box201 size=27.7,0,0.5 on=group23 offset=1.3,0,61.6 turn=-48.9 ~role="terrain"
+  box box198 size=35.1,0,0.5 on=group23 offset=22.3,0,55 turn=-48.6 ~role="terrain"
+  box box199 size=29.2,0,0.5 at=74.8,22.1,53.4 turn=-48.9 ~role="terrain"
+  box box184 size=22.4,0,11.7 at=111.2,22.1,-19.7 ~role="terrain"
+  box box183 size=22.4,0,11.7 at=111.2,22.1,-5.1 ~role="terrain"
+  box box181 size=22.4,0,11.7 at=111.2,22.1,9.2 ~role="terrain"
+  box box182 size=22.4,0,11.7 at=111.2,22.1,23.6 ~role="terrain"
+  box box188 size=10.6,0,8.7 on=group23 offset=29.7,0,31.7 turn=-90 ~role="terrain"
+  box box189 size=17.9,0,15.6 on=group23 offset=26.2,0,44.1 turn=-90 ~role="terrain"
+  box box190 size=13.9,0,12.6 on=group23 offset=-11.8,0,62.2 turn=-90 ~role="terrain"
+  box box191 size=8.6,0,8.2 on=group23 offset=-23.1,0,64.8 turn=-90 ~role="terrain"
+  box box192 size=4.7,0,3.4 on=group23 offset=32.4,0,17.8 turn=-90 ~role="terrain"
+  box box135 size=44.1,0,0.6 on=box52[0,1,-2] turn=180 ~role="terrain"
+  mirror box155 of=box135 across=(-27.997256,0,-0.000432) axis=(1,0,0.000015) ~role="terrain"
+  box box87 size=19.9,0,4.2 on=group1[0.09,1,-0.91] ~role="terrain"
+  box box53 size=43.9,0,0.2 on=box156[0,1,1] ~role="terrain"
+  box box200 size=25,0,0.5 on=group28[-0.13,1,-0.26] turn=-48.9 ~role="terrain"
+  box box194 size=16,0,0.5 on=group28[-0.43,1,0.07] turn=-48.9 ~role="terrain"
+  box box193 size=20.3,0,0.5 on=group28[-0.27,1,-0.74] turn=-48.7 ~role="terrain"
+  box box179 size=48.5,0,6.2 on=group28[-0.15,1,0.57] turn=-115.9 ~role="terrain"
+  box box109 size=9.3,0.1,9.3 on=box108[0,1,0] turn=11.8 ~role="terrain"
+  box box112 size=6.3,0,1.3 on=box135[-0.69,1,1] turn=-180 ~role="terrain"
+  box box83 size=108.3,0,4.6 on=group22 offset=15.5,0,20.4 turn=-90 ~role="terrain"
+  box box134 size=69.1,0,4.6 on=group19[0.15,1,0] turn=-89.9 ~role="terrain"
+  box box86 size=10.5,0,2.3 on=box83[0.023,1,-0.4] ~role="terrain"
+  box box85 size=7.4,0,1.7 on=box83[0.898,1,-0.6] turn=-0.3 ~role="terrain"
+  box box84 size=16.6,0,3.7 on=box201[1.28,1,-22] turn=48.9 ~role="terrain"
+  box box11 size=15.8,0.3,0.3 at=130.8,22.1,-32.5 turn=-90 ~role="terrain"
+  mirror box33 of=box11 across=(129.776173,0,0) axis=(1,0,0) ~role="terrain"
+  box box19 size=14.3,0.3,0.3 at=130.8,22.1,-17.3 turn=-90 ~role="terrain"
+  mirror box37 of=box19 across=(129.776173,0,0) axis=(1,0,0) ~role="terrain"
+  repeat boxs_7 n=4 step=15.89,0,-0.01 on=box83[-0.2972,1,-0.94] pin=origin {
+    box box size=15.6,0.3,0.3 ~role="terrain"
+  }
+  mirror boxs_8 of=boxs_7 across=(129.776173,0,0) axis=(1,0,0)
+  box box23 size=16.8,0.3,0.3 at=130.8,22.1,61.9 turn=-90 ~role="terrain"
+  box box39 size=14.5,0.3,0.3 on=box83[0.864,1,-1] ~role="terrain"
+  box box40 size=16.2,0.3,0.3 on=box84[-0.45,1,0.9] ~role="terrain"
+  box box31 size=14.1,0.3,0.3 at=108.7,22.1,70.3 ~role="terrain"
+  box box43 size=14.1,0.3,0.3 at=108.7,22.1,68.3 ~role="terrain"
+  box box41 size=12.6,0.3,0.3 at=122.2,22.1,68.3 ~role="terrain"
+  box box25 size=10.1,0.3,0.3 at=80,22.1,70.3 ~role="terrain"
+  box box28 size=9.1,0.3,0.3 at=96.9,22.1,70.3 ~role="terrain"
+  box box27 size=6.3,0.3,0.3 at=127.6,22.1,70.3 ~role="terrain"
+  box box46 size=5.7,0.3,0.3 at=88.1,22.1,70.3 ~role="terrain"
+  box box47 size=4.1,0.3,0.3 at=118,22.1,70.3 ~role="terrain"
+  box box154 size=19.4,0,15.3 on=box106[0,1,10.2] ~role="terrain"
+  box box42 size=16.2,0.3,0.3 on=box84[1.52,1,0.9] ~role="terrain"
+}
+box Destructible_Rock_Fragments_02B_2 size=2.8,4,1.1 at=330.5,-123.6,-756.8 rot=(-0.883,-0.057,-0.465,63.7) ~fit=0 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_Destructible_Rock_Fragments_02B@1" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+hull Terrain_Road_Desert_Decal_Sand_01_36 points=[(-46.8,0,-2.6); (46.8,0,-4); (45.5,0,-16.6); (-13.3,3.4,-11.9); (17.4,0,-49.2); (-10.1,0,49.2); (-31.2,0,-48.3); (8.6,2.8,14.7); (25.7,0,30.6); (-13.3,3.4,-11.9); (17.4,0,-49.2); (-31.2,0,-48.3); (-10.1,0,49.2); (12.2,2.9,9.6); (-25.8,2.2,2.4); (-1.7,3,11.7); (3.7,2.8,-17.9); (29.8,0,-43.9); (-13.3,3.4,-11.9); (-31.2,0,-48.3); (-10.1,0,49.2); (-13.3,3.4,-11.9); (-46.5,0,-8.9); (-31.2,0,-48.3)] at=236,-121.2,-814.1 ~fit=0.7 ~src="MidMeshGroup/MidMeshGroup_52_-38/SM_I_Terrain_Road_Desert_Decal_Sand_01@10" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+hull Terrain_Road_Desert_Decal_Sand_01_37 points=[(-15.5,0,22.1); (15.5,0,-15.8); (13.2,0,7.1); (-2.3,2.3,-7.5); (1.5,0,-37.1); (-13.1,0,37.1); (-12.6,0,-11.3); (-0.5,1.6,19.6); (5.9,0,24.3); (-4.8,2,11.8); (-2.4,0,32.7); (-8.6,1.5,-1.6); (1.8,2,2.5)] at=244.4,-121.2,-797 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_52_-38/SM_I_Terrain_Road_Desert_Decal_Sand_01@7" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Destructible_Rock_Fragments_02B size=2.9,4,1.1 at=328.4,-121.2,-759.5 rot=(-0.722,-0.352,-0.595,97.2) ~fit=0 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_Destructible_Rock_Fragments_02B@2" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Fence_SoundproofWall_02B_5 Fence_SoundproofWall_02B_2_5 at=303.8,-120.7,-781.8 turn=90 ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_H_Fence_SoundproofWall_02B" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+hull Terrain_Road_Desert_Decal_Sand_01_39 points=[(-3.4,0,-1.7); (3.4,0,2); (0.8,0.8,3.5); (1.9,0,-16.6); (0.8,0,16.6); (-2.6,0,11.4); (-0.6,0.5,-8.1); (-2.2,0,-9.7)] at=303.9,-120.5,-753.2 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_52_-38/SM_I_Terrain_Road_Desert_Decal_Sand_01@5" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+group Fence_Metal_01E_16 at=314.7,-120.2,-789.4 ~fit=0.6 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_H_Fence_Metal_1024x768_01E@1" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box box3 size=9.9,0.7,5.8 at=-6.2,0.2,2 rot=(-0.018,0.997,0.07,41.8)
+  box box2 size=5.3,0.7,3.9 at=-3.4,0.3,4.7 rot=(-0.024,0.999,0.033,69.9)
+  box box1 size=10.9,0.7,9.1 at=1.7,0.6,-3 rot=(-0.025,0.997,0.067,38.8)
+  box box4 size=9.7,0.7,7.1 at=7.6,0.9,-1.2 rot=(0.023,-0.999,0.024,90)
+}
+hull Terrain_Road_Desert_Decal_Sand_01_38 points=[(-6.8,0,-1.6); (6.8,0,-1.2); (-0.7,0,3.7); (1.4,1.2,-0.9); (1.8,0,-3.7); (4.7,0,2.5); (-3.3,0.8,0.8); (-3.9,0,2.6)] at=233.8,-120,-796 ~fit=0.7 ~src="MidMeshGroup/MidMeshGroup_52_-38/SM_I_Terrain_Road_Desert_Decal_Sand_01@6" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+hull Terrain_Road_Desert_Decal_Sand_03_3_3 points=[(-5.2,0,-1.4); (5.2,0,-1.7); (0.7,0,0.6); (-2.5,1.1,-1.7); (4.4,0.3,-1.7); (2.4,0,1.7); (-2.7,0,0.9)] at=233.8,-119.9,-782.6 ~fit=0.9 ~src="MidMeshGroup/MidMeshGroup_52_-38/SM_I_Terrain_Road_Desert_Decal_Sand_03@1" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+group Terrain_Road_Desert_Decal_Sand_02_24_3 at=298,-119.9,-829.2 ~fit=0.5 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_I_Terrain_Road_Desert_Decal_Sand_02@1" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  hull hull points=[(-5.8,0,7.5); (5.8,2.7,-3); (1.7,0,-6); (5.8,4.6,9.1); (5.4,0,-9.1)] at=-0.1,0,-23.3
+  hull hull_2 points=[(-5.8,0,-6.3); (5.8,4.6,-7.1); (-4.4,0,3.6); (3.5,3.3,-8.8); (0.8,0.8,8.8)] at=-0.1,0,-7.1
+  hull hull_3 points=[(-3.8,0,-7.5); (3.8,3.2,-6.8); (3.8,3.7,9.7); (-1.1,1.4,-9.7)] at=2.1,0,8.2
+  hull hull_4 points=[(-3.3,0,-8); (3.3,3.7,-5.6); (-3.1,0,-5.4); (0.8,2.3,-8.9); (3.3,0,8.9)] at=2.6,0,23.5
+}
+hull Terrain_Road_Desert_Decal_Sand_02_31_3 points=[(-1,0,-6.7); (1,0,3.2); (0.7,0,0.7); (-0.7,1.1,2.9); (-0.6,0,6.7); (-0.9,0.9,-3.9)] at=239.1,-119.9,-791.4 ~fit=0.8 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_I_Terrain_Road_Desert_Decal_Sand_02@2" ~role="decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_FlowerBed_03A_v2_5 Transport_Utility_FlowerBed_03A_3_8 on=RoadFacility_Ground_C_02C offset=-38.9,-0.4,-45.5 turn=-90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_H_Transport_Utility_FlowerBed_03A@3" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Fence_SoundproofWall_02_12 Fence_SoundproofWall_02_2_2 at=303.8,-119.8,-835 turn=-90 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_H_Fence_SoundproofWall_02@2" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Fence_SoundproofWall_02_12 Fence_SoundproofWall_02_3_3 at=303.8,-119.8,-800.2 turn=-90 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_H_Fence_SoundproofWall_02@1" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_01_53 Industrial_Container_SupplyBox_01_24_7 on=RoadFacility_Ground_C_02C offset=-89.7,-0.3,-46.3 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_H_Industrial_Container_SupplyBox_01@1" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_01_53 Industrial_Container_SupplyBox_01_29_7 on=RoadFacility_Ground_C_02C offset=-90,-0.3,-37.9 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_H_Industrial_Container_SupplyBox_01@2" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_02B_50 Industrial_Container_SupplyBox_02B_22_8 at=226.4,-119.8,-794.8 turn=90 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_52_-38/SM_H_Industrial_Container_SupplyBox_02B" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+box Fence_Metal_01E_18 size=9,0.3,6.2 at=307.3,-119.7,-748.5 turn=-92.1 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_H_Fence_Metal_1024x768_01E@2" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+Transport_Utility_Trademark_02_v2_3 Transport_Utility_Trademark_02_4_7 at=286.2,-117.9,-792.8 turn=-90 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_H_Transport_Utility_Trademark_02@4" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Vehicle_DriverlessVans_02_7 Vehicle_DriverlessVans_02_2_5 at=297,-113.7,-857.6 rot=(-0.034,-0.998,0.055,90.8) ~fit=0.6 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_H_FutureTech_Vehicle_DriverlessVans_02@2" ~role="decor" ~shape="col_convex" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_01_53 Industrial_Container_SupplyBox_01_25_7 at=233.9,-112.8,-790.1 turn=90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_52_-38/SM_H_Industrial_Container_SupplyBox_01@3" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"

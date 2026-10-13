@@ -1,0 +1,812 @@
+{
+  "source": "../h1.glb",
+  "level": "project",
+  "parts": 1964,
+  "kinds": {
+    "BS_Military_Hospital_Box_01": 3,
+    "BS_Military_Hospital_Box_02": 8,
+    "BS_Military_Shop_ArmorPlate_01": 4,
+    "Branding_LocationSign_02J": 2,
+    "Branding_LocationSign_02_B": 3,
+    "Branding_Office_doorplate_RoomUnit_01": 2,
+    "Branding_Office_doorplate_RoomUnit_03": 3,
+    "Branding_Office_doorplate_RoomUnit_04": 2,
+    "Branding_Office_doorplate_RoomUnit_05": 2,
+    "Branding_Office_doorplate_RoomUnit_06": 2,
+    "Branding_Office_doorplate_RoomUnit_07": 2,
+    "Branding_Office_doorplate_RoomUnit_10": 2,
+    "Branding_Office_doorplate_RoomUnit_11": 2,
+    "Branding_Office_doorplate_RoomUnit_27": 2,
+    "Commercial_Furniture_SafeBox_06": 2,
+    "Commercial_Lighting_EXIT_01": 8,
+    "Customiz_ExperimentalDoor_01_1024_Frame": 8,
+    "Customiz_ExperimentalDoor_01_L": 16,
+    "Decal_WellLid_11": 2,
+    "Decal_WellLid_11_v2": 2,
+    "Electron_Computer_01": 24,
+    "Electron_Computer_01_02": 2,
+    "Electron_Computer_01_03": 5,
+    "Electron_Computer_02_01": 19,
+    "Emissive_Cylinder_01": 5,
+    "Furniture_Cabinet_06": 2,
+    "Furniture_Cabinet_16": 19,
+    "Furniture_Cabinet_16_v2": 8,
+    "Furniture_Chair_05": 10,
+    "Furniture_Chair_08": 30,
+    "Furniture_Chair_09_02": 14,
+    "Furniture_ConferenceBoard_01b": 2,
+    "Furniture_Dispenser_01": 5,
+    "Furniture_Display_01": 7,
+    "Furniture_Display_01_v2": 3,
+    "Furniture_Display_01_v3": 3,
+    "Furniture_Flowerpot_01": 9,
+    "Furniture_Flowerpot_01_v2": 18,
+    "Furniture_Folder_01_A": 21,
+    "Furniture_Folder_01_B": 19,
+    "Furniture_Folder_01_C": 16,
+    "Furniture_Folder_01_D": 13,
+    "Furniture_Folder_02": 7,
+    "Furniture_Ladder_01_B": 4,
+    "Furniture_PaperCups_01_C": 4,
+    "Furniture_Speakers_01_B": 2,
+    "Furniture_ToolTable_01": 4,
+    "Furniture_Utility_Dustbin_01_A": 6,
+    "Furniture_Utility_Dustbin_01_B": 4,
+    "Generic_Lighting_Chandelier_01": 3,
+    "Generic_Lighting_Spotlight_02": 7,
+    "Generic_Lighting_Spotlight_04": 4,
+    "Generic_Lighting_TableLamp_04": 2,
+    "Generic_Lighting_WallLamp_02": 9,
+    "Generic_Lighting_WallLamp_05": 17,
+    "Generic_Lighting_WallLamp_05_v2": 2,
+    "Generic_Lighting_WallLamp_05_v3": 6,
+    "Generic_Lighting_WallLamp_05_v4": 18,
+    "Generic_Lighting_WallLamp_05_v5": 39,
+    "Generic_Lighting_WallLamp_05_v6": 3,
+    "Generic_Lighting_WallLamp_07": 4,
+    "Generic_Lighting_WallLamp_07_v2": 2,
+    "Government_Hospital_MedicalScreen_02": 10,
+    "Government_Office_BoxLid_01": 16,
+    "Government_Office_Box_01": 37,
+    "Government_Office_Cabinet_07": 2,
+    "Government_Office_Cable_01": 4,
+    "Government_Office_Carts_01": 3,
+    "Government_Office_CoffeeMachine_01": 8,
+    "Government_Office_FileCabinet_02B": 7,
+    "Government_Office_FileCabinet_03": 4,
+    "Government_Office_FileCabinet_03B": 5,
+    "Government_Office_FlowerPot_01": 5,
+    "Government_Office_Newspaper_06": 3,
+    "Government_Office_OfficeTable_08": 7,
+    "Government_Office_Safe_01A": 36,
+    "Government_Office_Safe_01B": 28,
+    "Government_Office_Safe_02A": 12,
+    "Government_Office_Safe_02B": 5,
+    "Government_Office_ServerComponents_10": 2,
+    "Government_Office_ServerParts_02": 7,
+    "Government_Office_ServerParts_02_v2": 2,
+    "Government_Office_ServerParts_03": 2,
+    "Government_Office_ServerParts_04": 2,
+    "Government_Office_ServerParts_04_v2": 5,
+    "Government_Office_ServerParts_06": 2,
+    "Government_Office_ServerParts_07": 6,
+    "Government_Office_ServerParts_07_v2": 3,
+    "Government_Office_Sofa_02": 3,
+    "Government_Office_StorageBasket_01": 5,
+    "Government_Office_TableMoveable_01": 2,
+    "Government_Office_Table_03": 3,
+    "Government_Utility_FireBox_03": 9,
+    "HBlack_01_InterWall_01": 2,
+    "HBoss_01_InterWall_01D": 5,
+    "HLight_01_ExterWall_04": 2,
+    "HOrange_01_ExterWall_01": 2,
+    "HOrange_01_InterDoor_01": 8,
+    "HOrange_01_InterWall_01C": 2,
+    "HOrange_01_InterWall_01F": 3,
+    "HOrange_01_InterWall_02C": 4,
+    "HOrange_01_InterWall_02E": 3,
+    "HOrange_01_InterWall_02E_v2": 2,
+    "HOrange_01_InterWall_07E": 3,
+    "HOrange_01_InterWall_07F": 2,
+    "HOrange_01_InterWall_10C": 4,
+    "HStairs_01C": 2,
+    "HStairs_03_ExterWall_01": 2,
+    "HStairs_03_ExterWall_01B": 2,
+    "HStairs_03_ExterWall_01C": 2,
+    "HStairs_04_ExterWall_01": 2,
+    "HStairs_04_InterWall_01": 2,
+    "HStairs_05": 2,
+    "HTerrace_01": 2,
+    "IceLand_Lighting_StreetLamp_07b": 7,
+    "IceLand_Nature_Rock_Medium_BeachRock_01c": 4,
+    "IceLand_Nature_Rock_Medium_BeachRock_01e": 2,
+    "IceLand_Props_IndustrialExtinguisher_01a": 6,
+    "IceLand_Props_IndustrialExtinguisher_01c": 13,
+    "IndustrialRailingPlate_01B": 2,
+    "Industrial_Container_02": 6,
+    "Industrial_Container_02_v2": 4,
+    "Industrial_Container_PackingBox_01": 35,
+    "Industrial_Container_PackingBox_01B": 3,
+    "Industrial_Container_PackingBox_01C": 4,
+    "Industrial_Container_PackingBox_01_v2": 3,
+    "Industrial_Container_SupplyBox_01": 39,
+    "Industrial_Container_SupplyBox_02": 35,
+    "Industrial_Container_SupplyBox_02B": 22,
+    "Industrial_Electrical_Lift_01": 2,
+    "Industrial_Lighting_Leuchtstabe_01": 11,
+    "Industrial_Lighting_Spotlight_01E": 14,
+    "Industrial_Lighting_WallLamp_02B": 31,
+    "Industrial_Prop_Light_02": 4,
+    "Industrial_Tools_Cabinet_01E": 3,
+    "Industrial_Tools_Cloth_02": 2,
+    "Industrial_Tools_DvingShoes_01": 3,
+    "Industrial_Tools_Lifebuoy_01": 3,
+    "Industrial_Tools_OxygenCylinder_01": 5,
+    "Industrial_Tools_Oxygenbottle_01": 2,
+    "Lighting_DecorativeLamp_02_C": 5,
+    "Lighting_DecorativeLamp_02_C_v10": 2,
+    "Lighting_DecorativeLamp_02_C_v2": 4,
+    "Lighting_DecorativeLamp_02_C_v3": 2,
+    "Lighting_DecorativeLamp_02_C_v4": 3,
+    "Lighting_DecorativeLamp_02_C_v5": 4,
+    "Lighting_DecorativeLamp_02_C_v6": 11,
+    "Lighting_DecorativeLamp_02_C_v7": 2,
+    "Lighting_DecorativeLamp_02_C_v8": 8,
+    "Lighting_DecorativeLamp_02_C_v9": 2,
+    "Lighting_DecorativeLamp_02_E": 4,
+    "Lighting_DecorativeLamp_02_E_v10": 2,
+    "Lighting_DecorativeLamp_02_E_v11": 7,
+    "Lighting_DecorativeLamp_02_E_v12": 4,
+    "Lighting_DecorativeLamp_02_E_v2": 3,
+    "Lighting_DecorativeLamp_02_E_v3": 2,
+    "Lighting_DecorativeLamp_02_E_v4": 2,
+    "Lighting_DecorativeLamp_02_E_v5": 3,
+    "Lighting_DecorativeLamp_02_E_v6": 2,
+    "Lighting_DecorativeLamp_02_E_v7": 2,
+    "Lighting_DecorativeLamp_02_E_v8": 3,
+    "Lighting_DecorativeLamp_02_E_v9": 2,
+    "Lighting_OverheadLight_01": 33,
+    "Lighting_OverheadLight_01_v2": 4,
+    "Lighting_OverheadLight_01_v3": 17,
+    "Lighting_OverheadLight_01_v4": 5,
+    "Lighting_OverheadLight_01_v5": 2,
+    "Lighting_OverheadLight_01_v6": 6,
+    "Lighting_OverheadLight_01_v7": 3,
+    "Lighting_OverheadLight_01_v8": 16,
+    "Lighting_OverheadLight_01_v9": 18,
+    "Machinery_Cabinet_02": 5,
+    "Machinery_Cabinet_03": 49,
+    "Machinery_Cabinet_03_v2": 2,
+    "Machinery_Medical_01": 3,
+    "Machinery_RFID_01_A": 2,
+    "Machinery_RFID_01_B": 2,
+    "Medium_Door_02": 2,
+    "Office_ComputerMonitors_03": 28,
+    "Office_Instrument_02C": 3,
+    "Office_SpaceSuit_03": 2,
+    "PipeLine_92x48x256_01": 4,
+    "Residential_Bedroom_Cushion_01_04": 2,
+    "Resort_Flowerpot_05": 3,
+    "Resort_MopBucket_01": 2,
+    "Resort_ReminderBoard_01": 14,
+    "RoadFacility_Ground_01B": 2,
+    "Road_FlowerBed_04_01": 3,
+    "Small_Door_11": 4,
+    "Small_Door_11_Frame": 3,
+    "Tools_Box_01": 14,
+    "Tools_Box_03": 22,
+    "Tools_MetalShelf_02": 3,
+    "Tools_MetalShelf_04": 4,
+    "Transport_Airplane_Lighting_04": 6,
+    "Transport_Utility_Guardrail_03": 2,
+    "Update_Container_PlasticBox_02": 8,
+    "Update_Container_PlasticBox_02_v2": 35,
+    "Update_Container_PlasticBox_02_v3": 2,
+    "Update_Container_PlasticBox_02_v4": 4,
+    "Vehicle_GroundVehicle_01": 4,
+    "Vehicle_GroundVehicle_02": 4,
+    "WalkwaySystem_PaintingStairs_128_02": 7,
+    "WalkwaySystem_PaintingStairs_128_02_v2": 2,
+    "WalkwaySystem_PaintingStairs_128_02_v3": 2,
+    "WalkwaySystem_PaintingStairs_128_02_v4": 3,
+    "WalkwaySystem_Terrace_128_01": 5,
+    "WalkwaySystem_Terrace_192_01": 6,
+    "WalkwaySystem_Terrace_256_01": 7,
+    "WalkwaySystem_Terrace_256_01_v2": 4,
+    "WalkwaySystem_Terrace_256_01_v3": 6,
+    "WalkwaySystem_Terrace_256_01_v4": 5,
+    "WalkwaySystem_Terrace_256_01_v5": 2,
+    "WalkwaySystem_Terrace_256_01_v6": 7,
+    "box": 202,
+    "cone": 3,
+    "cyl": 3,
+    "mesh": 208,
+    "span": 1,
+    "wedge": 19
+  },
+  "arrays": [
+    {
+      "id": "PipeLine_92x48x256",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "PipeLine_92x48x256_01"
+      ]
+    },
+    {
+      "id": "Government_Office_FileCabinet",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_FileCabinet_03"
+      ]
+    },
+    {
+      "id": "WalkwaySystem_PaintingStairs_128_02_16",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "WalkwaySystem_PaintingStairs_128_02"
+      ]
+    },
+    {
+      "id": "Furniture_Cabinet_16_29",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Furniture_Cabinet_16_v2"
+      ]
+    },
+    {
+      "id": "Furniture_Cabinet_16_30",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Furniture_Cabinet_16_v2"
+      ]
+    },
+    {
+      "id": "Machinery_Cabinet_03_53",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Machinery_Cabinet_03"
+      ]
+    },
+    {
+      "id": "Machinery_Cabinet_03_54",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Machinery_Cabinet_03"
+      ]
+    },
+    {
+      "id": "Machinery_Cabinet_03_56",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Machinery_Cabinet_03"
+      ]
+    },
+    {
+      "id": "WalkwaySystem_Terrace_256_01_34",
+      "n": 5,
+      "kind": "linear",
+      "children": [
+        "WalkwaySystem_Terrace_256_01_v4"
+      ]
+    },
+    {
+      "id": "Lighting_DecorativeLamp_02_E_49",
+      "n": 7,
+      "kind": "linear",
+      "children": [
+        "Lighting_DecorativeLamp_02_E_v11"
+      ]
+    },
+    {
+      "id": "Industrial_Tools_OxygenCylinder",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Industrial_Tools_OxygenCylinder_01"
+      ]
+    },
+    {
+      "id": "IceLand_Lighting_StreetLamp",
+      "n": 4,
+      "kind": "screw",
+      "children": [
+        "IceLand_Lighting_StreetLamp_07b"
+      ]
+    },
+    {
+      "id": "Government_Office_FileCabinet_2",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_FileCabinet_02B"
+      ]
+    },
+    {
+      "id": "Government_Office_Safe",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Safe_02A"
+      ]
+    },
+    {
+      "id": "Government_Office_Safe_02A_13",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Safe_02A"
+      ]
+    },
+    {
+      "id": "Government_Office_Safe_02A_14",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Safe_02A"
+      ]
+    },
+    {
+      "id": "Government_Office_Safe_02A_15",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Safe_02A"
+      ]
+    },
+    {
+      "id": "Industrial_Lighting_WallLamp_02B_32",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Industrial_Lighting_WallLamp_02B"
+      ]
+    },
+    {
+      "id": "Industrial_Lighting_WallLamp_02B_33",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Industrial_Lighting_WallLamp_02B"
+      ]
+    },
+    {
+      "id": "Industrial_Lighting_WallLamp_02B_34",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Industrial_Lighting_WallLamp_02B"
+      ]
+    },
+    {
+      "id": "Industrial_Lighting_Spotlight_01E_15",
+      "n": [
+        2,
+        2
+      ],
+      "kind": "grid",
+      "children": [
+        "Industrial_Lighting_Spotlight_01E"
+      ]
+    },
+    {
+      "id": "Government_Office_Safe_2",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Safe_01A"
+      ]
+    },
+    {
+      "id": "Government_Office_Safe_01A_37",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Safe_01A",
+        "Government_Office_Safe_01B"
+      ]
+    },
+    {
+      "id": "Government_Office_Safe_01A_40",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Safe_01A"
+      ]
+    },
+    {
+      "id": "Government_Office_Safe_01A_41",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Safe_01A"
+      ]
+    },
+    {
+      "id": "Government_Office_Safe_01A_42",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Safe_01A"
+      ]
+    },
+    {
+      "id": "Government_Office_Safe_01A_43",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Safe_01A"
+      ]
+    },
+    {
+      "id": "Government_Office_Safe_01A_44",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Safe_01A"
+      ]
+    },
+    {
+      "id": "Government_Office_Safe_01A_45",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Safe_01A"
+      ]
+    },
+    {
+      "id": "Generic_Lighting_Chandelier",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Generic_Lighting_Chandelier_01"
+      ]
+    },
+    {
+      "id": "Emissive_Cylinder",
+      "n": 5,
+      "kind": "linear",
+      "children": [
+        "Emissive_Cylinder_01"
+      ]
+    },
+    {
+      "id": "Lighting_DecorativeLamp_02_C_52",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_DecorativeLamp_02_C_v2"
+      ]
+    },
+    {
+      "id": "Lighting_DecorativeLamp_02_C_53",
+      "n": 4,
+      "kind": "screw",
+      "children": [
+        "Lighting_DecorativeLamp_02_C_v8"
+      ]
+    },
+    {
+      "id": "Lighting_DecorativeLamp_02_C_54",
+      "n": 4,
+      "kind": "screw",
+      "children": [
+        "Lighting_DecorativeLamp_02_C_v8"
+      ]
+    },
+    {
+      "id": "Generic_Lighting_WallLamp_02_10",
+      "n": 5,
+      "kind": "linear",
+      "children": [
+        "Generic_Lighting_WallLamp_02"
+      ]
+    },
+    {
+      "id": "Government_Office_Safe_01B_29",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Safe_01B"
+      ]
+    },
+    {
+      "id": "Government_Office_Safe_01B_30",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Safe_01B"
+      ]
+    },
+    {
+      "id": "Government_Office_Safe_01B_31",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Safe_01B"
+      ]
+    },
+    {
+      "id": "Government_Office_Safe_01B_32",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Government_Office_Safe_01B"
+      ]
+    },
+    {
+      "id": "Lighting_DecorativeLamp_02",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_DecorativeLamp_02_C"
+      ]
+    },
+    {
+      "id": "Generic_Lighting_WallLamp_05_86",
+      "n": 5,
+      "kind": "linear",
+      "children": [
+        "Generic_Lighting_WallLamp_05_v5"
+      ]
+    },
+    {
+      "id": "Generic_Lighting_WallLamp_05_87",
+      "n": 5,
+      "kind": "linear",
+      "children": [
+        "Generic_Lighting_WallLamp_05_v5"
+      ]
+    },
+    {
+      "id": "Generic_Lighting_WallLamp_05_88",
+      "n": 5,
+      "kind": "linear",
+      "children": [
+        "Generic_Lighting_WallLamp_05_v5"
+      ]
+    },
+    {
+      "id": "Generic_Lighting_WallLamp_05_89",
+      "n": 5,
+      "kind": "linear",
+      "children": [
+        "Generic_Lighting_WallLamp_05_v5"
+      ]
+    },
+    {
+      "id": "Generic_Lighting_WallLamp_05_90",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Generic_Lighting_WallLamp_05_v5"
+      ]
+    },
+    {
+      "id": "Generic_Lighting_WallLamp_05_91",
+      "n": 5,
+      "holes": [
+        2
+      ],
+      "kind": "linear",
+      "children": [
+        "Generic_Lighting_WallLamp_05_v5"
+      ]
+    },
+    {
+      "id": "Generic_Lighting_WallLamp_05_92",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Generic_Lighting_WallLamp_05_v5"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_108",
+      "n": [
+        2,
+        2
+      ],
+      "kind": "grid",
+      "children": [
+        "Lighting_OverheadLight_01_v8"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_109",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v3"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_118",
+      "n": 3,
+      "kind": "linear",
+      "children": [
+        "Lighting_OverheadLight_01_v7"
+      ]
+    },
+    {
+      "id": "Lighting_DecorativeLamp_02_C_56",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_DecorativeLamp_02_C_v6"
+      ]
+    },
+    {
+      "id": "Lighting_DecorativeLamp_02_C_57",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "Lighting_DecorativeLamp_02_C_v6"
+      ]
+    },
+    {
+      "id": "Lighting_OverheadLight_01_121",
+      "n": [
+        2,
+        2
+      ],
+      "kind": "grid",
+      "children": [
+        "Lighting_OverheadLight_01_v6"
+      ]
+    },
+    {
+      "id": "HOrange_01_InterWall_4",
+      "n": 4,
+      "kind": "linear",
+      "children": [
+        "HOrange_01_InterWall_10C"
+      ]
+    }
+  ],
+  "mirrors": [
+    {
+      "id": "Machinery_Cabinet_05_5",
+      "of": "Machinery_Cabinet_05",
+      "across": "(0,0,24.03838) axis=(0,0,1)",
+      "objects": 1
+    },
+    {
+      "id": "Machinery_Cabinet_05_6",
+      "of": "Machinery_Cabinet_05_2",
+      "across": "(0,0,24.03838) axis=(0,0,1)",
+      "objects": 1
+    },
+    {
+      "id": "Machinery_Cabinet_05_7",
+      "of": "Machinery_Cabinet_05_3",
+      "across": "(0,0,24.03838) axis=(0,0,1)",
+      "objects": 1
+    },
+    {
+      "id": "Machinery_Cabinet_05_8",
+      "of": "Machinery_Cabinet_05_4",
+      "across": "(0,0,24.03838) axis=(0,0,1)",
+      "objects": 1
+    },
+    {
+      "id": "Generic_Lighting_Chandelier_03_9",
+      "of": "Generic_Lighting_Chandelier_03_4",
+      "across": "(0,0,137.47299) axis=(0,0,1)",
+      "objects": 1
+    },
+    {
+      "id": "Generic_Lighting_Chandelier_03_10",
+      "of": "Generic_Lighting_Chandelier_03_7",
+      "across": "(0,0,137.47299) axis=(0,0,1)",
+      "objects": 1
+    },
+    {
+      "id": "Generic_Lighting_Chandelier_03_18",
+      "of": "Generic_Lighting_Chandelier_03_17",
+      "across": "(-168.100875,0,0) axis=(1,0,0)",
+      "objects": 1
+    },
+    {
+      "id": "Generic_Lighting_Chandelier_03_20",
+      "of": "Generic_Lighting_Chandelier_03_19",
+      "across": "(-168.100875,0,0) axis=(1,0,0)",
+      "objects": 1
+    },
+    {
+      "id": "Furniture_Fencing_01_6",
+      "of": "Furniture_Fencing_01_2",
+      "across": "(-120.095146,0,0) axis=(1,0,0)",
+      "objects": 1
+    },
+    {
+      "id": "Furniture_Fencing_01_5",
+      "of": "Furniture_Fencing_01_3",
+      "across": "(-120.095146,0,0) axis=(1,0,0)",
+      "objects": 1
+    }
+  ],
+  "covered": 197,
+  "placement": {
+    "on": 312,
+    "against": 89,
+    "at": 50,
+    "coord": 1360,
+    "mirror": 10
+  },
+  "meanFit": 0.281,
+  "dissolved": [
+    "HOrange_01_InterWall",
+    "WalkwaySystem_Terrace_256_01_33",
+    "WalkwaySystem_Terrace_128",
+    "HOrange_01_InterWall_3",
+    "Lighting_OverheadLight_01_112",
+    "WalkwaySystem_PaintingStairs_128_02_17",
+    "Lighting_OverheadLight_01_110",
+    "Lighting_OverheadLight_01_107",
+    "Lighting_OverheadLight_01_106",
+    "Lighting_OverheadLight_01_111",
+    "Lighting_DecorativeLamp_02_C_51",
+    "WalkwaySystem_Terrace_256",
+    "WalkwaySystem_Terrace_256_01_35",
+    "WalkwaySystem_Terrace_256_01_36",
+    "WalkwaySystem_Terrace_256_01_37",
+    "Transport_Airplane_Lighting",
+    "Machinery_Cabinet_03_55",
+    "Generic_Lighting_WallLamp_05_93",
+    "Generic_Lighting_WallLamp_05_94",
+    "Generic_Lighting_WallLamp_05_95",
+    "Generic_Lighting_WallLamp_05_96",
+    "Generic_Lighting_WallLamp_05_97",
+    "WalkwaySystem_Terrace_192",
+    "HOrange_01_InterWall_2",
+    "Lighting_OverheadLight_01_115",
+    "WalkwaySystem_PaintingStairs_128_02_18",
+    "Generic_Lighting_Spotlight_02_8",
+    "Lighting_OverheadLight_01_119",
+    "Lighting_DecorativeLamp_02_C_55",
+    "Lighting_OverheadLight_01_120",
+    "Lighting_OverheadLight_01_113",
+    "Lighting_OverheadLight_01_114",
+    "Lighting_OverheadLight_01_116",
+    "Lighting_OverheadLight_01_117",
+    "Government_Office_Safe_01A_38",
+    "Government_Office_Safe_01A_39",
+    "HBoss_01_InterWall"
+  ],
+  "fallback": [
+    "HBlack_01_InterWall_08",
+    "HBoss_01_ExterWall_Light_02",
+    "HStairs_03_ExterWall_01_2",
+    "Customiz_ExperimentalDoor_01_L_5",
+    "HOrange_01_InterWall_03B",
+    "Customiz_ExperimentalDoor_01_1024_Frame_8",
+    "Customiz_ExperimentalDoor_01_L_16",
+    "Branding_Screen_Monitor_01",
+    "WalkwaySystem_Terrace_128_01_4",
+    "Government_Office_Blinds_03_3",
+    "Customiz_SlidingDoor_01B",
+    "Customiz_SlidingDoor_01A",
+    "HBlack_01_InterWall_11",
+    "HLight_01_InterWall_11",
+    "HStairs_04_ExterWall_01",
+    "HStairs_04_ExterWall_01_2",
+    "box11",
+    "HLight_01_InterWall_11C",
+    "HBlack_01_InterWall_11C",
+    "Industrial_Container_SupplyBox_02B_6",
+    "HBoss_01_InterWall_01",
+    "HBoss_01_InterWall_05",
+    "Lighting_DecorativeLamp_02_C_47",
+    "WalkwaySystem_Terrace_128_01_2",
+    "WalkwaySystem_Terrace_128_01_3"
+  ],
+  "renamed": 15
+}

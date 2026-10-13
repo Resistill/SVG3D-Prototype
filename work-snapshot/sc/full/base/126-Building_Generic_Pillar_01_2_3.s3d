@@ -1,0 +1,193 @@
+// 分区 126/233：9 个物体（1 组），x 345…434，z -739…-682
+
+group RoadFacility_Ground_C_02F at=345.1,-130.3,-739.3 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_52_-37/SM_I_RoadFacility_Ground_C_02F" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  plate floor points=[(2.1,3.9); (-2.1,-3.2); (-0.3,-3.9)] h=0.4 at=-6.8,0.7,0.2 turn=-165.28 tilt=6.3
+  plate slope points=[(-0.8,2.1); (2.5,-0.2); (1.5,-2.1); (-2.5,0.6)] h=0.4 at=-9.5,4.1,8.1 turn=-176.45 tilt=55.34
+  plate slope_2 points=[(-0.8,-1.1); (1.8,-1.4); (1.6,0.9); (-1.8,1.4)] h=0.4 at=-15.2,8,15 turn=152.48 tilt=36.64
+  plate slope_3 points=[(-1.3,1.3); (-2.1,-1.7); (2.1,1.7)] h=0.4 at=4.7,2.5,-4.1 turn=-69.41 tilt=27.24
+  plate slope_4 points=[(-1.1,2.1); (-1.1,-2.1); (1.1,-0.6); (1,2)] h=0.4 at=-12.2,3.8,-8.5 turn=31.93 tilt=30.82
+  plate slope_5 points=[(1.8,1.6); (-1.8,-1.7); (-1.3,1.7)] h=0.4 at=11.9,8,13.7 turn=-159.69 tilt=29.44
+  plate floor_2 points=[(-1.9,-3.7); (1,4); (1.9,3.7); (-1,-4)] h=0.4 at=-8.6,0.8,1.1 turn=-165.27 tilt=6.3
+  plate slope_6 points=[(1.3,1.7); (2.3,-1.7); (-2.3,1.4)] h=0.4 at=4.6,3.1,-3.8 turn=112.68 tilt=153.18
+  plate slope_7 points=[(1,1.5); (-2.2,1.6); (2.2,-1.6)] h=0.4 at=11.4,8.4,13.2 turn=21.31 tilt=152.08
+  plate floor_3 points=[(-2.7,-3.4); (0.3,4.3); (-2.1,-3.6); (-0.3,-4.3); (2.7,3.4); (-0.3,-4.3)] h=0.4 at=-7.1,0.5,0.1 turn=-165.29 tilt=6.3
+  plate slope_8 points=[(0.7,-0.6); (0.3,-1.1); (-0.1,-1.3); (-0.5,-1.1); (-0.9,-0.9); (-1.2,-0.5); (-1.3,-0.1); (-1.2,0.4); (-0.9,0.8); (-0.5,1.1); (-0.1,1.3); (0.4,1.3); (0.8,1.1); (1.1,0.7); (1.3,0.3); (1.1,-0.2)] h=0.4 at=15.6,6.8,0.1 turn=-20.78 tilt=32.17
+  plate wall points=[(-4.2,-0.2); (4.2,0.7); (4.2,0.2); (-4.1,-0.7)] h=0.4 at=-6,0.7,-0.7 turn=125.27 tilt=92.22
+  plate wall_2 points=[(-4.2,0.7); (4.2,-0.2); (4.1,-0.7); (-4.2,0.2)] h=0.4 at=-5.8,0.7,-0.9 turn=-54.73 tilt=87.79
+  plate slope_9 points=[(0.9,0); (-0.2,-0.9); (-0.6,-1.2); (-0.8,-1.3); (-1.4,-0.4); (-1.3,-0.3); (-0.9,0.1); (-0.3,0.5); (0.3,0.9); (0.7,1.3); (1.4,0.5)] h=0.4 at=10.6,5.9,3.5 turn=-160.92 tilt=147.97
+  plate floor_4 points=[(1.7,-3.9); (-1.3,4); (-1.7,3.9); (1.3,-4)] h=0.4 at=-5.9,0.8,-0.8 turn=14.72 tilt=173.7
+  plate floor_5 points=[(-1.6,-3.8); (1.3,4); (1.6,3.8); (-1.3,-4)] h=0.4 at=-5.9,0.5,-0.8 turn=-165.29 tilt=6.3
+  plate wall_3 points=[(-3.9,0.2); (3.9,-0.6); (3.9,-0.2); (-3.9,0.6)] h=0.4 at=-8.9,0.8,1.1 turn=-54.73 tilt=87.78
+  plate floor_6 points=[(0.1,-1); (0.2,-0.5); (0.3,-0.5); (0.7,-0.4); (0.7,-0.4); (0.8,-0.1); (0.8,0.2); (0.4,0.3); (0.3,0.4); (0.4,0.9); (0.5,1.5); (0.1,1.5); (-0.3,1.6); (-0.3,1.1); (-0.4,0.5); (-0.5,0); (-0.5,-0.5); (-0.8,-1.4); (0,-1.6)] h=0.4 at=-14.6,3.2,-4.7 turn=-137.81 tilt=161.04
+  plate floor_7 points=[(-1.4,0.6); (1.1,-1.2); (1.4,-0.7); (1.4,-0.6); (1.4,-0.5); (1.2,-0.2); (-0.6,1.1); (-0.9,1.2); (-1,1.2); (-1.1,1.1)] h=0.4 at=-6.4,4.1,-15.3 turn=27.14 tilt=23.42
+  plate floor_8 points=[(-0.6,0.7); (-0.4,0.4); (0,0.1); (0.4,-0.2); (0.6,-0.4); (0.6,-0.6); (1,-1.9); (1.2,-1.9); (1,-0.7); (0.7,0.6); (0.8,0.9); (0.3,1); (0,1.4); (-0.4,1.6); (-0.8,1.8); (-1.2,1.9); (-1.2,1.9); (-1.1,1.6); (-0.9,1)] h=0.4 at=15.1,6.6,-3 turn=-67.88 tilt=22.19
+  plate floor_9 points=[(-4,1.1); (4,-0.8); (4,-1.1); (-4,0.8)] h=0.4 at=-7.9,0.7,0.6 turn=-67.18 tilt=25.17
+  plate floor_10 points=[(0.4,1); (-0.6,0.2); (-1.1,-0.1); (-1.3,-0.1); (-0.9,-0.6); (-0.5,-1.2); (-0.5,-0.9); (0,-0.6); (1,0.2); (1.3,0.4); (1,0.8); (0.8,1.2)] h=0.4 at=-14.7,6.4,-14.2 turn=-74.96 tilt=164.07
+  plate slope_10 points=[(-0.4,0.6); (-0.9,-0.6); (-1,-1); (-0.6,-1.2); (-0.2,-1.3); (0,-1); (0.6,0.2); (0.8,0.8); (1,0.8); (0.4,1.1); (-0.2,1.3); (-0.1,1.1)] h=0.4 at=12.1,6.4,-0.3 turn=64.28 tilt=146.21
+  plate floor_11 points=[(0.6,1.4); (-0.1,1.3); (-0.7,0.1); (-0.9,-1.3); (-0.3,-1.4); (0.3,0); (0.9,1.3)] h=0.4 at=15.6,6.9,-3.7 turn=124.52 tilt=154.9
+  plate floor_12 points=[(-0.6,0.7); (-0.8,-0.5); (-0.8,-0.7); (0,-0.6); (-0.6,-0.7); (0,-0.8); (0.5,-0.8); (0.8,-0.5); (0.8,0.8); (0.6,0.8); (0.3,0.7); (0.1,0.7); (-0.1,0.8)] h=0.4 at=15.7,6.9,1.4 turn=178 tilt=172.26
+}
+Industrial_Container_02_v2_6 Industrial_Container_02_37 on=RoadFacility_Ground_C_02C offset=110.7,-0.4,47.7 turn=90.4 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Industrial_Container_02@12" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_02_v2_6 Industrial_Container_02_38 on=RoadFacility_Ground_C_02C offset=86,-0.4,58.3 turn=90.4 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Industrial_Container_02@13" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_02_v2_6 Industrial_Container_02_40 on=RoadFacility_Ground_C_02C offset=110,-0.4,58.3 turn=90.4 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Industrial_Container_02@15" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_02_v2_6 Industrial_Container_02_42 on=RoadFacility_Ground_C_02C offset=39.6,-0.4,58.6 turn=90.4 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Industrial_Container_02@14" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+group Fence_SoundproofWall_02_9_3 on=RoadFacility_Ground_C_02C offset=41.5,-0.4,65.1 ~fit=0.9 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Fence_SoundproofWall_02@8" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex" {
+  box wall size=28.2,14.7,1.1 at=0.7,0.1,0
+  box box_2 size=2.3,16.1,1.8 at=-13.9,0,0 turn=-90
+}
+Industrial_Container_SupplyBox_01_53 Industrial_Container_SupplyBox_01_39_6 on=RoadFacility_Ground_C_02C offset=69.1,-0.3,59.4 turn=-178.5 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_H_Industrial_Container_SupplyBox_01@46" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Container_SupplyBox_02B_50 Industrial_Container_SupplyBox_02B_32_4 on=RoadFacility_Ground_C_02C offset=81.6,-0.3,50.8 turn=3.4 ~fit=0 ~src="MidMeshGroup/MidMeshGroup_53_-37/SM_H_Industrial_Container_SupplyBox_02B@9" ~role="decor" ~shape="col_box" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+group Building_Generic_Pillar_01_2_3 on=RoadFacility_Ground_C_02C offset=99.2,-0.3,35.6 turn=-4 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-37/SM_Building_Generic_Pillar_256x1024_01" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  pipe pipe1 path=[(44.2,54.6,-2.8); (36.2,49,-5.4); (28.1,43.5,-8); (20,37.9,-10.5); (13.5,34,-17.1); (7,30.2,-24)] r=0.2 smooth=true
+  pipe pipe2 path=[(-12.4,34.4,5.1); (-6.2,31.4,3); (-0.7,27.8,1); (-0.8,20.5,1.1); (-0.7,13.3,1); (-0.7,6.1,1)] r=0.2 smooth=true
+  pipe pipe3 path=[(19.7,37.2,3); (13.2,34.3,2.9); (6.7,31.3,2.8); (1.1,27.5,2.7); (1.2,20.4,2.7); (1.2,13.2,2.7); (1.3,6.1,2.7)] r=0.2 smooth=true
+  box box5 size=3.7,0.3,3.7 at=0.2,0,1.8 turn=4
+  box box6 size=2.4,7.9,2.4 on=box5[0,1,0] turn=-90
+  group group10 at=2.3,6.1,-3.1 {
+    plate wall points=[(0,-10.8); (0,11.3); (0.2,11.3); (0.2,-10.8); (0,-11.3); (-0.2,-11.2)] h=0.4 at=-1,11.3,4 turn=-93.49 tilt=89.9
+    plate wall_2 points=[(0.1,-11.1); (0.1,11.1); (-0.1,11.1); (-0.1,-11.1)] h=0.4 at=-1,11.1,4 turn=-48.44 tilt=90
+    plate slope points=[(4.1,-2.2); (4,-2.3); (-3.6,1.8); (-4.1,2.2); (-3.9,2.3); (-3.5,2)] h=0.4 at=-0.1,24.5,-0.1 turn=58.53 tilt=61.03
+    plate wall_3 points=[(-4.2,-1.9); (3.7,1.7); (4,2.1); (4.2,2); (3.7,1.6); (-4.1,-2.1)] h=0.4 at=0.2,24.5,0 turn=-100.56 tilt=78.71
+  }
+  box box4 size=1.9,22.7,1.8 at=0.2,6.1,1.8 turn=4
+  box box3 size=0.3,8.3,0.3 at=-1,24.8,1.1 rot=(0.453,-0.827,0.332,79.9)
+  cyl cyl1 r=0.2 h=8.3 at=-0.5,24.9,3.1 rot=(0.971,0,-0.241,42.3)
+  box box1 size=0.3,8.3,0.3 at=1.1,24.9,0.6 rot=(-0.941,-0.307,-0.144,44.5)
+  box box2 size=0.3,8.3,0.3 at=1.5,24.9,2.7 rot=(-0.335,-0.876,-0.348,96.7)
+  group group5 at=0.1,30,6.9 turn=116.4 {
+    box ramp size=1.4,0.4,1.4 at=-0.1,0.4,0 rot=(-0.255,0.06,-0.965,27.4)
+  }
+  box box52 size=19.5,12.2,0 at=25.9,30.8,22.7 rot=(-0.659,-0.525,-0.538,34)
+  box box11 size=16.4,0.4,0.3 at=5.3,31.2,-16 rot=(-0.43,0.879,0.207,89.6)
+  group group11 at=11,31.5,13.1 {
+    box box size=16.8,0.4,0.4 at=-0.9,0.5,8.2 rot=(-0.46,0.824,0.33,12.4)
+    box box_2 size=17.2,0.3,0.3 at=8.1,3.3,-1.6 rot=(0.398,0.909,-0.125,94.3)
+  }
+  cyl cyl11 r=0.2 h=16.9 axis=x at=-2.1,31.6,15.1 rot=(0.007,-1,-0.011,63.7)
+  group group9 at=2.2,31.9,4.5 turn=25.3 {
+    box ramp size=17.9,0.4,0.7 at=0.1,3.8,-0.6 rot=(0,0,1,25.2)
+    box ramp_2 size=0.7,0.2,0.7 at=6.2,6.4,0.5 rot=(0.937,0.1,0.335,35.4)
+  }
+  box box13 size=11.1,0.3,0.3 at=1.7,32,17.3 rot=(-0.195,0.938,0.287,92.9)
+  group group2 at=-2.4,32.1,2.2 turn=-37.5 {
+    box ramp size=1.4,0.4,11.4 at=0,1.9,-0.1 rot=(0.995,-0.017,-0.097,19.3)
+  }
+  box box14 size=11.6,0.3,0.3 at=-2.8,32.1,7.2 rot=(-0.314,-0.949,0.001,47.4)
+  box box27 size=14.8,0.3,0.3 at=-1.8,32.2,-2.3 rot=(0.463,0.881,-0.097,52.6)
+  box box22 size=19,0.3,6.5 at=6,32.4,2.2 rot=(0.039,0.999,-0.034,84.1)
+  cyl cyl15 r=0.2 h=23.2 axis=x at=2.6,32.5,-13.2 rot=(-0.115,-0.99,0.08,111)
+  cyl cyl12 r=0.2 h=12.1 at=18.5,32.9,19.7 rot=(-0.823,0,-0.568,25.9)
+  box box50 size=18.2,11.8,0 at=15.6,32.9,11 rot=(-0.247,-0.953,-0.178,74.3)
+  group group12 at=24.5,32.9,17.8 {
+    plate slope points=[(5,4.6); (2.2,-2.9); (-4.3,-5.2); (-5,-0.7); (-2.4,5.2)] h=0.4 at=0.4,4.7,0.9 turn=-14.87 tilt=65.31
+    plate slope_2 points=[(1.9,2.2); (0.7,-2.2); (-1.9,0)] h=0.4 at=-4,7.4,-2.6 turn=-71.59 tilt=68.76
+    plate slope_3 points=[(-1.5,-2); (1.5,2); (1.3,-1.2)] h=0.4 at=0.7,8.4,-0.7 turn=17.29 tilt=36.68
+  }
+  group group3 at=5.7,33,-3.7 {
+    box box size=9,0.4,0.4 at=0,5.2,2.6 rot=(0.814,-0.119,0.568,45.6)
+    box box_2 size=11.8,0.3,0.3 at=1.1,3.4,0 rot=(-0.276,-0.805,0.526,61.9)
+  }
+  box box41 size=23.4,0,2.9 at=3.3,33,-13.2 rot=(-0.378,0.925,0.037,80.6)
+  cyl cyl8 r=0.2 h=18.9 axis=x at=27.8,33.2,21.9 rot=(-0.035,-0.95,0.31,13.5)
+  box box45 size=12.7,0,2.6 at=-2.9,34.1,2.2 rot=(-0.107,0.891,0.442,60.7)
+  cyl cyl25 r=6.2 h=0 axis=x at=-18.1,34.2,16.7 rot=(-0.156,-0.53,0.834,38.8)
+  box box47 size=25.5,0,13.1 at=0.3,34.3,8.8 rot=(-0.035,0.925,0.378,70.3)
+  group group1 at=-18.3,34.7,0.6 {
+    cyl cyl r=0.2 h=21.4 axis=x at=0,2.9,0 rot=(-0.099,-0.977,0.19,56)
+    box box size=0.3,6.4,0.3 at=5.5,0.1,4.7 rot=(0.555,0.806,0.206,65.3)
+  }
+  group group4 at=15.2,34.8,11.6 {
+    box ramp size=2.9,0.4,2.9 at=0.1,1.6,-0.1 rot=(0.426,0.232,0.874,63.7)
+  }
+  cyl cyl18 r=0.2 h=7.4 axis=x at=-15.2,34.9,18 rot=(-0.013,1,0,177)
+  group group7 at=-21.3,34.9,14.2 {
+    cyl cyl r=0.2 h=10.6 axis=x at=1.2,3.5,-0.5 rot=(0.338,0.902,0.268,108.7)
+    cyl cyl_2 r=0.2 h=9 axis=x at=-0.9,6.4,0.1 rot=(0.068,-0.996,-0.051,106.4)
+  }
+  cyl cyl22 r=0.2 h=17.3 axis=x at=-18.8,35,-1.6 rot=(0.032,-0.997,-0.071,48.7)
+  box box38 size=10.6,6.2,0 at=-23.1,35,21.4 rot=(-0.431,0.888,0.161,45.7)
+  box box42 size=22.4,0,18.1 at=6.3,35.1,-10.3 rot=(-0.205,-0.872,0.445,55.8)
+  box box25 size=0.4,7,0.4 at=-19.2,35.1,17.9 rot=(0.369,-0.873,0.318,82.4)
+  cone cone1 r=0.2 r2=0.1 h=19.5 axis=x at=-7.1,35.2,13.4 rot=(-0.038,-0.997,0.073,55.7)
+  group group14 at=11.9,35.2,-3 {
+    plate floor points=[(-7.8,1.1); (-6.2,6.4); (7.8,-2.8); (3.8,-6.4)] h=0.4 at=0.9,2.6,-3.3 turn=-154.17 tilt=23.79
+    plate floor_2 points=[(-2.1,-4.6); (4,2.3); (0.3,4.6); (-4,-2.1)] h=0.4 at=-4.9,2.7,6.7 turn=-63.68 tilt=25.23
+    plate floor_3 points=[(0.7,-4.6); (1.7,-2.1); (-1.7,4.6)] h=0.4 at=-2.9,3.1,7.2 turn=1.15 tilt=20.39
+    plate slope points=[(-1.1,-0.3); (1.1,1.3); (0.9,-1.3)] h=0.4 at=-1.4,4.5,3.7 turn=-34 tilt=32.66
+  }
+  box box16 size=9.9,0.4,0.4 at=-6.5,35.5,19.9 rot=(-0.536,-0.831,0.15,23)
+  cyl cyl23 r=0.2 h=9.6 axis=x at=-8.6,35.5,2.3 rot=(0.094,0.951,0.296,36.9)
+  group group13 at=-24.6,35.5,18.7 {
+    plate floor points=[(2.5,1.4); (-1.2,-4.2); (-2.5,3.8); (2.3,4.2)] h=0.4 at=-1.2,3.9,0.2 turn=-65.58 tilt=25.56
+    plate slope points=[(-2.2,-3.1); (2.2,-1.6); (0.9,3.1)] h=0.4 at=3.1,2.6,-1.5 turn=68.84 tilt=57.26
+    plate slope_2 points=[(0.6,-2.2); (3.3,2.2); (-3.3,-0.2)] h=0.4 at=0.9,3.3,0.7 turn=41.03 tilt=69.44
+  }
+  cone cone3 r=0.1 r2=0.2 h=26.9 axis=x at=28.7,35.5,13.6 rot=(0.058,0.998,0.028,129)
+  group group15 at=-17.5,35.7,0.1 {
+    plate floor points=[(3.8,5.6); (9.4,5.8); (9.7,-4.9); (-9.7,-5.8); (-8.9,5)] h=0.4 at=0,2,0.1 turn=160.18 tilt=19.77
+  }
+  cyl cyl16 r=0.2 h=25.2 axis=x at=5.8,35.7,11.3 rot=(0.167,-0.979,-0.118,110.7)
+  box box48 size=24.4,0,16.5 at=10.3,35.9,11.6 rot=(0.182,0.968,0.171,90.4)
+  box box40 size=26,0,13.2 at=13.3,35.9,-12.4 rot=(-0.106,-0.958,0.267,90.7)
+  box box26 size=24,0.3,0.3 at=-20.3,35.9,14.8 rot=(-0.565,0.812,0.147,63.8)
+  box box8 size=20.8,0.5,0.4 at=-14.6,36,-4.2 rot=(-0.832,-0.547,-0.091,39.3)
+  cyl cyl10 r=0.2 h=10.7 axis=x at=-23.5,36.1,21 rot=(-0.113,0.929,-0.352,38.2)
+  box box46 size=16.9,0,9.9 at=1.9,36.2,2.9 rot=(0.322,-0.069,0.944,25.5)
+  box box33 size=21,0,12.5 at=-15.8,37,-2.2 rot=(-0.376,-0.925,0.052,45.8)
+  cyl cyl17 r=0.2 h=20.5 axis=x at=17.2,37.1,10.3 rot=(0.214,-0.946,-0.245,85.6)
+  box box32 size=11.8,0,7 at=-13.3,37.1,14.6 rot=(0.34,0.901,0.269,69.3)
+  box box53 size=17.8,0,16.3 at=14.8,37.3,8.7 rot=(0.676,-0.707,0.207,46.9)
+  box box17 size=11.8,0.4,0.4 at=-15.6,37.3,13.5 rot=(0.199,0.894,0.402,57)
+  cyl cyl9 r=0.2 h=13.2 axis=x at=20,37.4,-3.9 rot=(0.018,1,0.017,91)
+  cyl cyl6 r=0.2 h=9.9 axis=x at=-11.8,37.4,13.6 rot=(0.235,0.948,0.213,98.7)
+  group group8 at=-27,37.5,20.3 {
+    cyl cyl r=0.2 h=7.4 axis=x at=0,1.8,-2.5 rot=(-0.112,-0.638,0.762,25.8)
+    box box size=7,0.4,0.4 at=1.3,1.6,1 rot=(0.615,0.782,0.099,72.3)
+  }
+  group group6 at=25.7,37.5,5.4 {
+    box ramp size=1.4,0.3,1.4 at=9.4,0.6,13.3 rot=(0,0,-1,66.3)
+    box ramp_2 size=1.4,0.4,1.4 at=-0.6,6.3,0.1 rot=(0.695,0.285,0.66,63.7)
+    box ramp_3 size=1.4,0.4,1.4 at=1.1,6.7,1.3 rot=(-0.862,0.236,-0.449,62.7)
+    box ramp_4 size=1.4,0.4,1.4 at=-6.5,1.3,-13.2 rot=(-0.362,-0.202,0.91,63)
+    box ramp_5 size=1.4,0.4,1.4 at=-9.1,2.9,-6.8 rot=(-0.362,-0.202,0.91,63)
+    box wall size=1.4,1.4,0.2 at=-6.6,0,-2.6 rot=(-0.851,-0.521,-0.07,17.9)
+    box wall_2 size=1.4,1.4,0.2 at=-8,1.3,-3.2 rot=(-0.851,-0.521,-0.07,17.9)
+    box wall_3 size=1.4,1.4,0.2 at=-9.3,2.7,-3.9 rot=(-0.851,-0.521,-0.07,17.9)
+  }
+  box box31 size=14.9,0,8.9 at=-7.3,37.6,16.1 rot=(0.757,-0.627,0.181,41.8)
+  box box24 size=7.5,0.4,0.4 at=-29.3,37.7,20.3 rot=(-0.241,-0.941,-0.237,71.8)
+  cyl cyl2 r=0.2 h=13.3 axis=x at=-2,37.9,15 rot=(0.141,-0.978,-0.15,87.7)
+  cyl cyl5 r=0.2 h=16.4 axis=x at=-7,37.9,15.3 rot=(0.113,-0.962,-0.249,50.8)
+  box box9 size=9.4,0.4,0.4 at=-3.5,38.2,4.1 rot=(0.096,-0.901,0.422,76.5)
+  box box23 size=12.2,0.4,0.4 at=-8.6,38.2,4.5 rot=(-0.093,0.954,-0.286,54.1)
+  box box28 size=18.8,0,12.3 at=-18.4,38.2,1.2 rot=(-0.09,0.954,-0.284,90.5)
+  box box29 size=11.1,0,8.7 at=-17.8,38.3,13.4 rot=(0.475,0.863,0.172,88.8)
+  box box34 size=10.1,0,9.7 at=-7.3,38.4,4.4 rot=(-0.163,-0.969,0.186,91.6)
+  box box35 size=16.5,0,8.4 at=-4,38.6,13.5 rot=(0.252,-0.955,-0.158,58)
+  cyl cyl21 r=0.2 h=14.3 axis=x at=14.8,38.7,-5.1 rot=(-0.079,0.979,-0.186,46.9)
+  cyl cyl19 r=0.2 h=19.1 axis=x at=-22.7,38.8,1 rot=(-0.165,-0.966,0.2,80.9)
+  box box18 size=20.1,0.4,0.4 at=29.2,38.9,19.5 rot=(0.178,-0.706,-0.686,40.5)
+  box box36 size=7.8,0,7 at=-27,39.3,19.2 rot=(0.364,-0.906,0.217,66.8)
+  box box43 size=11.9,0,9.9 at=14.8,39.3,-4.4 rot=(-0.106,-0.957,0.271,90.7)
+  box box49 size=19.3,0,12.3 at=31.9,39.6,18 rot=(0.422,-0.806,-0.415,63.6)
+  cyl cyl3 r=0.2 h=9.5 axis=x at=-7.3,39.8,8.9 turn=-176
+  box box15 size=12.1,0.4,0.4 at=-25.8,40,13.1 rot=(0.68,0.72,0.141,54.2)
+  box box37 size=10.2,0,8.8 at=-25.8,40.2,14.3 rot=(0.09,-0.017,0.996,21.2)
+  cone cone2 r=0.1 r2=0.1 h=13.7 axis=x at=20.9,40.5,9.4 rot=(-0.224,-0.941,0.252,86.8)
+  box box12 size=34.1,0.3,0.4 at=-28.8,40.5,8.2 rot=(0.765,0.133,-0.63,36.9)
+  box box20 size=6,0.4,0.4 at=12.9,40.7,0.5 rot=(0.847,-0.199,0.494,33.7)
+  cyl cyl7 r=0.2 h=8.6 axis=x at=-16.7,40.9,9.5 rot=(-0.035,0.286,-0.958,14.4)
+  cyl cyl13 r=0.2 h=29.6 axis=x at=-34.5,41.1,1.5 rot=(-0.187,-0.979,0.076,136.7)
+  cyl cyl24 r=16.3 h=0 at=-30,41.6,4.3 rot=(-0.913,0,-0.407,23.2)
+  box box7 size=16.8,0.4,0.4 at=-37.6,42.3,14.1 rot=(-0.557,-0.27,-0.785,44.1)
+  box box30 size=23,0,12.3 at=-32.3,42.6,12.5 rot=(0.944,0.305,-0.125,47)
+  box box21 size=15.1,0.4,0.4 at=18.7,42.6,8.2 rot=(-0.138,-0.989,0.055,69.6)
+  box box51 size=16.3,0,14.1 at=24,43.9,8.2 rot=(-0.314,0.033,0.949,12.6)
+  cyl cyl4 r=0.2 h=23.7 axis=x at=-32.6,44.3,10.5 rot=(-0.098,-0.995,0.003,176.5)
+  cyl cyl14 r=0.2 h=12.1 axis=x at=26.8,44.6,12.2 rot=(0.075,-0.997,-0.02,150.3)
+  box box10 size=30.3,0.3,0.3 at=32.5,45.9,0.1 rot=(-0.089,0.275,0.957,37.3)
+  box box44 size=31,0,12.7 at=31.1,47.2,-3.7 rot=(-0.613,-0.259,0.746,37.9)
+  cyl cyl20 r=0.2 h=31.4 axis=x at=30.1,47.9,-0.8 rot=(0.212,-0.977,-0.014,172.5)
+  box box39 size=27.7,0,16.3 at=30.7,48.3,-0.2 rot=(0.2,0.801,0.564,47.8)
+  box box19 size=18.9,0.4,0.4 at=38.3,50.1,3.2 rot=(0.207,0.831,0.516,51.5)
+}

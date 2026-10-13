@@ -1,0 +1,69 @@
+// 分区 163/233：2 个物体（2 组），x 718…719，z -399…-399
+
+group RoadFacility_Ground_B_06B at=717.8,-146.1,-399.1 ~fit=0.2 ~src="MidMeshGroup/MidMeshGroup_53_-37/SM_I_RoadFacility_Ground_B_06B" ~role="terrain" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box slab size=50,0.4,1.3 at=-75,4.7,-83.8
+  box slab_2 size=20,0.4,1.3 at=-17.5,4.7,-83.8
+  box slab_3 size=67.5,0.4,1.3 at=66.3,4.7,-83.8
+  box slab_4 size=1.3,0.4,167.6 at=-99.4,4.7,0.6
+  box slab_5 size=2.5,0.4,167.6 at=-51.3,4.7,0.6
+  box slab_6 size=1.3,0.4,167.6 at=-26.9,4.7,0.6
+  box slab_7 size=2.5,0.4,167.6 at=-8.8,4.7,0.6
+  box slab_8 size=1.3,0.4,167.6 at=33.1,4.7,0.6
+  box slab_9 size=1.3,0.4,167.6 at=99.4,4.7,0.6
+  box slab_10 size=46.3,0.4,1.3 at=-75.7,4.7,71.2
+  box slab_11 size=16.3,0.4,1.3 at=-18.1,4.7,71.2
+  box slab_12 size=65,0.4,1.3 at=66.3,4.7,71.2
+  box slab_13 size=46.3,0.4,1.3 at=-75.7,4.7,83.8
+  box slab_14 size=16.3,0.4,1.3 at=-18.1,4.7,83.8
+  box slab_15 size=65,0.4,1.3 at=66.3,4.7,83.8
+  box slab_16 size=40.1,0.4,1.1 at=12.1,3.9,-83.9
+  box slab_17 size=3.2,0.4,167.7 at=-6.3,3.9,0.4
+  box slab_18 size=3.2,0.4,167.7 at=30.6,3.9,0.4
+  box slab_19 size=33.7,0.4,2.1 at=12.1,3.9,83.2
+  box slab_20 size=3.2,0.4,1.1 at=-49.7,0,-83.7
+  box slab_21 size=3.2,0.4,1.1 at=-28.7,0,-83.7
+  box slab_22 size=1.1,0.4,167.2 at=-50.8,0,0.4
+  box slab_23 size=2.1,0.4,167.2 at=-28.1,0,0.4
+  box slab_24 size=2.1,0.4,1.1 at=-49.2,0,83.5
+  box slab_25 size=1.1,0.4,1.1 at=-29.7,0,83.5
+  box slab_26 size=17.9,0.4,1.1 at=-39.2,0.5,-83.7
+  box slab_27 size=17.9,0.4,1.1 at=-39.2,0.5,83.5
+}
+group Building_TransferStation_InterWall_01E at=718.9,-104.5,-399.3 ~fit=0.8 ~src="MidMeshGroup/MidMeshGroup_53_-37/SM_H_Building_FutureTech_TransferStation_InterWall_01E" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple" {
+  box slab size=197,0.4,3.7 at=0,3.8,-78.3
+  box slab_2 size=197,0.4,3.7 at=0,3.8,78
+  box slab_3 size=197,0.4,3.7 at=0,0,-78.3
+  box slab_4 size=197,0.4,3.7 at=0,0,78
+  box wall size=152,7.6,2.6 at=41.8,4.8,0 turn=90
+  box wall_2 size=152,7.6,2.6 at=22.1,4.8,0 turn=-90
+  box slab_5 size=2.9,0.4,152 at=22.1,4.8,0
+  box slab_6 size=2.9,0.4,152 at=42,4.8,0
+  box wall_3 size=197,4.9,3.2 at=0,0,-78.6
+  box wall_4 size=197,4.9,2.9 at=0,0,78.5 turn=180
+  box slab_7 size=2.9,0.4,152 at=22.3,11.7,0
+  box slab_8 size=1.9,0.4,152 at=41.7,11.7,0
+  box slab_9 size=40.3,0.4,4 at=32,4.6,-78.7
+  box slab_10 size=40.3,0.4,4 at=32,4.6,78.7
+  box slab_11 size=40.3,0.4,4 at=32,8.5,-78.7
+  box slab_12 size=40.3,0.4,4 at=32,8.5,78.7
+  box wall_5 size=40.4,4.3,0.4 at=32,4.6,80.5
+  box wall_6 size=40.4,4.3,0.4 at=31.9,4.6,-80.5 turn=180
+  box wall_7 size=40.4,4.3,0.4 at=32,4.6,-76.7
+  box wall_8 size=40.4,4.3,0.4 at=31.9,4.6,76.7 turn=180
+  box wall_9 size=151.6,0.9,0.4 at=16.2,11.2,0 turn=-90
+  box wall_10 size=151.6,0.9,0.4 at=27.9,11.2,0 turn=90
+  box wall_11 size=151.6,0.9,0.4 at=36,11.2,0 turn=-90
+  box wall_12 size=151.6,0.9,0.4 at=47.6,11.2,0 turn=90
+  box ramp size=0.9,0.4,151.6 at=28.1,11.6,0 rot=(0,0,1,36.1)
+  box ramp_2 size=0.9,0.4,151.6 at=47.8,11.6,0 rot=(0,0,1,36.1)
+  box ramp_3 size=0.9,0.4,151.6 at=16.2,11.5,0 rot=(0,0,-1,36.1)
+  box ramp_4 size=0.9,0.4,151.6 at=36,11.5,0 rot=(0,0,-1,36.1)
+  box ramp_5 size=0.9,0.4,151.6 at=47.6,11.4,0 rot=(0,0,-1,34.1)
+  box ramp_6 size=0.9,0.4,151.6 at=27.9,11.4,0 rot=(0,0,-1,34.1)
+  box ramp_7 size=0.9,0.4,151.6 at=36.2,11.5,0 rot=(0,0,1,34.1)
+  box ramp_8 size=0.9,0.4,151.6 at=16.5,11.5,0 rot=(0,0,1,34.1)
+  box wall_13 size=6.1,7.5,0.1 at=22.1,4.7,-76.2
+  box wall_14 size=6.1,7.5,0.1 at=41.7,4.7,-76.2
+  box wall_15 size=6.1,7.5,0.1 at=22.1,4.7,76.2
+  box wall_16 size=6.1,7.5,0.1 at=41.7,4.7,76.2
+}

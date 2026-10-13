@@ -1,0 +1,4 @@
+// 细化到 structure：HLight_01_ExterWall_01（面积前 90%（1/107 块），1 个部件）
+over HLight_01_ExterWall_01 : group envelope=-122.5,0,-105,122.5,352,105 {
+  box box1 size=241,352.3,206.9 at=-1.6,-0.3,1.3 mat=whitebox ~src="BigMeshGroup/BigMeshGroup_51_-36/SM_H_Building_FutureTech_HLight_01_ExterWall_01#0"
+}

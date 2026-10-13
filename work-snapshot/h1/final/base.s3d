@@ -1,0 +1,14 @@
+// 由逆向管线从 ../h1.glb 生成（project）。~fit 是拟合度，~err 是相对误差；mesh 是拟合不了、直接引用源网格的部件
+
+// 拆分成多个文件：类型一个文件，物体按挂靠关系聚组、再按水平位置分区（名字跨文件可见；重跑逆向会整体重写这些文件）
+import "base/types.s3d"
+import "base/01-HStairs_01.s3d"
+import "base/02-HStairs_01B.s3d"
+import "base/03-volume_3.s3d"
+import "base/04-volume_4.s3d"
+import "base/05-volume_12.s3d"
+import "base/06-HLight_01_ExterWall_01.s3d"
+import "base/07-volume_5.s3d"
+import "base/08-HBoss_01_ExterWall_01.s3d"
+import "base/09-HOrange_01_ExterWall_01.s3d"
+import "base/10-HLight_01_ExterWall_Damage_01.s3d"

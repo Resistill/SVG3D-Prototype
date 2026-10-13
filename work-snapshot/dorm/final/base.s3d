@@ -1,0 +1,15 @@
+// 由逆向管线从 ../dorm.glb 生成（project）。~fit 是拟合度，~err 是相对误差；mesh 是拟合不了、直接引用源网格的部件
+
+// 拆分成多个文件：类型一个文件，物体按挂靠关系聚组、再按水平位置分区（名字跨文件可见；重跑逆向会整体重写这些文件）
+import "base/types.s3d"
+import "base/01-Building_Dormitory_02_ExterWall_01_2.s3d"
+import "base/02-Building_Dormitory_01_5.s3d"
+import "base/03-RoadFacility_Ground_D_05.s3d"
+import "base/04-Building_Dormitory_02_ExterWall_01.s3d"
+import "base/05-Building_Dormitory_03_ExterWall_01.s3d"
+import "base/06-Building_Dormitory_01_4.s3d"
+import "base/07-RoadFacility_Ground_R_01B.s3d"
+import "base/08-RoadFacility_Ground_R_01.s3d"
+import "base/09-Building_DormitoryPassage_01.s3d"
+import "base/10-RoadFacility_Ground_D_04B_Decal.s3d"
+import "base/11-Building_BigDoor_03.s3d"

@@ -1,0 +1,17 @@
+// 分区 188/233：11 个物体（1 组），x 461…502，z -217…-173
+
+repeat Industrial_Mechanical_LiquidTank n=3 step=0,0,77.71 at=Building_PipeHouse_01_InterWall_01_2 offset=17.29,-27.98,-78.1 pin=origin {
+  Industrial_Mechanical_LiquidTank_01b_5 Industrial_Mechanical_LiquidTank_01b_5 ~fit=0.8
+}
+Industrial_Prop_Light_02_v2_8 Industrial_Prop_Light_02_56_4 at=461.1,-139,-177.1 rot=(0,0.707,-0.707,180) ~fit=0 ~src="SmallMeshGroup/SmallMeshGroup_53_-36/SM_H_Industrial_Prop_Light_02@17" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Prop_Light_02_v2_8 Industrial_Prop_Light_02_57_4 at=461.1,-139,-213.8 rot=(0,0.707,-0.707,180) ~fit=0 ~src="SmallMeshGroup/SmallMeshGroup_53_-36/SM_H_Industrial_Prop_Light_02@18" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Prop_Light_02_v2_8 Industrial_Prop_Light_02_59_4 at=461.1,-139,-175.1 rot=(0,0.707,-0.707,180) ~fit=0 ~src="SmallMeshGroup/SmallMeshGroup_53_-36/SM_H_Industrial_Prop_Light_02@22" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Prop_Light_02_v2_8 Industrial_Prop_Light_02_63_3 at=461.1,-139,-216.2 rot=(0,0.707,-0.707,180) ~fit=0 ~src="SmallMeshGroup/SmallMeshGroup_53_-36/SM_H_Industrial_Prop_Light_02@35" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Prop_Light_02_v2_8 Industrial_Prop_Light_02_71_3 at=487.1,-138.9,-196.6 rot=(0.577,-0.577,0.577,120) ~fit=0 ~src="SmallMeshGroup/SmallMeshGroup_53_-36/SM_H_Industrial_Prop_Light_02@15" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+Industrial_Prop_Light_02_v2_8 Industrial_Prop_Light_02_67_4 at=485.2,-134.7,-193.4 rot=(-0.577,-0.577,0.577,120) ~fit=0 ~src="SmallMeshGroup/SmallMeshGroup_53_-36/SM_H_Industrial_Prop_Light_02@28" ~role="decor" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAndComplex"
+repeat Fence_Metal_01B_49 n=7 step=0,0,27.43 at=RoadFacility_Ground_R_02 offset=168.93,30.21,-44.78 pin=origin {
+  Fence_Metal_01B_10 Fence_Metal_01B_10 turn=-90 ~fit=0
+}
+Fence_Metal_01_42 Fence_Metal_01_10_8 at=502.2,-119.3,-200.4 turn=90 ~fit=1 ~src="BigMeshGroup/BigMeshGroup_53_-36/SM_H_Fence_Metal_1024x768_01@33" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box Fence_Metal_01_9_8 size=27.4,36,4.5 at=502.2,-119.3,-172.9 turn=-90 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_53_-36/SM_H_Fence_Metal_1024x768_01@19" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+box BlockWallCube_20_12 size=211,57.8,9.7 at=495.1,-118.8,-193.5 turn=-90.1 ~fit=1 ~src="Blocker/BigMeshGroup_53_-36/BlockWallCube@8" ~role="collision" ~shape="bounds" ~collidable=1 ~collision_profile="Custom" ~trace_flag="CTF_UseDefault"

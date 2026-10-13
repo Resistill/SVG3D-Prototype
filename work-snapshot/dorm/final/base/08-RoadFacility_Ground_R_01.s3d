@@ -1,0 +1,5 @@
+// 分区 8/11：3 个物体（3 组），x -901…-765，z -232…-86
+
+mesh RoadFacility_Ground_R_01 src="../dorm.glb#BigMeshGroup/BigMeshGroup_50_-36/SM_I_RoadFacility_Ground_R_01" size=383,85,240 pivot=-812,-215,-86 at=-812,-215,-86 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_50_-36/SM_I_RoadFacility_Ground_R_01" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseComplexAsSimple"
+mesh RoadFacility_Ground_R_01_Decal src="../dorm.glb#BigMeshGroup/BigMeshGroup_50_-36/SM_I_RoadFacility_Ground_R_01_Decal" size=479,5,382 pivot=-765,-146,-161 at=-765,-146,-161 ~fit=0 ~src="BigMeshGroup/BigMeshGroup_50_-36/SM_I_RoadFacility_Ground_R_01_Decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex"
+mesh RoadFacility_Ground_D_02_Decal src="../dorm.glb#BigMeshGroup/BigMeshGroup_50_-36/SM_I_RoadFacility_Ground_D_02_Decal" size=176,1,234 pivot=-901,-129,-233 on=RoadFacility_Ground_D_02B[-0.48,1,0.01] ~fit=0 ~src="BigMeshGroup/BigMeshGroup_50_-36/SM_I_RoadFacility_Ground_D_02_Decal" ~shape="bounds" ~collidable=1 ~collision_profile="BlockAll" ~trace_flag="CTF_UseSimpleAsComplex"
